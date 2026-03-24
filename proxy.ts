@@ -6,12 +6,14 @@ import { updateSession } from "@/lib/supabase/proxy";
 //
 // Request lifecycle:
 // 1. Browser sends HTTP request (cookies attached automatically)
-// 2. THIS PROXY runs first — refreshes expired JWT if needed, updates cookies
+// 2. THIS PROXY runs first — refreshes expired JWT if needed, writes
+//    Set-Cookie headers to the response
 // 3. Next.js routes the request to the matching page/API route
-// 4. Server components render (can read cookies but NOT write them)
-//    OR tRPC API route runs (createTRPCContext reads cookies → viewer context)
-// 5. Response streams back to browser (including any Set-Cookie headers
-//    from step 2, so the browser stores the updated token)
+// 4. Response headers (including Set-Cookie from step 2) are sent, then
+//    server components begin rendering and streaming HTML simultaneously.
+//    Because headers are already sent, server components can read cookies
+//    but CANNOT write them. For tRPC API calls, the route handler runs
+//    and returns JSON once the procedure finishes.
 //
 // Why this exists: Server components use HTTP streaming (RSC), so once
 // they start rendering, the response headers are already being sent.
