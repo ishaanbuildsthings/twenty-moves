@@ -2,28 +2,19 @@
 
 import confetti from "canvas-confetti";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatSolveTime, formatTime } from "./timer-utils";
 import { getScramble } from "./actions";
-import { addSolve, clearSolves, getAllSolves, type Solve } from "./db";
+import { addSolve, clearSolves, getAllSolves, updateSolvePenalty, type Solve } from "./db";
+import type { PenaltyType } from "./types";
 
 type TimerState = "idle" | "ready" | "running" | "stopped";
-
-function formatTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const centiseconds = Math.floor((ms % 1000) / 10);
-
-  if (minutes > 0) {
-    return `${minutes}:${String(seconds).padStart(2, "0")}.${String(centiseconds).padStart(2, "0")}`;
-  }
-  return `${seconds}.${String(centiseconds).padStart(2, "0")}`;
-}
 
 export default function TimerPage() {
   const [state, setState] = useState<TimerState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [scramble, setScramble] = useState<string | null>(null);
   const [solves, setSolves] = useState<Solve[]>([]);
+  const [lastSolveId, setLastSolveId] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const scrambleRef = useRef<string | null>(null);
@@ -81,6 +72,7 @@ export default function TimerPage() {
     const usedScramble = scrambleRef.current ?? "";
     addSolve(finalTime, usedScramble).then((solve) => {
       setSolves((prev) => [solve, ...prev]);
+      setLastSolveId(solve.id);
     });
   }, [elapsed]);
 
@@ -117,6 +109,17 @@ export default function TimerPage() {
     };
   }, []);
 
+  const applyPenalty = useCallback((penaltyType: PenaltyType) => {
+    if (lastSolveId === null) return;
+    const current = solvesRef.current.find((s) => s.id === lastSolveId);
+    const next: PenaltyType = current?.penaltyType === penaltyType ? null : penaltyType;
+    updateSolvePenalty(lastSolveId, next).then(() => {
+      setSolves((prev) =>
+        prev.map((s) => s.id === lastSolveId ? { ...s, penaltyType: next } : s)
+      );
+    });
+  }, [lastSolveId]);
+
   const hint =
     state === "running"
       ? "Press spacebar to stop"
@@ -138,7 +141,7 @@ export default function TimerPage() {
               <span className="text-zinc-400 tabular-nums w-6 shrink-0">
                 {solves.length - i}
               </span>
-              <span className="font-mono tabular-nums">{formatTime(solve.timeMs)}</span>
+              <span className="font-mono tabular-nums">{formatSolveTime(solve)}</span>
             </li>
           ))}
         </ul>
@@ -164,6 +167,25 @@ export default function TimerPage() {
           {formatTime(elapsed)}
         </p>
         <p className="text-zinc-500 text-sm">{hint}</p>
+        {state === "stopped" && (() => {
+          const penalty = solves.find((s) => s.id === lastSolveId)?.penaltyType ?? null;
+          return (
+            <div className="flex gap-2">
+              <button
+                className={`px-3 py-1 text-sm rounded border transition-colors ${penalty === "plustwo" ? "border-yellow-400 text-yellow-500" : "border-zinc-300 dark:border-zinc-700 hover:border-yellow-400 hover:text-yellow-500"}`}
+                onClick={() => applyPenalty("plustwo")}
+              >
+                +2
+              </button>
+              <button
+                className={`px-3 py-1 text-sm rounded border transition-colors ${penalty === "dnf" ? "border-red-400 text-red-500" : "border-zinc-300 dark:border-zinc-700 hover:border-red-400 hover:text-red-500"}`}
+                onClick={() => applyPenalty("dnf")}
+              >
+                DNF
+              </button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
