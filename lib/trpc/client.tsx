@@ -11,6 +11,12 @@ import type { AppRouter } from "./routers/_app";
 
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
 
+// Browser: reuse a single QueryClient so the cache persists across
+// client-side navigations. A full page refresh will reset it.
+// Server (SSR): create a fresh instance per request so cached data from
+// one user's render never leaks into another's. This instance isn't
+// actually used for fetching — it just needs to exist so the SSR render
+// doesn't crash.
 let clientQueryClientSingleton: QueryClient;
 function getQueryClient() {
   if (typeof window === "undefined") {
