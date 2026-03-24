@@ -20,7 +20,7 @@ export const authRouter = createTRPCRouter({
         data: { user: supabaseUser },
       } = await ctx.supabase.auth.getUser();
 
-      if (!supabaseUser || !supabaseUser.email) {
+      if (!supabaseUser) {
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
 
@@ -37,7 +37,6 @@ export const authRouter = createTRPCRouter({
       const user = await ctx.prisma.user.create({
         data: {
           supabaseId: supabaseUser.id,
-          email: supabaseUser.email,
           username: input.username,
           firstName: input.firstName,
           lastName: input.lastName,
