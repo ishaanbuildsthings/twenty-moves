@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TRPCReactProvider } from "@/lib/trpc/client";
-import { AuthButton } from "@/lib/components/auth-button";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,6 +18,10 @@ export const metadata: Metadata = {
   description: "A social app for cubers",
 };
 
+// Root layout — wraps ALL pages (both (auth) and (app) route groups).
+// Only contains global providers and styles. Auth-specific UI (like the
+// header with sign-out button) lives in (app)/layout.tsx where the
+// ViewerProvider is available.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,13 +33,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <TRPCReactProvider>
-          <header className="flex items-center justify-between border-b px-6 py-3">
-            <a href="/" className="font-bold">Cubing Strava</a>
-            <AuthButton />
-          </header>
-          {children}
-        </TRPCReactProvider>
+        <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>
   );
