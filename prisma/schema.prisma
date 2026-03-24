@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  firstName String
+  lastName  String
+  wcaId     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  solves        Solve[]
+  personalBests PersonalBest[]
+  followers     Follow[]       @relation("followee")
+  following     Follow[]       @relation("follower")
+}
+
+model Event {
+  id   String @id @default(cuid())
+  name String @unique
+
+  solves        Solve[]
+  scrambles     Scramble[]
+  personalBests PersonalBest[]
+}
+
+model Scramble {
+  id      String @id @default(cuid())
+  eventId String
+  moves   String
+
+  event  Event   @relation(fields: [eventId], references: [id])
+  solves Solve[]
+}
+
+enum PbType {
+  single
+  avg5
+  avg12
+  avg50
+  avg100
+}
+
+model PersonalBest {
+  id      String @id @default(cuid())
+  userId  String
+  eventId String
+  time    String
+  type    PbType
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId, type])
+}
+
+enum Penalty {
+  plus_two
+  dnf
+}
+
+model Solve {
+  id         String   @id @default(cuid())
+  userId     String
+  eventId    String
+  scrambleId String
+  time       Float
+  penalty    Penalty?
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  event    Event    @relation(fields: [eventId], references: [id])
+  scramble Scramble @relation(fields: [scrambleId], references: [id])
+}
+
+model Follow {
+  id         String   @id @default(cuid())
+  followerId String
+  followeeId String
+  createdAt  DateTime @default(now())
+
+  follower User @relation("follower", fields: [followerId], references: [id])
+  followee User @relation("followee", fields: [followeeId], references: [id])
+
+  @@unique([followerId, followeeId])
+}
