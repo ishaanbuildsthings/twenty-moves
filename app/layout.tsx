@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TRPCReactProvider } from "@/lib/trpc/client";
+import { AuthButton } from "@/lib/components/auth-button";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,7 +30,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <header className="flex items-center justify-between border-b px-6 py-3">
+            <a href="/" className="font-bold">Cubing Strava</a>
+            <AuthButton />
+          </header>
+          {children}
+        </TRPCReactProvider>
       </body>
     </html>
   );

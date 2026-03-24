@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { getPrisma } from "@/lib/prisma";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { ViewerContext } from "@/lib/viewer-context";
 
 // Runs server-side only — called on every request either by the HTTP route
@@ -8,9 +9,21 @@ import type { ViewerContext } from "@/lib/viewer-context";
 // (lib/trpc/server.ts). Prisma is passed via context (rather than imported
 // directly in services) so we can swap it for a mock in tests.
 export const createTRPCContext = async () => {
-  // TODO: resolve viewer from session/token once auth is implemented
-  const viewer: ViewerContext | null = null;
-  return { prisma: getPrisma(), viewer };
+  const prisma = getPrisma();
+  const supabase = await createServerSupabaseClient();
+  const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+  let viewer: ViewerContext | null = null;
+  if (supabaseUser) {
+    const user = await prisma.user.findUnique({
+      where: { supabaseId: supabaseUser.id },
+    });
+    if (user) {
+      viewer = { type: "authUser", userId: user.id };
+    }
+  }
+
+  return { prisma, viewer, supabase };
 };
 
 const t = initTRPC.context<typeof createTRPCContext>().create({

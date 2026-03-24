@@ -1,0 +1,56 @@
+import { z } from "zod/v4";
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, baseProcedure, authedProcedure } from "../init";
+import { userToIUser } from "@/lib/transforms/user";
+
+export const authRouter = createTRPCRouter({
+  // Creates a profile for a user who has signed in with Supabase but
+  // doesn't have a User row yet. Uses baseProcedure (not authedProcedure)
+  // because the viewer is null until the User row exists.
+  createProfile: baseProcedure
+    .input(
+      z.object({
+        username: z.string().min(3).max(30),
+        firstName: z.string().min(1).max(50),
+        lastName: z.string().min(1).max(50),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const {
+        data: { user: supabaseUser },
+      } = await ctx.supabase.auth.getUser();
+
+      if (!supabaseUser || !supabaseUser.email) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const existing = await ctx.prisma.user.findUnique({
+        where: { supabaseId: supabaseUser.id },
+      });
+      if (existing) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Profile already exists",
+        });
+      }
+
+      const user = await ctx.prisma.user.create({
+        data: {
+          supabaseId: supabaseUser.id,
+          email: supabaseUser.email,
+          username: input.username,
+          firstName: input.firstName,
+          lastName: input.lastName,
+        },
+      });
+
+      return userToIUser(user);
+    }),
+
+  me: authedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.prisma.user.findUniqueOrThrow({
+      where: { id: ctx.viewer.userId },
+    });
+    return userToIUser(user);
+  }),
+});
