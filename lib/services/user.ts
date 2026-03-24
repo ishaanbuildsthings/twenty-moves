@@ -1,6 +1,13 @@
 import type { PrismaClient } from "@/app/generated/prisma/client";
+import type { ViewerContext } from "@/lib/viewer-context";
 
-export function userService(prisma: PrismaClient) {
+export type ServiceContext = {
+  prisma: PrismaClient;
+  viewer: ViewerContext;
+};
+
+export function userService(ctx: ServiceContext) {
+  const { prisma } = ctx;
   return {
     list: () => prisma.user.findMany({ orderBy: { createdAt: "desc" } }),
 
