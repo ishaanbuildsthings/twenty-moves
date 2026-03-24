@@ -17,9 +17,6 @@ export function userService(ctx: ServiceContext) {
     getByUsername: (username: string) =>
       prisma.user.findUniqueOrThrow({ where: { username } }),
 
-    create: (data: { supabaseId: string; email: string; username: string; firstName: string; lastName: string }) =>
-      prisma.user.create({ data }),
-
     update: (id: string, data: { username?: string; firstName?: string; lastName?: string; wcaId?: string | null }) =>
       prisma.user.update({ where: { id }, data }),
 

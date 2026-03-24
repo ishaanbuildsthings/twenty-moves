@@ -46,13 +46,6 @@ export const authRouter = createTRPCRouter({
       return userToIUser(user);
     }),
 
-  me: authedProcedure.query(async ({ ctx }) => {
-    const user = await ctx.prisma.user.findUniqueOrThrow({
-      where: { id: ctx.viewer.userId },
-    });
-    return userToIUser(user);
-  }),
-
   // Returns auth status without throwing. Used to determine where to
   // redirect: login, create-profile, or show the app.
   status: baseProcedure.query(async ({ ctx }) => {
