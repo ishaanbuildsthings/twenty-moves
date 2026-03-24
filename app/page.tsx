@@ -1,11 +1,35 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Home() {
+  const router = useRouter();
   const trpc = useTRPC();
-  const usersQuery = useQuery(trpc.user.list.queryOptions());
+  const statusQuery = useQuery(trpc.auth.status.queryOptions());
+  const usersQuery = useQuery({
+    ...trpc.user.list.queryOptions(),
+    enabled: statusQuery.data?.state === "ready",
+  });
+
+  useEffect(() => {
+    if (!statusQuery.data) return;
+    if (statusQuery.data.state === "unauthenticated") {
+      router.replace("/login");
+    } else if (statusQuery.data.state === "needs-profile") {
+      router.replace("/create-profile");
+    }
+  }, [statusQuery.data, router]);
+
+  if (!statusQuery.data || statusQuery.data.state !== "ready") {
+    return (
+      <div className="flex flex-col flex-1 items-center justify-center p-8">
+        <p className="text-zinc-500">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 items-center justify-center p-8 font-sans">

@@ -53,4 +53,26 @@ export const authRouter = createTRPCRouter({
     });
     return userToIUser(user);
   }),
+
+  // Returns auth status without throwing. Used to determine where to
+  // redirect: login, create-profile, or show the app.
+  status: baseProcedure.query(async ({ ctx }) => {
+    const {
+      data: { user: supabaseUser },
+    } = await ctx.supabase.auth.getUser();
+
+    if (!supabaseUser) {
+      return { state: "unauthenticated" as const };
+    }
+
+    const user = await ctx.prisma.user.findUnique({
+      where: { supabaseId: supabaseUser.id },
+    });
+
+    if (!user) {
+      return { state: "needs-profile" as const };
+    }
+
+    return { state: "ready" as const, user: userToIUser(user) };
+  }),
 });
