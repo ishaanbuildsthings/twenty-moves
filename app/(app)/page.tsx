@@ -58,6 +58,7 @@ export default function TimerPage() {
   const [scramble, setScramble] = useState<string | null>(null);
   const [solves, setSolves] = useState<Solve[]>([]);
   const [stats, setStats] = useState<EventStats | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const scrambleRef = useRef<string | null>(null);
@@ -67,6 +68,7 @@ export default function TimerPage() {
   // Load solves and scramble when event changes.
   useEffect(() => {
     selectedEventRef.current = selectedEvent;
+    setConfirmClear(false);
     getScramble(selectedEvent).then(setScramble);
     getRecentSolves(selectedEvent).then(setSolves);
     getStats(selectedEvent).then(setStats);
@@ -216,7 +218,7 @@ export default function TimerPage() {
         >
           {formatTime(elapsed)}
         </p>
-        <p className="text-zinc-500 text-sm">{hint}</p>
+{/* hint removed */}
         </div>
 
       {/* Right panel — stats + solves list */}
@@ -225,7 +227,7 @@ export default function TimerPage() {
         {stats && (
           <div className="px-3 py-3 border-b border-border">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 mb-1.5">
+            <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 mb-1.5">
               <span />
               <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest text-right">Current</span>
               <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest text-right">Best</span>
@@ -233,7 +235,7 @@ export default function TimerPage() {
             {/* Stat rows */}
             <div className="space-y-1.5">
               {eventConfig.stats.includes("single") && (
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 items-center">
+                <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Single</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
                     {solves.length > 0 ? formatSolveTime(solves[0]) : "-"}
@@ -244,7 +246,7 @@ export default function TimerPage() {
                 </div>
               )}
               {eventConfig.stats.includes("mo3") && (
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 items-center">
+                <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Mo3</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
                     {stats.currentMo3 !== null ? formatTime(stats.currentMo3) : "-"}
@@ -255,7 +257,7 @@ export default function TimerPage() {
                 </div>
               )}
               {eventConfig.stats.includes("ao5") && (
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 items-center">
+                <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao5</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
                     {stats.currentAo5 !== null ? formatTime(stats.currentAo5) : "-"}
@@ -266,7 +268,7 @@ export default function TimerPage() {
                 </div>
               )}
               {eventConfig.stats.includes("ao12") && (
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 items-center">
+                <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao12</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
                     {stats.currentAo12 !== null ? formatTime(stats.currentAo12) : "-"}
@@ -277,7 +279,7 @@ export default function TimerPage() {
                 </div>
               )}
               {eventConfig.stats.includes("ao100") && (
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 items-center">
+                <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao100</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
                     {stats.currentAo100 !== null ? formatTime(stats.currentAo100) : "-"}
@@ -370,18 +372,36 @@ export default function TimerPage() {
           ))}
         </ul>
         <div className="p-2 border-t border-border flex justify-center">
-          <button
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-500 py-1 px-3 rounded-md hover:bg-red-500/10 transition-colors"
-            onClick={() =>
-              clearSolves(selectedEvent).then((newStats) => {
-                setSolves([]);
-                setStats(newStats);
-              })
-            }
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Clear session
-          </button>
+          {confirmClear ? (
+            <div className="flex items-center gap-2">
+              <button
+                className="text-xs text-red-500 font-semibold py-1 px-3 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                onClick={() => {
+                  clearSolves(selectedEvent).then((newStats) => {
+                    setSolves([]);
+                    setStats(newStats);
+                    setConfirmClear(false);
+                  });
+                }}
+              >
+                Confirm
+              </button>
+              <button
+                className="text-xs text-muted-foreground py-1 px-3 rounded-md hover:bg-muted transition-colors"
+                onClick={() => setConfirmClear(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-500 py-1 px-3 rounded-md hover:bg-red-500/10 transition-colors"
+              onClick={() => setConfirmClear(true)}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear session
+            </button>
+          )}
         </div>
       </aside>
       </div>
