@@ -26,7 +26,7 @@ export interface EventMeta {
   stats: StatType[];
 }
 
-const STANDARD_STATS: StatType[] = ["single", "ao5", "ao12", "ao100"];
+const STANDARD_STATS: StatType[] = ["single", "mo3", "ao5", "ao12", "ao100"];
 const BLD_STATS: StatType[] = ["single", "mo3", "ao5", "ao12"];
 
 export const EVENTS_LIST: EventMeta[] = [
