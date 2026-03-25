@@ -76,6 +76,36 @@ export async function getRecentSolves(
   });
 }
 
+// Load more solves older than a given date (for infinite scroll).
+// Returns the next batch of solves before `beforeDate`, newest first.
+export async function loadMoreSolves(
+  event: CubeEvent,
+  beforeDate: number,
+  limit = 50
+): Promise<Solve[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SOLVES_STORE, "readonly");
+    const index = tx.objectStore(SOLVES_STORE).index(SOLVES_BY_EVENT_DATE);
+
+    // Range: all solves for this event with date < beforeDate.
+    const range = IDBKeyRange.bound([event, 0], [event, beforeDate], false, true);
+    const results: Solve[] = [];
+
+    const cursorReq = index.openCursor(range, "prev");
+    cursorReq.onsuccess = () => {
+      const cursor = cursorReq.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value as Solve);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    cursorReq.onerror = () => reject(cursorReq.error);
+  });
+}
+
 // Fetch ALL solves for an event (needed for best-ever stats).
 // Only used internally for stats recomputation.
 async function getAllSolvesForEvent(

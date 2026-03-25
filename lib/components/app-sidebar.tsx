@@ -24,10 +24,10 @@ import { useViewer } from "@/lib/hooks/useViewer";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const navItems = [
-  { label: "Practice", href: "/", icon: "⏱️" },
-  { label: "Home", href: "/home", icon: "🏠" },
-  { label: "Race", href: "/race", icon: "🏁" },
-  { label: "Tourney", href: "/tourney", icon: "🏆" },
+  { label: "Practice", href: "/", icon: "⏱️", comingSoon: false },
+  { label: "Home", href: "/home", icon: "🏠", comingSoon: false },
+  { label: "Race", href: "/race", icon: "🏁", comingSoon: true },
+  { label: "Tourney", href: "/tourney", icon: "🏆", comingSoon: true },
 ];
 
 export function AppSidebar() {
@@ -49,13 +49,21 @@ export function AppSidebar() {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    render={<Link href={item.href} />}
-                    isActive={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
-                  >
-                    <span className="text-xl leading-none">{item.icon}</span>
-                    <span className="text-base font-bold">{item.label}</span>
-                  </SidebarMenuButton>
+                  {item.comingSoon ? (
+                    <SidebarMenuButton disabled className="opacity-40 cursor-not-allowed">
+                      <span className="text-xl leading-none grayscale">{item.icon}</span>
+                      <span className="text-base font-bold">{item.label}</span>
+                      <span className="ml-auto text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Soon</span>
+                    </SidebarMenuButton>
+                  ) : (
+                    <SidebarMenuButton
+                      render={<Link href={item.href} />}
+                      isActive={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
+                    >
+                      <span className="text-xl leading-none">{item.icon}</span>
+                      <span className="text-base font-bold">{item.label}</span>
+                    </SidebarMenuButton>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
