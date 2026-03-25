@@ -83,13 +83,14 @@ function computeMo3(solves: SolveForStats[]): number | null {
   return Math.round(sum / 3);
 }
 
-// Find the best single from all solves (excluding DNF).
-// Returns null if no valid solves.
+// Find the best single from all solves.
+// Returns null if no solves, DNF if all solves are DNF.
 function computeBestSingle(solves: SolveForStats[]): number | null {
-  let best: number | null = null;
+  if (solves.length === 0) return null;
+  let best: number = DNF;
   for (const solve of solves) {
     const t = effectiveTime(solve);
-    if (t !== DNF && (best === null || t < best)) {
+    if (t < best) {
       best = t;
     }
   }
