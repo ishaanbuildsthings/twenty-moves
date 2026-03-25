@@ -124,8 +124,22 @@ export default function TimerPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden select-none">
-      {/* Left panel */}
-      <aside className="w-48 shrink-0 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
+      {/* Timer area */}
+      <div className="flex flex-col flex-1 items-center justify-center gap-6">
+        <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem]">
+          {scramble ?? ""}
+        </p>
+        <p
+          className="font-mono tabular-nums"
+          style={{ fontSize: "clamp(3rem, 15vw, 8rem)" }}
+        >
+          {formatTime(elapsed)}
+        </p>
+        <p className="text-zinc-500 text-sm">{hint}</p>
+      </div>
+
+      {/* Right panel */}
+      <aside className="w-48 shrink-0 border-l border-zinc-200 dark:border-zinc-800 flex flex-col">
         <p className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800">
           Solves
         </p>
@@ -151,20 +165,6 @@ export default function TimerPage() {
           </button>
         </div>
       </aside>
-
-      {/* Timer area */}
-      <div className="flex flex-col flex-1 items-center justify-center gap-6">
-        <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem]">
-          {scramble ?? ""}
-        </p>
-        <p
-          className="font-mono tabular-nums"
-          style={{ fontSize: "clamp(3rem, 15vw, 8rem)" }}
-        >
-          {formatTime(elapsed)}
-        </p>
-        <p className="text-zinc-500 text-sm">{hint}</p>
-      </div>
     </div>
   );
 }
