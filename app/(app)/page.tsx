@@ -36,7 +36,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type TimerState = "idle" | "ready" | "running" | "stopped";
+// Timer states:
+// idle       — waiting for spacebar press
+// inspecting — inspection countdown (if enabled)
+// holding    — spacebar held, waiting for hold delay to pass
+// ready      — hold delay met, release to start
+// running    — timer is running
+// stopped    — timer stopped, showing result
+type TimerState = "idle" | "inspecting" | "holding" | "ready" | "running" | "stopped";
 
 function formatTime(ms: number): string {
   if (ms === Infinity) return "DNF";
@@ -64,6 +71,7 @@ export default function TimerPage() {
   const [selectedEvent, setSelectedEvent] = useState<CubeEvent>(CubeEvent.THREE);
   const [state, setState] = useState<TimerState>("idle");
   const [elapsed, setElapsed] = useState(0);
+  const [inspectionTime, setInspectionTime] = useState(0);
   const [scramble, setScramble] = useState<string | null>(null);
   const [solves, setSolves] = useState<Solve[]>([]);
   const [stats, setStats] = useState<EventStats | null>(null);
@@ -72,27 +80,33 @@ export default function TimerPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
+  const holdStartRef = useRef<number | null>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inspectionStartRef = useRef<number | null>(null);
+  const inspectionRafRef = useRef<number | null>(null);
   const scrambleRef = useRef<string | null>(null);
   const solvesRef = useRef<Solve[]>([]);
   const selectedEventRef = useRef<CubeEvent>(selectedEvent);
+  const stateRef = useRef<TimerState>(state);
+  const settingsRef = useRef(timerSettings);
+
+  // Keep refs in sync with state.
+  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { settingsRef.current = timerSettings; }, [timerSettings]);
 
   // Load solves and scramble when event changes.
   useEffect(() => {
     selectedEventRef.current = selectedEvent;
     setConfirmClear(false);
-    Promise.resolve(generateScramble(selectedEvent)).then(setScramble);
+    setScramble(generateScramble(selectedEvent));
     getRecentSolves(selectedEvent).then(setSolves);
     getStats(selectedEvent).then(setStats);
   }, [selectedEvent]);
 
-  useEffect(() => {
-    scrambleRef.current = scramble;
-  }, [scramble]);
+  useEffect(() => { scrambleRef.current = scramble; }, [scramble]);
+  useEffect(() => { solvesRef.current = solves; }, [solves]);
 
-  useEffect(() => {
-    solvesRef.current = solves;
-  }, [solves]);
-
+  // Animation frame tick for the running timer.
   const tick = useCallback(() => {
     if (startTimeRef.current !== null) {
       setElapsed(Date.now() - startTimeRef.current);
@@ -100,12 +114,37 @@ export default function TimerPage() {
     }
   }, []);
 
+  // Animation frame tick for inspection countdown.
+  const inspectionTick = useCallback(() => {
+    if (inspectionStartRef.current !== null) {
+      const elapsed = Date.now() - inspectionStartRef.current;
+      setInspectionTime(elapsed);
+      inspectionRafRef.current = requestAnimationFrame(inspectionTick);
+    }
+  }, []);
+
+  const startInspection = useCallback(() => {
+    inspectionStartRef.current = Date.now();
+    setInspectionTime(0);
+    setState("inspecting");
+    inspectionRafRef.current = requestAnimationFrame(inspectionTick);
+  }, [inspectionTick]);
+
+  const stopInspection = useCallback(() => {
+    if (inspectionRafRef.current !== null) {
+      cancelAnimationFrame(inspectionRafRef.current);
+      inspectionRafRef.current = null;
+    }
+    inspectionStartRef.current = null;
+  }, []);
+
   const startTimer = useCallback(() => {
+    stopInspection();
     startTimeRef.current = Date.now();
     setElapsed(0);
     setState("running");
     rafRef.current = requestAnimationFrame(tick);
-  }, [tick]);
+  }, [tick, stopInspection]);
 
   const stopTimer = useCallback(() => {
     if (rafRef.current !== null) {
@@ -123,7 +162,7 @@ export default function TimerPage() {
     setState("stopped");
 
     const event = selectedEventRef.current;
-    Promise.resolve(generateScramble(event)).then(setScramble);
+    setScramble(generateScramble(event));
 
     const prevBest =
       solvesRef.current.length > 0
@@ -140,6 +179,31 @@ export default function TimerPage() {
     });
   }, [elapsed]);
 
+  // Begin hold sequence — start hold timer for delay.
+  const beginHold = useCallback(() => {
+    const delay = settingsRef.current.holdDelay;
+    holdStartRef.current = Date.now();
+
+    if (delay === 0) {
+      // No hold delay — go straight to ready.
+      setState("ready");
+    } else {
+      setState("holding");
+      holdTimerRef.current = setTimeout(() => {
+        setState("ready");
+      }, delay);
+    }
+  }, []);
+
+  // Cancel hold if spacebar released too early.
+  const cancelHold = useCallback(() => {
+    if (holdTimerRef.current !== null) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    holdStartRef.current = null;
+  }, []);
+
   const handlePenalty = async (id: number, penalty: Penalty) => {
     const { solve, stats: newStats } = await updateSolve(id, { penalty });
     setSolves((prev) => prev.map((s) => (s.id === id ? solve : s)));
@@ -154,20 +218,43 @@ export default function TimerPage() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
+      if (e.code !== "Space" || e.repeat) return;
       e.preventDefault();
-      if (state === "running") {
+
+      const s = stateRef.current;
+
+      if (s === "running") {
         stopTimer();
-      } else if (state === "stopped") {
+      } else if (s === "stopped") {
         setState("idle");
+      } else if (s === "idle") {
+        if (settingsRef.current.useInspection) {
+          startInspection();
+        } else {
+          beginHold();
+        }
+      } else if (s === "inspecting") {
+        beginHold();
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
       e.preventDefault();
-      if (state === "idle") {
+
+      const s = stateRef.current;
+
+      if (s === "ready") {
+        cancelHold();
         startTimer();
+      } else if (s === "holding") {
+        // Released before hold delay met — go back.
+        cancelHold();
+        if (settingsRef.current.useInspection && inspectionStartRef.current !== null) {
+          setState("inspecting");
+        } else {
+          setState("idle");
+        }
       }
     };
 
@@ -177,18 +264,15 @@ export default function TimerPage() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [state, startTimer, stopTimer]);
+  }, [startTimer, stopTimer, startInspection, beginHold, cancelHold]);
 
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (inspectionRafRef.current !== null) cancelAnimationFrame(inspectionRafRef.current);
+      if (holdTimerRef.current !== null) clearTimeout(holdTimerRef.current);
     };
   }, []);
-
-  const hint =
-    state === "running"
-      ? "Press spacebar to stop"
-      : "Release spacebar to start";
 
   const eventConfig = EVENT_MAP[selectedEvent];
 
@@ -297,12 +381,20 @@ export default function TimerPage() {
           {scramble ?? ""}
         </p>
         <p
-          className="font-mono tabular-nums"
+          className={`font-mono tabular-nums transition-colors ${
+            state === "holding" ? "text-red-500" :
+            state === "ready" ? "text-green-500" :
+            state === "inspecting" ? "text-yellow-500" :
+            ""
+          }`}
           style={{ fontSize: "clamp(3rem, 15vw, 8rem)" }}
         >
-          {formatTime(elapsed)}
+          {state === "inspecting"
+            ? Math.max(0, Math.ceil((timerSettings.inspectionDuration - inspectionTime) / 1000))
+            : state === "running" && !timerSettings.showTimerWhileRunning
+              ? "..."
+              : formatTime(elapsed)}
         </p>
-{/* hint removed */}
         </div>
 
       {/* Right panel — stats + solves list */}
