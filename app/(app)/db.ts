@@ -91,10 +91,7 @@ async function getAllSolvesForEvent(
     cursorReq.onsuccess = () => {
       const cursor = cursorReq.result;
       if (cursor) {
-        const solve = cursor.value as Solve;
-        if (!solve.event) solve.event = "333" as CubeEvent;
-        if (solve.penalty === undefined) solve.penalty = null;
-        results.push(solve);
+        results.push(cursor.value as Solve);
         cursor.continue();
       } else {
         resolve(results);
