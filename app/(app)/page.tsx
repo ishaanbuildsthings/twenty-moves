@@ -3,11 +3,21 @@
 import confetti from "canvas-confetti";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getScramble } from "./actions";
-import { addSolve, clearSolves, getAllSolves, type Solve } from "./db";
+import {
+  addSolve,
+  clearSolves,
+  getRecentSolves,
+  getStats,
+  type Solve,
+} from "./db";
+import { EVENTS, type CubeEvent } from "@/lib/cubing/events";
+import { EVENT_MAP } from "@/lib/cubing/events";
+import { effectiveTime, type EventStats } from "@/lib/cubing/stats";
 
 type TimerState = "idle" | "ready" | "running" | "stopped";
 
 function formatTime(ms: number): string {
+  if (ms === Infinity) return "DNF";
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -19,20 +29,34 @@ function formatTime(ms: number): string {
   return `${seconds}.${String(centiseconds).padStart(2, "0")}`;
 }
 
+function formatSolveTime(solve: Solve): string {
+  if (solve.penalty === "dnf") return "DNF";
+  const time = formatTime(
+    solve.penalty === "+2" ? solve.timeMs + 2000 : solve.timeMs
+  );
+  return solve.penalty === "+2" ? `${time}+` : time;
+}
+
 export default function TimerPage() {
+  const [selectedEvent, setSelectedEvent] = useState<CubeEvent>("333");
   const [state, setState] = useState<TimerState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [scramble, setScramble] = useState<string | null>(null);
   const [solves, setSolves] = useState<Solve[]>([]);
+  const [stats, setStats] = useState<EventStats | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const scrambleRef = useRef<string | null>(null);
   const solvesRef = useRef<Solve[]>([]);
+  const selectedEventRef = useRef<CubeEvent>(selectedEvent);
 
+  // Load solves and scramble when event changes.
   useEffect(() => {
-    getScramble().then(setScramble);
-    getAllSolves().then(setSolves);
-  }, []);
+    selectedEventRef.current = selectedEvent;
+    getScramble(selectedEvent).then(setScramble);
+    getRecentSolves(selectedEvent).then(setSolves);
+    getStats(selectedEvent).then(setStats);
+  }, [selectedEvent]);
 
   useEffect(() => {
     scrambleRef.current = scramble;
@@ -61,26 +85,31 @@ export default function TimerPage() {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    const finalTime = startTimeRef.current !== null
-      ? Date.now() - startTimeRef.current
-      : elapsed;
+    const finalTime =
+      startTimeRef.current !== null
+        ? Date.now() - startTimeRef.current
+        : elapsed;
     if (startTimeRef.current !== null) {
       setElapsed(finalTime);
       startTimeRef.current = null;
     }
     setState("stopped");
-    getScramble().then(setScramble);
 
-    const prevBest = solvesRef.current.length > 0
-      ? Math.min(...solvesRef.current.map((s) => s.timeMs))
-      : Infinity;
+    const event = selectedEventRef.current;
+    getScramble(event).then(setScramble);
+
+    const prevBest =
+      solvesRef.current.length > 0
+        ? Math.min(...solvesRef.current.map((s) => effectiveTime(s)))
+        : Infinity;
     if (finalTime < prevBest) {
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
     }
 
     const usedScramble = scrambleRef.current ?? "";
-    addSolve(finalTime, usedScramble).then((solve) => {
+    addSolve(event, finalTime, usedScramble).then(({ solve, stats: newStats }) => {
       setSolves((prev) => [solve, ...prev]);
+      setStats(newStats);
     });
   }, [elapsed]);
 
@@ -122,10 +151,63 @@ export default function TimerPage() {
       ? "Press spacebar to stop"
       : "Release spacebar to start";
 
+  const eventMeta = EVENT_MAP[selectedEvent];
+
   return (
     <div className="flex flex-1 overflow-hidden select-none">
-      {/* Left panel */}
-      <aside className="w-48 shrink-0 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
+      {/* Timer area */}
+      <div className="flex flex-col flex-1 items-center justify-center gap-6">
+        {/* Event selector */}
+        <div className="flex flex-wrap justify-center gap-1 px-4">
+          {EVENTS.map((ev) => (
+            <button
+              key={ev}
+              onClick={() => setSelectedEvent(ev)}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                selectedEvent === ev
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {EVENT_MAP[ev].name}
+            </button>
+          ))}
+        </div>
+
+        <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem]">
+          {scramble ?? ""}
+        </p>
+        <p
+          className="font-mono tabular-nums"
+          style={{ fontSize: "clamp(3rem, 15vw, 8rem)" }}
+        >
+          {formatTime(elapsed)}
+        </p>
+        <p className="text-zinc-500 text-sm">{hint}</p>
+
+        {/* Stats display */}
+        {stats && (
+          <div className="flex gap-4 text-xs text-muted-foreground">
+            {eventMeta.useMo3 ? (
+              <>
+                <span>mo3: {stats.currentMo3 !== null ? formatTime(stats.currentMo3) : "-"}</span>
+                <span>best: {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}</span>
+                <span>best mo3: {stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}</span>
+              </>
+            ) : (
+              <>
+                <span>ao5: {stats.currentAo5 !== null ? formatTime(stats.currentAo5) : "-"}</span>
+                <span>ao12: {stats.currentAo12 !== null ? formatTime(stats.currentAo12) : "-"}</span>
+                <span>ao100: {stats.currentAo100 !== null ? formatTime(stats.currentAo100) : "-"}</span>
+                <span>best: {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Right panel — solves list */}
+      <aside className="w-48 shrink-0 border-l border-zinc-200 dark:border-zinc-800 flex flex-col">
         <p className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800">
           Solves
         </p>
@@ -138,33 +220,26 @@ export default function TimerPage() {
               <span className="text-zinc-400 tabular-nums w-6 shrink-0">
                 {solves.length - i}
               </span>
-              <span className="font-mono tabular-nums">{formatTime(solve.timeMs)}</span>
+              <span className="font-mono tabular-nums">
+                {formatSolveTime(solve)}
+              </span>
             </li>
           ))}
         </ul>
         <div className="p-2 border-t border-zinc-200 dark:border-zinc-800">
           <button
             className="w-full text-xs text-zinc-400 hover:text-red-500 py-1 transition-colors"
-            onClick={() => clearSolves().then(() => setSolves([]))}
+            onClick={() =>
+              clearSolves(selectedEvent).then((newStats) => {
+                setSolves([]);
+                setStats(newStats);
+              })
+            }
           >
             Reset
           </button>
         </div>
       </aside>
-
-      {/* Timer area */}
-      <div className="flex flex-col flex-1 items-center justify-center gap-6">
-        <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem]">
-          {scramble ?? ""}
-        </p>
-        <p
-          className="font-mono tabular-nums"
-          style={{ fontSize: "clamp(3rem, 15vw, 8rem)" }}
-        >
-          {formatTime(elapsed)}
-        </p>
-        <p className="text-zinc-500 text-sm">{hint}</p>
-      </div>
     </div>
   );
 }
