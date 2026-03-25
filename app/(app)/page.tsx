@@ -10,8 +10,7 @@ import {
   getStats,
   type Solve,
 } from "./db";
-import { EVENTS, type CubeEvent } from "@/lib/cubing/events";
-import { EVENT_MAP } from "@/lib/cubing/events";
+import { CubeEvent, EVENTS_LIST, EVENT_MAP } from "@/lib/cubing/events";
 import { effectiveTime, type EventStats } from "@/lib/cubing/stats";
 
 type TimerState = "idle" | "ready" | "running" | "stopped";
@@ -38,7 +37,7 @@ function formatSolveTime(solve: Solve): string {
 }
 
 export default function TimerPage() {
-  const [selectedEvent, setSelectedEvent] = useState<CubeEvent>("333");
+  const [selectedEvent, setSelectedEvent] = useState<CubeEvent>(CubeEvent["3x3"]);
   const [state, setState] = useState<TimerState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [scramble, setScramble] = useState<string | null>(null);
@@ -159,17 +158,17 @@ export default function TimerPage() {
       <div className="flex flex-col flex-1 items-center justify-center gap-6">
         {/* Event selector */}
         <div className="flex flex-wrap justify-center gap-1 px-4">
-          {EVENTS.map((ev) => (
+          {EVENTS_LIST.map((meta) => (
             <button
-              key={ev}
-              onClick={() => setSelectedEvent(ev)}
+              key={meta.id}
+              onClick={() => setSelectedEvent(meta.id)}
               className={`px-2 py-1 text-xs rounded transition-colors ${
-                selectedEvent === ev
+                selectedEvent === meta.id
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted"
               }`}
             >
-              {EVENT_MAP[ev].name}
+              {meta.name}
             </button>
           ))}
         </div>
