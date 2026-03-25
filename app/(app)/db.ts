@@ -165,6 +165,7 @@ export async function updateSolve(
         return;
       }
 
+      // undefined = no update was passed, null = removing the penalty
       if (updates.penalty !== undefined) solve.penalty = updates.penalty;
       store.put(solve);
 
