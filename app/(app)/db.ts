@@ -53,8 +53,10 @@ export async function getRecentSolves(
     const tx = db.transaction(SOLVES_STORE, "readonly");
     const index = tx.objectStore(SOLVES_STORE).index(SOLVES_BY_EVENT_DATE);
 
-    // Index keys are [event, date] pairs. This range matches all rows
-    // for this event from date=0 to date=Infinity (i.e. all dates).
+    // IDBKeyRange.bound(lower, upper) creates a range that only matches
+    // index keys between lower and upper (inclusive). Our index keys are
+    // [event, date] pairs, so this matches all rows for this event
+    // from date=0 to date=Infinity (i.e. all dates).
     const range = IDBKeyRange.bound([event, 0], [event, Infinity]);
     const results: Solve[] = [];
 
