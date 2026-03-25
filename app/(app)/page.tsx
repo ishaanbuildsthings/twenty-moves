@@ -223,53 +223,65 @@ export default function TimerPage() {
       <aside className="w-56 shrink-0 border-l border-border flex flex-col bg-card">
         {/* Best stats */}
         {stats && (
-          <div className="px-3 py-3 border-b border-border space-y-1">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Best
+          <div className="px-3 py-3 border-b border-border">
+            <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-2">
+              🏅 Personal Best
             </p>
-            {eventConfig.stats.includes("single") && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Single</span>
-                <span className="font-mono tabular-nums">{stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}</span>
-              </div>
-            )}
-            {eventConfig.stats.includes("mo3") && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Mo3</span>
-                <span className="font-mono tabular-nums">{stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}</span>
-              </div>
-            )}
-            {eventConfig.stats.includes("ao5") && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Ao5</span>
-                <span className="font-mono tabular-nums">{stats.bestAo5 !== null ? formatTime(stats.bestAo5) : "-"}</span>
-              </div>
-            )}
-            {eventConfig.stats.includes("ao12") && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Ao12</span>
-                <span className="font-mono tabular-nums">{stats.bestAo12 !== null ? formatTime(stats.bestAo12) : "-"}</span>
-              </div>
-            )}
-            {eventConfig.stats.includes("ao100") && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Ao100</span>
-                <span className="font-mono tabular-nums">{stats.bestAo100 !== null ? formatTime(stats.bestAo100) : "-"}</span>
-              </div>
-            )}
+            <div className="space-y-2">
+              {eventConfig.stats.includes("single") && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Single</span>
+                  <span className="font-mono tabular-nums text-base font-bold text-primary">
+                    {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}
+                  </span>
+                </div>
+              )}
+              {eventConfig.stats.includes("mo3") && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Mo3</span>
+                  <span className="font-mono tabular-nums text-sm font-bold">
+                    {stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}
+                  </span>
+                </div>
+              )}
+              {eventConfig.stats.includes("ao5") && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Ao5</span>
+                  <span className="font-mono tabular-nums text-sm font-bold">
+                    {stats.bestAo5 !== null ? formatTime(stats.bestAo5) : "-"}
+                  </span>
+                </div>
+              )}
+              {eventConfig.stats.includes("ao12") && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Ao12</span>
+                  <span className="font-mono tabular-nums text-sm font-bold">
+                    {stats.bestAo12 !== null ? formatTime(stats.bestAo12) : "-"}
+                  </span>
+                </div>
+              )}
+              {eventConfig.stats.includes("ao100") && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Ao100</span>
+                  <span className="font-mono tabular-nums text-sm font-bold">
+                    {stats.bestAo100 !== null ? formatTime(stats.bestAo100) : "-"}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
-        <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
-          Solves
+        <p className="px-3 py-2 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest border-b border-border">
+          ⏱️ Solves
         </p>
         <ul className="flex-1 overflow-y-auto min-h-0">
           {solves.map((solve, i) => (
             <Popover key={solve.id}>
-              <PopoverTrigger render={<li />} nativeButton={false} className="flex items-center justify-between px-3 py-1.5 text-sm border-b border-border/50 cursor-pointer hover:bg-muted transition-colors w-full">
-                  <span className="text-muted-foreground tabular-nums w-6 shrink-0">
+              <PopoverTrigger render={<li />} nativeButton={false} className="flex items-center justify-between px-3 py-2 text-sm border-b border-border/40 cursor-pointer hover:bg-muted transition-colors w-full">
+                  <span className="text-muted-foreground tabular-nums text-xs w-6 shrink-0">
                     {solves.length - i}
                   </span>
-                  <span className="font-mono tabular-nums">
+                  <span className="font-mono tabular-nums font-semibold">
                     {formatSolveTime(solve)}
                   </span>
               </PopoverTrigger>
