@@ -20,7 +20,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { X, Copy, Trash2 } from "lucide-react";
+import { X, Copy, Trash2, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type TimerState = "idle" | "ready" | "running" | "stopped";
 
@@ -174,26 +180,33 @@ export default function TimerPage() {
   const eventConfig = EVENT_MAP[selectedEvent];
 
   return (
-    <div className="flex flex-1 overflow-hidden select-none">
-      {/* Timer area */}
-      <div className="flex flex-col flex-1 items-center justify-center gap-6">
-        {/* Event selector */}
-        <div className="flex flex-wrap justify-center gap-1 px-4">
-          {EVENT_CONFIGS.map((meta) => (
-            <button
-              key={meta.id}
-              onClick={() => setSelectedEvent(meta.id)}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                selectedEvent === meta.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {meta.name}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col flex-1 overflow-hidden select-none">
+      {/* Event selector — top bar */}
+      <div className="flex items-center px-4 py-2 border-b border-border">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
+            <span className={`cubing-icon ${eventConfig.iconClass} text-lg`} />
+            <span className="font-bold">{eventConfig.name}</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {EVENT_CONFIGS.map((meta) => (
+              <DropdownMenuItem
+                key={meta.id}
+                onClick={() => setSelectedEvent(meta.id)}
+                className={selectedEvent === meta.id ? "bg-accent" : ""}
+              >
+                <span className={`cubing-icon ${meta.iconClass} text-base`} />
+                <span>{meta.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
+      {/* Timer area */}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 items-center justify-center gap-6">
         <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem]">
           {scramble ?? ""}
         </p>
@@ -204,14 +217,14 @@ export default function TimerPage() {
           {formatTime(elapsed)}
         </p>
         <p className="text-zinc-500 text-sm">{hint}</p>
-      </div>
+        </div>
 
       {/* Right panel — stats + solves list */}
-      <aside className="w-56 shrink-0 border-l border-zinc-200 dark:border-zinc-800 flex flex-col">
+      <aside className="w-56 shrink-0 border-l border-border flex flex-col bg-card">
         {/* Best stats */}
         {stats && (
-          <div className="px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 space-y-1">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+          <div className="px-3 py-3 border-b border-border space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
               Best
             </p>
             {eventConfig.stats.includes("single") && (
@@ -246,14 +259,14 @@ export default function TimerPage() {
             )}
           </div>
         )}
-        <p className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800">
+        <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
           Solves
         </p>
         <ul className="flex-1 overflow-y-auto min-h-0">
           {solves.map((solve, i) => (
             <Popover key={solve.id}>
-              <PopoverTrigger render={<li />} nativeButton={false} className="flex items-center justify-between px-3 py-1.5 text-sm border-b border-zinc-100 dark:border-zinc-800/60 cursor-pointer hover:bg-muted transition-colors w-full">
-                  <span className="text-zinc-400 tabular-nums w-6 shrink-0">
+              <PopoverTrigger render={<li />} nativeButton={false} className="flex items-center justify-between px-3 py-1.5 text-sm border-b border-border/50 cursor-pointer hover:bg-muted transition-colors w-full">
+                  <span className="text-muted-foreground tabular-nums w-6 shrink-0">
                     {solves.length - i}
                   </span>
                   <span className="font-mono tabular-nums">
@@ -325,9 +338,9 @@ export default function TimerPage() {
             </Popover>
           ))}
         </ul>
-        <div className="p-2 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="p-2 border-t border-border">
           <button
-            className="w-full text-xs text-zinc-400 hover:text-red-500 py-1 transition-colors"
+            className="w-full text-xs text-muted-foreground hover:text-red-500 py-1 transition-colors"
             onClick={() =>
               clearSolves(selectedEvent).then((newStats) => {
                 setSolves([]);
@@ -339,6 +352,7 @@ export default function TimerPage() {
           </button>
         </div>
       </aside>
+      </div>
     </div>
   );
 }
