@@ -53,8 +53,8 @@ export function AppSidebar() {
                     render={<Link href={item.href} />}
                     isActive={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
                   >
-                    <span className="text-lg leading-none">{item.icon}</span>
-                    <span>{item.label}</span>
+                    <span className="text-xl leading-none">{item.icon}</span>
+                    <span className="text-base font-bold">{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
