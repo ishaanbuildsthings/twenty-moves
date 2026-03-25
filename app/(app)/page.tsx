@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { X, Copy, Trash2 } from "lucide-react";
 
 type TimerState = "idle" | "ready" | "running" | "stopped";
 
@@ -242,35 +243,65 @@ export default function TimerPage() {
                     {formatSolveTime(solve)}
                   </span>
               </PopoverTrigger>
-              <PopoverContent side="left" align="start" className="w-40 p-1">
+              <PopoverContent side="left" align="start" className="w-64 p-3 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-mono text-xs text-muted-foreground break-all leading-relaxed flex-1">
+                    {solve.scramble}
+                  </p>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      onClick={() => navigator.clipboard.writeText(solve.scramble)}
+                      title="Copy scramble"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <PopoverTrigger render={<button />} className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Close">
+                      <X className="w-3.5 h-3.5" />
+                    </PopoverTrigger>
+                  </div>
+                </div>
+
+                {/* Penalty toggle */}
+                <div className="flex items-center gap-1">
+                  <button
+                    className={`flex-1 text-xs py-1.5 rounded transition-colors ${
+                      solve.penalty === null
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-muted-foreground"
+                    }`}
+                    onClick={() => handlePenalty(solve.id, null)}
+                  >
+                    OK
+                  </button>
+                  <button
+                    className={`flex-1 text-xs py-1.5 rounded transition-colors ${
+                      solve.penalty === "+2"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-muted-foreground"
+                    }`}
+                    onClick={() => handlePenalty(solve.id, "+2")}
+                  >
+                    +2
+                  </button>
+                  <button
+                    className={`flex-1 text-xs py-1.5 rounded transition-colors ${
+                      solve.penalty === "dnf"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-muted-foreground"
+                    }`}
+                    onClick={() => handlePenalty(solve.id, "dnf")}
+                  >
+                    DNF
+                  </button>
+                </div>
+
+                {/* Delete */}
                 <button
-                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors"
-                  onClick={() => {
-                    navigator.clipboard.writeText(solve.scramble);
-                  }}
-                >
-                  Copy scramble
-                </button>
-                <button
-                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors"
-                  onClick={() =>
-                    handlePenalty(solve.id, solve.penalty === "+2" ? null : "+2")
-                  }
-                >
-                  {solve.penalty === "+2" ? "Remove +2" : "+2"}
-                </button>
-                <button
-                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors"
-                  onClick={() =>
-                    handlePenalty(solve.id, solve.penalty === "dnf" ? null : "dnf")
-                  }
-                >
-                  {solve.penalty === "dnf" ? "Remove DNF" : "DNF"}
-                </button>
-                <button
-                  className="w-full text-left px-2 py-1.5 text-sm rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors"
                   onClick={() => handleDelete(solve.id)}
                 >
+                  <Trash2 className="w-3.5 h-3.5" />
                   Delete
                 </button>
               </PopoverContent>
