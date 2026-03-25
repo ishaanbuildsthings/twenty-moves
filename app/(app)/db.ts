@@ -76,11 +76,13 @@ export async function getRecentSolves(
   });
 }
 
-// Load more solves older than a given date (for infinite scroll).
-// Returns the next batch of solves before `beforeDate`, newest first.
+// Load more solves older than a given timestamp (for infinite scroll).
+// Returns the next batch of solves before `olderThanEpochMs`, newest first.
+// `olderThanEpochMs` is a unix timestamp in ms (from Date.now()) — typically
+// the `date` field of the oldest currently loaded solve.
 export async function loadMoreSolves(
   event: CubeEvent,
-  beforeDate: number,
+  olderThanEpochMs: number,
   limit = 50
 ): Promise<Solve[]> {
   const db = await openDB();
@@ -88,8 +90,8 @@ export async function loadMoreSolves(
     const tx = db.transaction(SOLVES_STORE, "readonly");
     const index = tx.objectStore(SOLVES_STORE).index(SOLVES_BY_EVENT_DATE);
 
-    // Range: all solves for this event with date < beforeDate.
-    const range = IDBKeyRange.bound([event, 0], [event, beforeDate], false, true);
+    // Range: all solves for this event with date < olderThanEpochMs.
+    const range = IDBKeyRange.bound([event, 0], [event, olderThanEpochMs], false, true);
     const results: Solve[] = [];
 
     const cursorReq = index.openCursor(range, "prev");
