@@ -225,13 +225,13 @@ export default function TimerPage() {
         {stats && (
           <div className="px-3 py-3 border-b border-border">
             <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-2">
-              🏅 Personal Best
+              🏅 Session Best
             </p>
             <div className="space-y-2">
               {eventConfig.stats.includes("single") && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground">Single</span>
-                  <span className="font-mono tabular-nums text-base font-bold text-primary">
+                  <span className="font-mono tabular-nums text-sm font-bold">
                     {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}
                   </span>
                 </div>
@@ -350,9 +350,9 @@ export default function TimerPage() {
             </Popover>
           ))}
         </ul>
-        <div className="p-2 border-t border-border">
+        <div className="p-2 border-t border-border flex justify-center">
           <button
-            className="w-full text-xs text-muted-foreground hover:text-red-500 py-1 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-500 py-1 px-3 rounded-md hover:bg-red-500/10 transition-colors"
             onClick={() =>
               clearSolves(selectedEvent).then((newStats) => {
                 setSolves([]);
@@ -360,7 +360,8 @@ export default function TimerPage() {
               })
             }
           >
-            Reset
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear session
           </button>
         </div>
       </aside>
