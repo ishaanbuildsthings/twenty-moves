@@ -1,8 +1,15 @@
 import { z } from "zod";
 
 // Public env vars — available in both browser and Edge middleware.
+// NEXT_PUBLIC_ prefix means Next.js bundles these into client-side JS,
+// so they're visible in the browser. Only put non-secret values here.
 const publicEnvSchema = z.object({
+  // The URL of our Supabase project. The browser needs this to know
+  // where to send auth requests (sign in, sign up, sign out).
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  // The publishable (anon) key for our Supabase project. Safe to expose
+  // in the browser — it identifies the project but doesn't grant any
+  // special access. Operations are still gated by Row Level Security.
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
 });
 
