@@ -99,6 +99,7 @@ function computeBestSingle(solves: SolveForStats[]): number | null {
 
 // Scan all solves to find the best ever ao5/ao12/ao100/mo3.
 // Checks every possible window position, not just the current one.
+// Returns null if not enough solves, DNF if all windows are DNF.
 function findBestAverage(
   solves: SolveForStats[],
   computeFn: (s: SolveForStats[]) => number | null
@@ -106,7 +107,8 @@ function findBestAverage(
   let best: number | null = null;
   for (let i = 0; i < solves.length; i++) {
     const val = computeFn(solves.slice(i));
-    if (val !== null && val !== DNF && (best === null || val < best)) {
+    if (val === null) continue;
+    if (best === null || val < best) {
       best = val;
     }
   }
