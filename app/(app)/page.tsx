@@ -387,7 +387,7 @@ export default function TimerPage() {
           }`}
           style={{ fontSize: "clamp(3rem, 15vw, 8rem)" }}
         >
-          {state === "inspecting"
+          {state === "inspecting" || ((state === "holding" || state === "ready") && inspectionStartRef.current !== null)
             ? Math.max(0, Math.ceil((timerSettings.inspectionDuration - inspectionTime) / 1000))
             : state === "running" && !timerSettings.showTimerWhileRunning
               ? "Solve!"
