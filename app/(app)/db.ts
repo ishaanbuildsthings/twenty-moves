@@ -107,8 +107,8 @@ async function updateStatsInTx(
   event: CubeEvent
 ): Promise<EventStats> {
   const solves = await getAllSolvesForEvent(tx, event);
-  const meta = getEventConfig(event);
-  const stats = recomputeStats(event, solves, meta.stats);
+  const eventConfig = getEventConfig(event);
+  const stats = recomputeStats(event, solves, eventConfig.stats);
   const statsStore = tx.objectStore(STATS_STORE);
   statsStore.put(stats);
   return stats;
