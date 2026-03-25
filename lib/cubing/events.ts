@@ -27,7 +27,7 @@ export interface EventMeta {
 }
 
 const STANDARD_STATS: StatType[] = ["ao5", "ao12", "ao100"];
-const BLD_STATS: StatType[] = ["mo3"];
+const BLD_STATS: StatType[] = ["mo3", "ao5", "ao12"];
 
 export const EVENTS_LIST: EventMeta[] = [
   { id: CubeEvent.TWO, name: "2x2", stats: STANDARD_STATS },
