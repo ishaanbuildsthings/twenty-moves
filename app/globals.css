@@ -128,3 +128,37 @@
     @apply font-sans;
   }
 }
+
+/* Rubik's cube face colors */
+:root {
+  --cube-white: #ffffff;
+  --cube-yellow: #ffd500;
+  --cube-red: #c41e3a;
+  --cube-orange: #ff5800;
+  --cube-blue: #0051ba;
+  --cube-green: #009e60;
+}
+
+/* 6-color gradient used as a subtle accent throughout the app */
+.cube-gradient {
+  background: linear-gradient(
+    90deg,
+    var(--cube-red),
+    var(--cube-orange),
+    var(--cube-yellow),
+    var(--cube-green),
+    var(--cube-blue),
+    var(--cube-white)
+  );
+}
+
+.cube-gradient-ring {
+  background: conic-gradient(
+    var(--cube-red),
+    var(--cube-orange),
+    var(--cube-yellow),
+    var(--cube-green),
+    var(--cube-blue),
+    var(--cube-red)
+  );
+}

@@ -41,6 +41,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
+      {/* Cube-colored accent bar at the top of the sidebar */}
+      <div className="cube-gradient h-1 shrink-0" />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
@@ -65,6 +67,11 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger render={<SidebarMenuButton />}>
+                <div className="cube-gradient-ring rounded-full p-[2px] shrink-0">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sidebar text-xs font-semibold">
+                    {viewer.username[0].toUpperCase()}
+                  </div>
+                </div>
                 <span className="truncate text-sm">@{viewer.username}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-48">
