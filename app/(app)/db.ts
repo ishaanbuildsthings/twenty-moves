@@ -4,8 +4,8 @@ import { recomputeStats, type EventStats } from "@/lib/cubing/stats";
 
 const DB_NAME = "cubing-timer";
 const DB_VERSION = 1;
-const SOLVES_STORE = "solves";
-const STATS_STORE = "stats";
+const SOLVES_STORE = "solves"; // IDB table for individual solves
+const STATS_STORE = "stats"; // IDB table for precomputed per-event averages
 
 export type Penalty = "+2" | "dnf" | null;
 
