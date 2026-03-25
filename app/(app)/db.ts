@@ -3,7 +3,7 @@ import { getEventMeta } from "@/lib/cubing/events";
 import { recomputeStats, type EventStats } from "@/lib/cubing/stats";
 
 const DB_NAME = "cubing-timer";
-const DB_VERSION = 2;
+const DB_VERSION = 1;
 const SOLVES_STORE = "solves";
 const STATS_STORE = "stats";
 
@@ -21,29 +21,14 @@ export interface Solve {
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
+    req.onupgradeneeded = () => {
       const db = req.result;
-      const oldVersion = e.oldVersion;
-
-      if (oldVersion < 1) {
-        // Fresh install
-        const solvesStore = db.createObjectStore(SOLVES_STORE, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        solvesStore.createIndex("by-event-date", ["event", "date"]);
-      } else if (oldVersion < 2) {
-        // Upgrading from v1: add index to existing solves store.
-        // Existing solves won't have an event field — they'll be
-        // migrated lazily (treated as "333" when read).
-        const tx = (req.transaction as IDBTransaction);
-        const solvesStore = tx.objectStore(SOLVES_STORE);
-        solvesStore.createIndex("by-event-date", ["event", "date"]);
-      }
-
-      if (oldVersion < 2) {
-        db.createObjectStore(STATS_STORE, { keyPath: "event" });
-      }
+      const solvesStore = db.createObjectStore(SOLVES_STORE, {
+        keyPath: "id",
+        autoIncrement: true,
+      });
+      solvesStore.createIndex("by-event-date", ["event", "date"]);
+      db.createObjectStore(STATS_STORE, { keyPath: "event" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -71,9 +56,6 @@ export async function getRecentSolves(
       const cursor = cursorReq.result;
       if (cursor && results.length < limit) {
         const solve = cursor.value as Solve;
-        // Migrate v1 solves that lack an event field.
-        if (!solve.event) solve.event = "333" as CubeEvent;
-        if (solve.penalty === undefined) solve.penalty = null;
         results.push(solve);
         cursor.continue();
       } else {
@@ -180,7 +162,7 @@ export async function updateSolve(
       store.put(solve);
 
       try {
-        const event = (solve.event || "333") as CubeEvent;
+        const event = solve.event;
         const stats = await updateStatsInTx(tx, event);
         resolve({ solve, stats });
       } catch (err) {
@@ -207,7 +189,7 @@ export async function deleteSolve(
         return;
       }
 
-      const event = (solve.event || "333") as CubeEvent;
+      const event = solve.event;
       store.delete(id);
 
       try {
