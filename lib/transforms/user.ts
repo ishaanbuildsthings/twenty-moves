@@ -8,7 +8,6 @@ export interface IUser {
 }
 
 export interface IPrivateUser extends IUser {
-  supabaseId: string;
   wcaId: string | null;
   createdAt: Date;
 }
@@ -25,7 +24,6 @@ export function userToIUser(user: User): IUser {
 export function userToIPrivateUser(user: User): IPrivateUser {
   return {
     ...userToIUser(user),
-    supabaseId: user.supabaseId,
     wcaId: user.wcaId,
     createdAt: user.createdAt,
   };
