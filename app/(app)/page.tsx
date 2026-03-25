@@ -22,6 +22,13 @@ import {
 } from "@/components/ui/popover";
 import { X, Copy, Check, Trash2, ChevronDown, Settings } from "lucide-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -60,6 +67,7 @@ export default function TimerPage() {
   const [stats, setStats] = useState<EventStats | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const scrambleRef = useRef<string | null>(null);
@@ -208,9 +216,24 @@ export default function TimerPage() {
         <button
           className="ml-auto p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           title="Timer settings"
+          onClick={() => setSettingsOpen(true)}
         >
           <Settings className="w-4 h-4" />
         </button>
+
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Timer Settings</DialogTitle>
+              <DialogDescription>
+                Configure your practice session.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 text-sm text-muted-foreground">
+              No settings available yet.
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Timer area */}
