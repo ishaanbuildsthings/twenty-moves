@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { caller } from "@/lib/trpc/server";
 import { ViewerProvider } from "@/lib/context/viewer";
-import { AuthButton } from "@/lib/components/auth-button";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/lib/components/app-sidebar";
 
 export default async function AppLayout({
   children,
@@ -21,11 +22,12 @@ export default async function AppLayout({
 
   return (
     <ViewerProvider user={session.user}>
-      <header className="flex items-center justify-between border-b px-6 py-3">
-        <a href="/" className="font-bold">Cubing Strava</a>
-        <AuthButton />
-      </header>
-      {children}
+      <SidebarProvider>
+        <AppSidebar />
+        <main className="flex flex-col flex-1 min-h-0">
+          {children}
+        </main>
+      </SidebarProvider>
     </ViewerProvider>
   );
 }

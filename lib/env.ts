@@ -30,9 +30,16 @@ let _publicEnv: PublicEnv | undefined;
 let _serverEnv: ServerEnv | undefined;
 
 // Safe to call from Edge middleware and client code.
+// We must reference each NEXT_PUBLIC_ variable by its full name so that
+// Next.js can inline the values at build time. process.env as a whole
+// object doesn't exist in the browser — only explicit references like
+// process.env.NEXT_PUBLIC_X get replaced with actual values.
 export function publicEnv(): PublicEnv {
   if (!_publicEnv) {
-    _publicEnv = publicEnvSchema.parse(process.env);
+    _publicEnv = publicEnvSchema.parse({
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    });
   }
   return _publicEnv;
 }

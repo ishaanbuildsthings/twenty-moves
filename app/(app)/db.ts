@@ -2,11 +2,14 @@ const DB_NAME = "cubing-timer";
 const DB_VERSION = 1;
 const STORE = "solves";
 
+export type Penalty = "+2" | "dnf" | null;
+
 export interface Solve {
   id: number;
   timeMs: number;
   scramble: string;
   date: number; // epoch ms
+  penalty: Penalty;
 }
 
 function openDB(): Promise<IDBDatabase> {
@@ -20,12 +23,12 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function addSolve(timeMs: number, scramble: string): Promise<Solve> {
+export async function addSolve(timeMs: number, scramble: string, penalty: Penalty = null): Promise<Solve> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
     const store = tx.objectStore(STORE);
-    const solve = { timeMs, scramble, date: Date.now() };
+    const solve = { timeMs, scramble, date: Date.now(), penalty };
     const req = store.add(solve);
     req.onsuccess = () => resolve({ ...solve, id: req.result as number });
     req.onerror = () => reject(req.error);
