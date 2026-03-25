@@ -20,7 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { X, Copy, Trash2, ChevronDown, Settings } from "lucide-react";
+import { X, Copy, Check, Trash2, ChevronDown, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +59,7 @@ export default function TimerPage() {
   const [solves, setSolves] = useState<Solve[]>([]);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const scrambleRef = useRef<string | null>(null);
@@ -333,11 +334,19 @@ export default function TimerPage() {
                     {solve.scramble}
                   </p>
                   <button
-                    className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
-                    onClick={() => navigator.clipboard.writeText(solve.scramble)}
+                    className={`p-1 rounded-md transition-colors shrink-0 ${
+                      copiedId === solve.id
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                    onClick={() => {
+                      navigator.clipboard.writeText(solve.scramble);
+                      setCopiedId(solve.id);
+                      setTimeout(() => setCopiedId(null), 1500);
+                    }}
                     title="Copy scramble"
                   >
-                    <Copy className="w-3.5 h-3.5" />
+                    {copiedId === solve.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
 
