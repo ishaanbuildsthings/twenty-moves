@@ -204,31 +204,48 @@ export default function TimerPage() {
           {formatTime(elapsed)}
         </p>
         <p className="text-zinc-500 text-sm">{hint}</p>
+      </div>
 
-        {/* Stats display */}
+      {/* Right panel — stats + solves list */}
+      <aside className="w-56 shrink-0 border-l border-zinc-200 dark:border-zinc-800 flex flex-col">
+        {/* Best stats */}
         {stats && (
-          <div className="flex gap-4 text-xs text-muted-foreground">
+          <div className="px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 space-y-1">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+              Best
+            </p>
             {eventConfig.stats.includes("single") && (
-              <span>best: {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}</span>
-            )}
-            {eventConfig.stats.includes("ao5") && (
-              <span>ao5: {stats.currentAo5 !== null ? formatTime(stats.currentAo5) : "-"}</span>
-            )}
-            {eventConfig.stats.includes("ao12") && (
-              <span>ao12: {stats.currentAo12 !== null ? formatTime(stats.currentAo12) : "-"}</span>
-            )}
-            {eventConfig.stats.includes("ao100") && (
-              <span>ao100: {stats.currentAo100 !== null ? formatTime(stats.currentAo100) : "-"}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Single</span>
+                <span className="font-mono tabular-nums">{stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}</span>
+              </div>
             )}
             {eventConfig.stats.includes("mo3") && (
-              <span>mo3: {stats.currentMo3 !== null ? formatTime(stats.currentMo3) : "-"}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Mo3</span>
+                <span className="font-mono tabular-nums">{stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}</span>
+              </div>
+            )}
+            {eventConfig.stats.includes("ao5") && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Ao5</span>
+                <span className="font-mono tabular-nums">{stats.bestAo5 !== null ? formatTime(stats.bestAo5) : "-"}</span>
+              </div>
+            )}
+            {eventConfig.stats.includes("ao12") && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Ao12</span>
+                <span className="font-mono tabular-nums">{stats.bestAo12 !== null ? formatTime(stats.bestAo12) : "-"}</span>
+              </div>
+            )}
+            {eventConfig.stats.includes("ao100") && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Ao100</span>
+                <span className="font-mono tabular-nums">{stats.bestAo100 !== null ? formatTime(stats.bestAo100) : "-"}</span>
+              </div>
             )}
           </div>
         )}
-      </div>
-
-      {/* Right panel — solves list */}
-      <aside className="w-48 shrink-0 border-l border-zinc-200 dark:border-zinc-800 flex flex-col">
         <p className="px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800">
           Solves
         </p>

@@ -68,33 +68,40 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarTrigger className="w-full justify-start" />
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<SidebarMenuButton />}>
-                <span className="truncate text-sm">@{viewer.username}</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-48">
-                <DropdownMenuItem
-                  render={<Link href={`/profile/${viewer.username}`} />}
-                >
-                  <User />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  render={<Link href="/settings" />}
-                >
-                  <Settings />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
         </SidebarMenu>
+        {/* Floating profile card — Discord-style */}
+        <div className="mx-2 mb-2 rounded-lg bg-[oklch(0.14_0.003_260)] p-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<button />} className="flex items-center gap-2 w-full rounded-md px-1 py-1 hover:bg-[oklch(0.20_0.004_260)] transition-colors">
+              <div className="w-8 h-8 rounded-full bg-[oklch(0.30_0.004_260)] flex items-center justify-center text-xs font-bold shrink-0">
+                {viewer.username[0].toUpperCase()}
+              </div>
+              <div className="flex flex-col items-start overflow-hidden group-data-[collapsible=icon]:hidden">
+                <span className="text-sm font-semibold truncate w-full">{viewer.firstName}</span>
+                <span className="text-xs text-muted-foreground truncate w-full">@{viewer.username}</span>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-48">
+              <DropdownMenuItem
+                render={<Link href={`/profile/${viewer.username}`} />}
+              >
+                <User />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                render={<Link href="/settings" />}
+              >
+                <Settings />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
