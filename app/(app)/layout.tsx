@@ -21,11 +21,9 @@ export default async function AppLayout({
     redirect("/create-profile");
   }
 
-  const { timerSettings } = await trpc.settings.get();
-
   return (
     <ViewerProvider user={session.user}>
-      <SettingsProvider initialTimerSettings={timerSettings}>
+      <SettingsProvider>
         <SidebarProvider>
           <AppSidebar />
           <main className="flex flex-col flex-1 min-h-0">

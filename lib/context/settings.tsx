@@ -1,9 +1,11 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
-import { useTRPC } from "@/lib/trpc/client";
-import { useMutation } from "@tanstack/react-query";
-import type { TimerSettings } from "@/lib/settings/timer";
+import {
+  loadTimerSettings,
+  saveTimerSettings,
+  type TimerSettings,
+} from "@/lib/settings/timer";
 
 interface SettingsContextValue {
   timerSettings: TimerSettings;
@@ -12,29 +14,19 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
-export function SettingsProvider({
-  initialTimerSettings,
-  children,
-}: {
-  initialTimerSettings: TimerSettings;
-  children: React.ReactNode;
-}) {
-  const [timerSettings, setTimerSettings] = useState(initialTimerSettings);
-  const trpc = useTRPC();
-
-  const mutation = useMutation(
-    trpc.settings.updateTimer.mutationOptions()
-  );
+export function SettingsProvider({ children }: { children: React.ReactNode }) {
+  // Load from localStorage on first render. Synchronous, no loading state.
+  const [timerSettings, setTimerSettings] = useState(loadTimerSettings);
 
   const updateTimerSettings = useCallback(
     (updates: Partial<TimerSettings>) => {
-      const merged = { ...timerSettings, ...updates };
-      // Optimistic update — instant UI response.
-      setTimerSettings(merged);
-      // Persist to database in the background.
-      mutation.mutate({ timerSettings: merged });
+      setTimerSettings((prev) => {
+        const merged = { ...prev, ...updates };
+        saveTimerSettings(merged);
+        return merged;
+      });
     },
-    [timerSettings, mutation]
+    []
   );
 
   return (

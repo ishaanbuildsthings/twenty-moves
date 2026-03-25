@@ -21,17 +21,6 @@ model User {
   personalBests PersonalBest[]
   followers     Follow[]       @relation("followee")
   following     Follow[]       @relation("follower")
-  settings      UserSettings?
-}
-
-model UserSettings {
-  id             String @id @default(cuid())
-  userId         String @unique
-  timerSettings  Json   @default("{}")
-
-  user User @relation(fields: [userId], references: [id])
-
-  updatedAt DateTime @updatedAt
 }
 
 model Event {
