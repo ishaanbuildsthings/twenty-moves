@@ -329,7 +329,6 @@ export default function TimerPage() {
                   <option value={0}>None</option>
                   <option value={300}>0.3s</option>
                   <option value={500}>0.5s</option>
-                  <option value={1000}>1s</option>
                 </select>
               </div>
 
