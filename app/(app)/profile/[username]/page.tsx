@@ -6,7 +6,7 @@ import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, X, Check, ExternalLink } from "lucide-react";
-import type { IPrivateUser } from "@/lib/transforms/user";
+
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -63,7 +63,6 @@ export default function ProfilePage() {
 
   const user = profileQuery.data;
   const isOwnProfile = viewer.id === user.id;
-  const privateUser = isOwnProfile ? (user as IPrivateUser) : null;
 
   const startEditing = () => {
     setEditForm({
@@ -183,13 +182,13 @@ export default function ProfilePage() {
         </div>
 
         {/* Member since — only visible on own profile */}
-        {privateUser && (
+        {isOwnProfile && "createdAt" in user && (
           <div className="flex items-center justify-between py-3 border-b border-border">
             <div>
               <p className="text-sm font-semibold">Member since</p>
             </div>
             <span className="text-sm text-muted-foreground">
-              {new Date(privateUser.createdAt).toLocaleDateString("en-US", {
+              {new Date(user.createdAt as string | Date).toLocaleDateString("en-US", {
                 month: "long",
                 year: "numeric",
               })}
