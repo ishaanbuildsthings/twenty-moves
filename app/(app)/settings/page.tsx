@@ -6,6 +6,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Pencil, Check, X, Loader2, Camera } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { UserAvatar } from "@/lib/components/user-avatar";
 
 type EditingField = "firstName" | "lastName" | "username" | null;
 
@@ -173,14 +174,10 @@ export default function SettingsPage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingPicture}
-            className="relative w-16 h-16 rounded-full bg-muted overflow-hidden flex items-center justify-center group shrink-0"
+            className="relative group shrink-0"
           >
-            {viewer.profilePictureUrl ? (
-              <img src={viewer.profilePictureUrl} alt={viewer.username} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xl font-bold">{viewer.firstName[0].toUpperCase()}</span>
-            )}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <UserAvatar user={viewer} size="md" rounded="xl" />
+            <div className="absolute inset-0 rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               {uploadingPicture ? (
                 <Loader2 className="w-5 h-5 text-white animate-spin" />
               ) : (

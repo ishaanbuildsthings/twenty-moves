@@ -7,6 +7,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
+import { UserAvatar } from "@/lib/components/user-avatar";
 
 type ProfileTab = "overview" | "collection" | "clubs";
 
@@ -72,13 +73,7 @@ export default function ProfilePage() {
       <div className="px-8 pt-8 pb-4">
         <div className="flex items-start justify-between max-w-3xl mx-auto">
           <div className="flex items-center gap-5">
-            <div className="w-24 h-24 rounded-xl bg-muted flex items-center justify-center text-4xl font-bold overflow-hidden">
-              {user.profilePictureUrl ? (
-                <img src={user.profilePictureUrl} alt={user.username} className="w-full h-full object-cover" />
-              ) : (
-                user.firstName[0].toUpperCase()
-              )}
-            </div>
+            <UserAvatar user={user} size="lg" rounded="xl" />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-extrabold">{user.username}</h1>
