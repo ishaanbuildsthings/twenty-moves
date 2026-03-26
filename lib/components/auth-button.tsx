@@ -6,7 +6,7 @@ import { useViewer } from "@/lib/hooks/useViewer";
 
 export function AuthButton() {
   const router = useRouter();
-  const viewer = useViewer();
+  const { viewer } = useViewer();
   const supabase = createBrowserSupabaseClient();
 
   const handleSignOut = async () => {

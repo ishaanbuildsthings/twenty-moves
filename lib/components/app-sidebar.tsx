@@ -33,7 +33,7 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const viewer = useViewer();
+  const { viewer } = useViewer();
   const supabase = createBrowserSupabaseClient();
 
   const handleSignOut = async () => {
@@ -102,7 +102,7 @@ export function AppSidebar() {
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <DropdownMenuItem onClick={handleSignOut} className="text-red-500 focus:text-red-500">
                 <LogOut />
                 <span>Sign out</span>
               </DropdownMenuItem>
