@@ -289,11 +289,6 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between py-3 border-b border-border">
           <div className="flex-1">
             <p className="text-xs text-muted-foreground mb-0.5">Country</p>
-            <p className="text-sm font-medium">
-              {viewer.country
-                ? `${countryCodeToFlag(viewer.country)} ${COUNTRIES.find((c) => c.code === viewer.country)?.name ?? viewer.country}`
-                : "Not set"}
-            </p>
           </div>
           <select
             className="bg-muted rounded-md px-2 py-1 text-sm border border-border"
