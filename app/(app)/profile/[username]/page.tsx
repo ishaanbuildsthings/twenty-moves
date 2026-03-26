@@ -8,23 +8,25 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
+import { EventIcon } from "@/lib/components/event-icon";
 import { countryCodeToFlag } from "@/lib/countries";
+import { CubeEvent, EVENT_MAP } from "@/lib/cubing/events";
 
 type ProfileTab = "overview" | "collection" | "clubs";
 
 // Mock data for placeholder UI
 const MOCK_RATINGS = [
-  { event: "3x3", icon: "event-333", rating: 1420 },
-  { event: "2x2", icon: "event-222", rating: 1180 },
-  { event: "4x4", icon: "event-444", rating: 980 },
-  { event: "OH", icon: "event-333oh", rating: 1050 },
+  { event: CubeEvent.THREE, rating: 1420 },
+  { event: CubeEvent.TWO, rating: 1180 },
+  { event: CubeEvent.FOUR, rating: 980 },
+  { event: CubeEvent.OH, rating: 1050 },
 ];
 
 const MOCK_PBS = [
-  { event: "3x3", icon: "event-333", single: "8.42", ao5: "10.15" },
-  { event: "2x2", icon: "event-222", single: "2.31", ao5: "3.44" },
-  { event: "4x4", icon: "event-444", single: "38.72", ao5: "42.10" },
-  { event: "OH", icon: "event-333oh", single: "14.55", ao5: "17.82" },
+  { event: CubeEvent.THREE, single: "8.42", ao5: "10.15" },
+  { event: CubeEvent.TWO, single: "2.31", ao5: "3.44" },
+  { event: CubeEvent.FOUR, single: "38.72", ao5: "42.10" },
+  { event: CubeEvent.OH, single: "14.55", ao5: "17.82" },
 ];
 
 const MOCK_POSTS = [
@@ -151,18 +153,23 @@ export default function ProfilePage() {
                 Ratings
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {MOCK_RATINGS.map((r) => (
-                  <div
-                    key={r.event}
-                    className="bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`cubing-icon ${r.icon} text-lg`} />
-                      <span className="text-xs font-semibold text-muted-foreground">{r.event}</span>
+                {MOCK_RATINGS.map((r) => {
+                  const config = EVENT_MAP[r.event];
+                  return (
+                    <div
+                      key={r.event}
+                      className="bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <EventIcon event={config} size={44} />
+                        <div>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">{config.name}</span>
+                          <p className="text-2xl font-extrabold text-foreground leading-tight">{r.rating}</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-2xl font-extrabold text-foreground">{r.rating}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -177,14 +184,16 @@ export default function ProfilePage() {
                   <span className="text-right">Single</span>
                   <span className="text-right">Ao5</span>
                 </div>
-                {MOCK_PBS.map((pb) => (
+                {MOCK_PBS.map((pb) => {
+                  const config = EVENT_MAP[pb.event];
+                  return (
                   <div
                     key={pb.event}
                     className="grid grid-cols-[1fr_5rem_5rem] gap-2 px-4 py-3 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <span className={`cubing-icon ${pb.icon} text-base`} />
-                      <span className="text-sm font-semibold">{pb.event}</span>
+                      <EventIcon event={config} size={18} />
+                      <span className="text-sm font-semibold">{config.name}</span>
                     </div>
                     <span className="text-base font-mono tabular-nums text-right font-extrabold text-foreground">
                       {pb.single}
@@ -193,7 +202,8 @@ export default function ProfilePage() {
                       {pb.ao5}
                     </span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 

@@ -8,11 +8,13 @@ import { Pencil, Check, X, Loader2, Camera, ChevronDown } from "lucide-react";
 import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
+import { useSettings } from "@/lib/context/settings";
 
 type EditingField = "firstName" | "lastName" | "username" | null;
 
 export default function SettingsPage() {
   const { viewer, setViewer } = useViewer();
+  const { displaySettings, updateDisplaySettings } = useSettings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -317,6 +319,41 @@ export default function SettingsPage() {
         {error && (
           <p className="text-sm text-red-500 pt-2">{error}</p>
         )}
+      </section>
+
+      {/* Display section */}
+      <section>
+        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Display
+        </h2>
+        <div className="py-3 border-b border-border">
+          <p className="text-sm font-medium mb-1">Icon style</p>
+          <p className="text-xs text-muted-foreground mb-3">Choose how event icons appear across the app</p>
+          <div className="flex gap-2">
+            <button
+              className={`flex flex-col items-center gap-2 px-5 py-3 rounded-lg border-2 transition-colors ${
+                !displaySettings.use3dIcons
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:border-muted-foreground/40"
+              }`}
+              onClick={() => updateDisplaySettings({ use3dIcons: false })}
+            >
+              <span className="cubing-icon event-333 text-3xl" />
+              <span className="text-xs font-semibold">Flat</span>
+            </button>
+            <button
+              className={`flex flex-col items-center gap-2 px-5 py-3 rounded-lg border-2 transition-colors ${
+                displaySettings.use3dIcons
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:border-muted-foreground/40"
+              }`}
+              onClick={() => updateDisplaySettings({ use3dIcons: true })}
+            >
+              <img src="/rubiks_3x3.svg" alt="3D" width={32} height={32} />
+              <span className="text-xs font-semibold">3D</span>
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   );

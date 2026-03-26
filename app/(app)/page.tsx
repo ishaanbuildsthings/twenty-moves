@@ -16,14 +16,15 @@ import {
   type Penalty,
 } from "./db";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CubeEvent, EVENT_CONFIGS, EVENT_MAP, type EventConfig } from "@/lib/cubing/events";
+import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
+import { EventIcon } from "@/lib/components/event-icon";
 import { effectiveTime, type EventStats } from "@/lib/cubing/stats";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { X, Copy, Check, Trash2, ChevronDown, Settings } from "lucide-react";
+import { X, Copy, Check, Trash2, ChevronDown, Settings, PanelRightClose, PanelRightOpen } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,7 @@ export default function TimerPage() {
   const [totalSolveCount, setTotalSolveCount] = useState(0);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Whether there are more solves in IDB beyond what's currently loaded.
@@ -328,7 +330,7 @@ export default function TimerPage() {
       <div className="flex items-center px-4 py-2 border-b border-border">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
-            <span className={`cubing-icon ${eventConfig.iconClass} text-lg`} />
+            <EventIcon event={eventConfig} size={32} />
             <span className="font-bold">{eventConfig.name}</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </DropdownMenuTrigger>
@@ -339,7 +341,7 @@ export default function TimerPage() {
                 onClick={() => setSelectedEvent(meta.id)}
                 className={selectedEvent === meta.id ? "bg-accent" : ""}
               >
-                <span className={`cubing-icon ${meta.iconClass} text-base`} />
+                <EventIcon event={meta} size={28} />
                 <span>{meta.name}</span>
               </DropdownMenuItem>
             ))}
@@ -443,15 +445,24 @@ export default function TimerPage() {
         </div>
 
       {/* Right panel — stats + solves list */}
-      <aside className="w-56 shrink-0 border-l border-border flex flex-col bg-card">
+      <aside className={`shrink-0 border-l border-border flex flex-col bg-card transition-all ${rightPanelOpen ? "w-56" : "w-10"}`}>
+        {/* Collapse toggle */}
+        <button
+          className="flex items-center px-3 py-2 hover:bg-muted transition-colors"
+          onClick={() => setRightPanelOpen(!rightPanelOpen)}
+          title={rightPanelOpen ? "Collapse panel" : "Expand panel"}
+        >
+          {rightPanelOpen ? <PanelRightClose className="w-4 h-4 text-foreground" /> : <PanelRightOpen className="w-4 h-4 text-foreground" />}
+        </button>
+        {rightPanelOpen && <>
         {/* Stats table — current & best */}
         {stats && (
           <div className="border-b border-border">
-            <p className="px-3 pt-3 pb-1 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5" suppressHydrationWarning>
+            <p className="px-3 pt-2 pb-2 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5" suppressHydrationWarning>
               <span className="text-base leading-none">📈</span> Stats
             </p>
             {/* Column headers */}
-            <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 px-3 pb-1">
+            <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 px-3 pb-1.5">
               <span />
               <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest text-right">Current</span>
               <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest text-right">Best</span>
@@ -644,6 +655,7 @@ export default function TimerPage() {
             </button>
           )}
         </div>
+        </>}
       </aside>
       </div>
     </div>
