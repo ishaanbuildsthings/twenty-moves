@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { PrismaClientKnownRequestError } from "@prisma/client-runtime-utils";
 import { createTRPCRouter, authedProcedure } from "../init";
 import { userService } from "@/lib/services/user";
 import { userToIUser } from "@/lib/transforms/user";
@@ -22,7 +24,14 @@ export const userRouter = createTRPCRouter({
       lastName: z.string().min(1).max(50).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const user = await userService(ctx).update(ctx.viewer.userId, input);
-      return userToIUser(user);
+      try {
+        const user = await userService(ctx).update(ctx.viewer.userId, input);
+        return userToIUser(user);
+      } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
+          throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
+        }
+        throw e;
+      }
     }),
 });

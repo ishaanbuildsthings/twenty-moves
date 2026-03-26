@@ -28,6 +28,17 @@ export const createTRPCContext = async () => {
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
+  // Prevent internal errors (Prisma, DB, etc.) from leaking to the client.
+  // Only intentional TRPCErrors pass through with their original message.
+  errorFormatter({ shape, error }) {
+    return {
+      ...shape,
+      message:
+        error.code === "INTERNAL_SERVER_ERROR"
+          ? "Something went wrong"
+          : shape.message,
+    };
+  },
 });
 
 export const createTRPCRouter = t.router;
