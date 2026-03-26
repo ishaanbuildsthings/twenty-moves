@@ -13,6 +13,7 @@ export const authRouter = createTRPCRouter({
         username: z.string().min(3).max(30),
         firstName: z.string().min(1).max(50),
         lastName: z.string().min(1).max(50),
+        profilePictureUrl: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -40,6 +41,7 @@ export const authRouter = createTRPCRouter({
           username: input.username,
           firstName: input.firstName,
           lastName: input.lastName,
+          profilePictureUrl: input.profilePictureUrl,
         },
       });
 
