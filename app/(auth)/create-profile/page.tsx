@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -11,14 +12,57 @@ export default function CreateProfilePage() {
   const [username, setUsername] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+  const [profilePictureError, setProfilePictureError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createProfile = useMutation(
     trpc.auth.createProfile.mutationOptions()
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (file && !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      e.target.value = "";
+      setProfilePictureError("Please upload a JPEG, PNG, WebP, or GIF.");
+      return;
+    }
+    if (file && file.size > 5 * 1024 * 1024) {
+      e.target.value = "";
+      setProfilePictureError("Photo must be under 5MB.");
+      return;
+    }
+    setProfilePictureError(null);
+    setProfilePictureFile(file);
+    setProfilePicturePreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    await createProfile.mutateAsync({ username, firstName, lastName });
+
+    let profilePictureUrl: string | undefined;
+
+    if (profilePictureFile) {
+      const supabase = createBrowserSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const path = `${user.id}/profile`;
+
+      const { error } = await supabase.storage
+        .from("avatars")
+        .upload(path, profilePictureFile, { upsert: true });
+
+      if (error) throw new Error(error.message);
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      profilePictureUrl = data.publicUrl;
+    }
+
+    await createProfile.mutateAsync({ username, firstName, lastName, profilePictureUrl });
     router.push("/");
   };
 
@@ -27,6 +71,29 @@ export default function CreateProfilePage() {
       <div className="w-full max-w-sm space-y-6">
         <h1 className="text-2xl font-bold text-center">Create your profile</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-20 h-20 rounded-full border-2 border-dashed border-zinc-300 overflow-hidden flex items-center justify-center text-zinc-400 hover:border-zinc-400 transition-colors"
+            >
+              {profilePicturePreview ? (
+                <img src={profilePicturePreview} alt="Profile picture preview" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xs text-center leading-tight px-1">Add photo</span>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            {profilePictureError && (
+              <p className="text-xs text-red-500">{profilePictureError}</p>
+            )}
+          </div>
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-zinc-700">
               Username
