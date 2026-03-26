@@ -6,7 +6,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Pencil, Check, X, Loader2, Camera } from "lucide-react";
 import { UserAvatar } from "@/lib/components/user-avatar";
-import { validateAvatarFile, uploadAvatar } from "@/lib/supabase/upload-avatar";
+import { validateAvatarFile, uploadAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
 
 type EditingField = "firstName" | "lastName" | "username" | null;
 
@@ -170,7 +170,7 @@ export default function SettingsPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept={ACCEPTED_IMAGE_TYPES}
             className="hidden"
             onChange={handlePictureUpload}
           />

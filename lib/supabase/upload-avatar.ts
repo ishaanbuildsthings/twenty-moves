@@ -4,7 +4,9 @@
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+// For use in <input accept="..."> attributes.
+export const ACCEPTED_IMAGE_TYPES = ALLOWED_IMAGE_TYPES.join(",");
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export function validateAvatarFile(file: File): string | null {

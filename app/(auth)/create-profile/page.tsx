@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
 import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
-import { validateAvatarFile, uploadAvatar } from "@/lib/supabase/upload-avatar";
+import { validateAvatarFile, uploadAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -71,7 +71,7 @@ export default function CreateProfilePage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_IMAGE_TYPES}
               className="hidden"
               onChange={handleFileChange}
             />
