@@ -161,10 +161,10 @@ export default function ProfilePage() {
                       className="bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <EventIcon event={config} size={36} />
+                        <EventIcon event={config} size={44} />
                         <div>
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{config.name}</span>
-                          <p className="text-3xl font-extrabold text-foreground leading-none">{r.rating}</p>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">{config.name}</span>
+                          <p className="text-2xl font-extrabold text-foreground leading-tight">{r.rating}</p>
                         </div>
                       </div>
                     </div>
