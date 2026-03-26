@@ -75,9 +75,11 @@ export default function SettingsPage() {
       cancelEditing();
       return;
     }
-    // Don't save if username is taken.
-    if (editingField === "username" && usernameCheck.data && !usernameCheck.data.available) {
-      return;
+    // Don't save if username check is pending or username is taken.
+    if (editingField === "username" && editValue !== viewer.username) {
+      if (!usernameCheck.data || !usernameCheck.data.available) {
+        return;
+      }
     }
     updateMutation.mutate({ [editingField]: editValue });
   };
