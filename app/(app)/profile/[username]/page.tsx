@@ -181,20 +181,6 @@ export default function ProfilePage() {
           ) : null}
         </div>
 
-        {/* Member since — only visible on own profile */}
-        {isOwnProfile && "createdAt" in user && (
-          <div className="flex items-center justify-between py-3 border-b border-border">
-            <div>
-              <p className="text-sm font-semibold">Member since</p>
-            </div>
-            <span className="text-sm text-muted-foreground">
-              {new Date(user.createdAt as string | Date).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-        )}
 
         {updateMutation.error && (
           <p className="text-sm text-red-500">

@@ -516,7 +516,7 @@ export default function TimerPage() {
             </div>
           </div>
         )}
-        <p className="px-3 py-2 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest border-b border-border flex items-center gap-1.5">
+        <p className="px-3 py-2 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest border-y border-border flex items-center gap-1.5">
           <span className="text-base leading-none">⏱️</span> Solves
         </p>
         <ul ref={scrollParentRef} className="flex-1 overflow-y-auto min-h-0">

@@ -1,17 +1,17 @@
 import { z } from "zod";
 import { createTRPCRouter, authedProcedure } from "../init";
 import { userService } from "@/lib/services/user";
-import { userToIUser, userToIPrivateUser } from "@/lib/transforms/user";
+import { userToIUser } from "@/lib/transforms/user";
 
 export const userRouter = createTRPCRouter({
-  // Fetch a user by username. Returns private data if the viewer is
-  // looking at their own profile.
+  // Fetch a user by username. Always returns the same public shape.
+  // The client determines if it's the viewer's own profile by
+  // comparing IDs, and conditionally shows edit controls.
   getByUsername: authedProcedure
     .input(z.object({ username: z.string() }))
     .query(async ({ ctx, input }) => {
       const user = await userService(ctx).getByUsername(input.username);
-      const isOwn = user.id === ctx.viewer.userId;
-      return isOwn ? userToIPrivateUser(user) : userToIUser(user);
+      return userToIUser(user);
     }),
 
   // Update the current user's profile.
@@ -23,6 +23,6 @@ export const userRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const user = await userService(ctx).update(ctx.viewer.userId, input);
-      return userToIPrivateUser(user);
+      return userToIUser(user);
     }),
 });
