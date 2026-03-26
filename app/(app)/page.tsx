@@ -329,7 +329,7 @@ export default function TimerPage() {
       <div className="flex items-center px-4 py-2 border-b border-border">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
-            <EventIcon event={eventConfig} size={26} />
+            <EventIcon event={eventConfig} size={32} />
             <span className="font-bold">{eventConfig.name}</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </DropdownMenuTrigger>
@@ -340,7 +340,7 @@ export default function TimerPage() {
                 onClick={() => setSelectedEvent(meta.id)}
                 className={selectedEvent === meta.id ? "bg-accent" : ""}
               >
-                <EventIcon event={meta} size={24} />
+                <EventIcon event={meta} size={28} />
                 <span>{meta.name}</span>
               </DropdownMenuItem>
             ))}
