@@ -152,7 +152,7 @@ export default function SettingsPage() {
                       onClick={saveField}
                       disabled={
                         updateMutation.isPending ||
-                        (field.key === "username" && usernameStatus?.valid === false)
+                        (field.key === "username" && usernameStatus?.valid !== true)
                       }
                     >
                       {updateMutation.isPending ? (
