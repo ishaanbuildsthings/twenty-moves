@@ -40,6 +40,7 @@ export const userRouter = createTRPCRouter({
         (url) => url.startsWith(`${publicEnv().NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/`),
         { message: "Invalid profile picture URL" }
       ).nullable().optional(),
+      country: z.string().length(2).nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {

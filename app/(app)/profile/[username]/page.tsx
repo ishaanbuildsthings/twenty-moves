@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
+import { countryCodeToFlag } from "@/lib/countries";
 
 type ProfileTab = "overview" | "collection" | "clubs";
 
@@ -76,7 +77,14 @@ export default function ProfilePage() {
             <UserAvatar user={user} size="lg" rounded="xl" />
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-extrabold">{user.username}</h1>
+                <h1 className="text-2xl font-extrabold">
+                  {user.username}
+                  {user.country && (
+                    <span className="ml-2" title={user.country}>
+                      {countryCodeToFlag(user.country)}
+                    </span>
+                  )}
+                </h1>
                 {user.wcaId && (
                   <a
                     href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}

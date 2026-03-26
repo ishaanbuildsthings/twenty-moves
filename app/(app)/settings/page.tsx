@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Pencil, Check, X, Loader2, Camera } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Check, X, Loader2, Camera, ChevronDown } from "lucide-react";
+import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
 
@@ -13,6 +14,7 @@ type EditingField = "firstName" | "lastName" | "username" | null;
 export default function SettingsPage() {
   const { viewer, setViewer } = useViewer();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editValue, setEditValue] = useState("");
@@ -52,6 +54,11 @@ export default function SettingsPage() {
     ...trpc.user.updateProfile.mutationOptions(),
     onSuccess: (updatedUser) => {
       setViewer(updatedUser);
+      // Update the profile page cache so navigating there shows fresh data.
+      queryClient.setQueryData(
+        trpc.user.getByUsername.queryKey({ username: updatedUser.username }),
+        updatedUser,
+      );
       setEditingField(null);
       setEditValue("");
       setError(null);
@@ -283,6 +290,29 @@ export default function SettingsPage() {
             )}
           </div>
         ))}
+
+        {/* Country / flag */}
+        <div className="flex items-center justify-between py-3 border-b border-border">
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground mb-0.5">Country</p>
+          </div>
+          <select
+            className="bg-muted rounded-md px-2 py-1 text-sm border border-border focus:outline-none"
+            value={viewer.country ?? ""}
+            onChange={async (e) => {
+              const country = e.target.value || null;
+              const updatedUser = await updateMutation.mutateAsync({ country });
+              setViewer(updatedUser);
+            }}
+          >
+            <option value="">None</option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {countryCodeToFlag(c.code)} {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {error && (
           <p className="text-sm text-red-500 pt-2">{error}</p>

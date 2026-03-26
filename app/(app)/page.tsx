@@ -369,7 +369,7 @@ export default function TimerPage() {
                   <p className="text-xs text-muted-foreground">How long to hold spacebar before ready</p>
                 </div>
                 <select
-                  className="bg-muted rounded-md px-2 py-1 text-sm"
+                  className="bg-muted rounded-md px-2 py-1 text-sm focus:outline-none"
                   value={timerSettings.holdDelayMs}
                   onChange={(e) => updateTimerSettings({ holdDelayMs: Number(e.target.value) })}
                 >

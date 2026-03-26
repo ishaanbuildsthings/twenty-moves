@@ -17,7 +17,7 @@ export function userService(ctx: ServiceContext) {
     getByUsername: (username: string) =>
       prisma.user.findUniqueOrThrow({ where: { username } }),
 
-    update: (id: string, data: { username?: string; firstName?: string; lastName?: string; wcaId?: string | null; profilePictureUrl?: string | null }) =>
+    update: (id: string, data: { username?: string; firstName?: string; lastName?: string; wcaId?: string | null; profilePictureUrl?: string | null; country?: string | null }) =>
       prisma.user.update({ where: { id }, data }),
 
     delete: (id: string) => prisma.user.delete({ where: { id } }),
