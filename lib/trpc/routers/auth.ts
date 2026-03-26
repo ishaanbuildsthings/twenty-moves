@@ -14,6 +14,7 @@ export const authRouter = createTRPCRouter({
         username: z.string().min(3).max(30),
         firstName: z.string().min(1).max(50),
         lastName: z.string().min(1).max(50),
+        country: z.string().length(2).optional(),
         profilePictureUrl: z.string().refine(
           (url) => url.startsWith(`${publicEnv().NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/`),
           { message: "Invalid profile picture URL" }
@@ -46,6 +47,7 @@ export const authRouter = createTRPCRouter({
           firstName: input.firstName,
           lastName: input.lastName,
           profilePictureUrl: input.profilePictureUrl,
+          country: input.country,
         },
       });
 

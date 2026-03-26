@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function CreateProfilePage() {
   const [username, setUsername] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [country, setCountry] = useState("");
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
   const [profilePictureError, setProfilePictureError] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export default function CreateProfilePage() {
       profilePictureUrl = data.publicUrl;
     }
 
-    await createProfile.mutateAsync({ username, firstName, lastName, profilePictureUrl });
+    await createProfile.mutateAsync({ username, firstName, lastName, profilePictureUrl, country: country || undefined });
     router.push("/");
   };
 
@@ -136,6 +138,24 @@ export default function CreateProfilePage() {
               onChange={(e) => setLastName(e.target.value)}
               className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium text-zinc-700">
+              Country
+            </label>
+            <select
+              id="country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm appearance-none"
+            >
+              <option value="">Select a country</option>
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name} {countryCodeToFlag(c.code)}
+                </option>
+              ))}
+            </select>
           </div>
           {createProfile.error && (
             <p className="text-sm text-red-600">{createProfile.error.message}</p>
