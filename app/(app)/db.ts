@@ -42,6 +42,20 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+// Count total solves for an event without loading data.
+// Used to display correct solve numbers in the UI.
+export async function countSolvesForEvent(event: CubeEvent): Promise<number> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SOLVES_STORE, "readonly");
+    const index = tx.objectStore(SOLVES_STORE).index(SOLVES_BY_EVENT_DATE);
+    const range = IDBKeyRange.bound([event, 0], [event, Infinity]);
+    const req = index.count(range);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 // Fetch recent solves for an event, newest first.
 // Uses the [event, date] index with a cursor for efficient access.
 export async function getRecentSolves(
@@ -67,6 +81,38 @@ export async function getRecentSolves(
       if (cursor && results.length < limit) {
         const solve = cursor.value as Solve;
         results.push(solve);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    cursorReq.onerror = () => reject(cursorReq.error);
+  });
+}
+
+// Load more solves older than a given timestamp (for infinite scroll).
+// Returns the next batch of solves before `olderThanEpochMs`, newest first.
+// `olderThanEpochMs` is a unix timestamp in ms (from Date.now()) — typically
+// the `date` field of the oldest currently loaded solve.
+export async function loadMoreSolves(
+  event: CubeEvent,
+  olderThanEpochMs: number,
+  limit = 50
+): Promise<Solve[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SOLVES_STORE, "readonly");
+    const index = tx.objectStore(SOLVES_STORE).index(SOLVES_BY_EVENT_DATE);
+
+    // Range: all solves for this event with date < olderThanEpochMs.
+    const range = IDBKeyRange.bound([event, 0], [event, olderThanEpochMs], false, true);
+    const results: Solve[] = [];
+
+    const cursorReq = index.openCursor(range, "prev");
+    cursorReq.onsuccess = () => {
+      const cursor = cursorReq.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value as Solve);
         cursor.continue();
       } else {
         resolve(results);

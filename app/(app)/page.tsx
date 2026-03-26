@@ -6,13 +6,16 @@ import { generateScramble } from "@/lib/cubing/scramble";
 import {
   addSolve,
   clearSolves,
+  countSolvesForEvent,
   deleteSolve,
   getRecentSolves,
   getStats,
+  loadMoreSolves,
   updateSolve,
   type Solve,
   type Penalty,
 } from "./db";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP, type EventConfig } from "@/lib/cubing/events";
 import { effectiveTime, type EventStats } from "@/lib/cubing/stats";
 import {
@@ -73,10 +76,19 @@ export default function TimerPage() {
   const [inspectionTime, setInspectionTime] = useState(0);
   const [scramble, setScramble] = useState<string | null>(null);
   const [solves, setSolves] = useState<Solve[]>([]);
+  const [totalSolveCount, setTotalSolveCount] = useState(0);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Whether there are more solves in IDB beyond what's currently loaded.
+  // False once a batch returns fewer results than requested.
+  const [hasMore, setHasMore] = useState(true);
+  // True while fetching the next batch of solves (prevents duplicate requests).
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Ref to the scrollable <ul> container — needed by the virtualizer to
+  // measure scroll position and determine which rows are visible.
+  const scrollParentRef = useRef<HTMLUListElement>(null);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const holdStartRef = useRef<number | null>(null);
@@ -98,7 +110,13 @@ export default function TimerPage() {
     selectedEventRef.current = selectedEvent;
     setConfirmClear(false);
     setScramble(generateScramble(selectedEvent));
-    getRecentSolves(selectedEvent).then(setSolves);
+    setHasMore(true);
+    const INITIAL_SOLVES_LOADED = 100;
+    getRecentSolves(selectedEvent, INITIAL_SOLVES_LOADED).then((loaded) => {
+      setSolves(loaded);
+      setHasMore(loaded.length === INITIAL_SOLVES_LOADED);
+    });
+    countSolvesForEvent(selectedEvent).then(setTotalSolveCount);
     getStats(selectedEvent).then(setStats);
   }, [selectedEvent]);
 
@@ -174,6 +192,7 @@ export default function TimerPage() {
     const usedScramble = scrambleRef.current ?? "";
     addSolve(event, finalTime, usedScramble).then(({ solve, stats: newStats }) => {
       setSolves((prev) => [solve, ...prev]);
+      setTotalSolveCount((c) => c + 1);
       setStats(newStats);
     });
   }, [elapsed]);
@@ -212,8 +231,38 @@ export default function TimerPage() {
   const handleDelete = async (id: number) => {
     const { stats: newStats } = await deleteSolve(id);
     setSolves((prev) => prev.filter((s) => s.id !== id));
+    setTotalSolveCount((c) => c - 1);
     setStats(newStats);
   };
+
+  // Infinite scroll — load more solves when scrolling near bottom.
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || solves.length === 0) return;
+    setLoadingMore(true);
+    const oldestSolve = solves[solves.length - 1];
+    const BATCH_SIZE = 50;
+    const more = await loadMoreSolves(selectedEvent, oldestSolve.date, BATCH_SIZE);
+    setSolves((prev) => [...prev, ...more]);
+    setHasMore(more.length === BATCH_SIZE);
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, solves, selectedEvent]);
+
+  // Virtualizer for the solves list.
+  const virtualizer = useVirtualizer({
+    count: solves.length,
+    getScrollElement: () => scrollParentRef.current,
+    estimateSize: () => 36,
+    overscan: 10,
+  });
+
+  // Trigger load more when scrolled near bottom.
+  useEffect(() => {
+    const lastItem = virtualizer.getVirtualItems().at(-1);
+    if (!lastItem) return;
+    if (lastItem.index >= solves.length - 10 && hasMore && !loadingMore) {
+      handleLoadMore();
+    }
+  }, [virtualizer.getVirtualItems(), solves.length, hasMore, loadingMore, handleLoadMore]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -470,73 +519,97 @@ export default function TimerPage() {
         <p className="px-3 py-2 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest border-b border-border flex items-center gap-1.5">
           <span className="text-base leading-none">⏱️</span> Solves
         </p>
-        <ul className="flex-1 overflow-y-auto min-h-0">
-          {solves.map((solve, i) => (
-            <Popover key={solve.id}>
-              <PopoverTrigger render={<li />} nativeButton={false} className="flex items-center justify-between px-3 py-2 text-sm border-b border-border/40 cursor-pointer hover:bg-muted transition-colors w-full">
-                  <span className="text-muted-foreground tabular-nums text-xs w-6 shrink-0">
-                    {solves.length - i}
-                  </span>
-                  <span className="font-mono tabular-nums font-semibold">
-                    {formatSolveTime(solve)}
-                  </span>
-              </PopoverTrigger>
-              <PopoverContent side="left" align="center" className="w-72 p-4 space-y-3">
-                {/* Time + delete */}
-                <div className="flex items-center justify-between">
-                  <span className="font-mono tabular-nums text-lg font-bold">
-                    {formatSolveTime(solve)}
-                  </span>
-                  <button
-                    className="p-1.5 rounded-md hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400"
-                    onClick={() => handleDelete(solve.id)}
-                    title="Delete solve"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+        <ul ref={scrollParentRef} className="flex-1 overflow-y-auto min-h-0">
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const solve = solves[virtualRow.index];
+              const i = virtualRow.index;
+              return (
+                <div
+                  key={solve.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <Popover>
+                    <PopoverTrigger render={<li />} nativeButton={false} className="flex items-center justify-between px-3 py-2 text-sm border-b border-border/40 cursor-pointer hover:bg-muted transition-colors w-full h-full">
+                        <span className="text-muted-foreground tabular-nums text-xs w-6 shrink-0">
+                          {totalSolveCount - i}
+                        </span>
+                        <span className="font-mono tabular-nums font-semibold">
+                          {formatSolveTime(solve)}
+                        </span>
+                    </PopoverTrigger>
+                    <PopoverContent side="left" align="center" className="w-72 p-4 space-y-3">
+                      {/* Time + delete */}
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono tabular-nums text-lg font-bold">
+                          {formatSolveTime(solve)}
+                        </span>
+                        <button
+                          className="p-1.5 rounded-md hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400"
+                          onClick={() => handleDelete(solve.id)}
+                          title="Delete solve"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
 
-                {/* Scramble */}
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                    {solve.scramble}
-                  </p>
-                  <button
-                    className={`p-1 rounded-md transition-colors shrink-0 ${
-                      copiedId === solve.id
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                    onClick={() => {
-                      navigator.clipboard.writeText(solve.scramble);
-                      setCopiedId(solve.id);
-                      setTimeout(() => setCopiedId(null), 1500);
-                    }}
-                    title="Copy scramble"
-                  >
-                    {copiedId === solve.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
+                      {/* Scramble */}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                          {solve.scramble}
+                        </p>
+                        <button
+                          className={`p-1 rounded-md transition-colors shrink-0 ${
+                            copiedId === solve.id
+                              ? "text-primary"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          }`}
+                          onClick={() => {
+                            navigator.clipboard.writeText(solve.scramble);
+                            setCopiedId(solve.id);
+                            setTimeout(() => setCopiedId(null), 1500);
+                          }}
+                          title="Copy scramble"
+                        >
+                          {copiedId === solve.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
 
-                {/* Penalty toggle */}
-                <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
-                  {([null, "+2", "dnf"] as const).map((p) => (
-                    <button
-                      key={p ?? "ok"}
-                      className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition-colors ${
-                        solve.penalty === p
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => handlePenalty(solve.id, p)}
-                    >
-                      {p === null ? "None" : p === "+2" ? "+2" : "DNF"}
-                    </button>
-                  ))}
+                      {/* Penalty toggle */}
+                      <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
+                        {([null, "+2", "dnf"] as const).map((p) => (
+                          <button
+                            key={p ?? "ok"}
+                            className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition-colors ${
+                              solve.penalty === p
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                            onClick={() => handlePenalty(solve.id, p)}
+                          >
+                            {p === null ? "None" : p === "+2" ? "+2" : "DNF"}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
-              </PopoverContent>
-            </Popover>
-          ))}
+              );
+            })}
+          </div>
         </ul>
         <div className="p-2 border-t border-border flex justify-center">
           {confirmClear ? (
@@ -546,6 +619,7 @@ export default function TimerPage() {
                 onClick={() => {
                   clearSolves(selectedEvent).then((newStats) => {
                     setSolves([]);
+                    setTotalSolveCount(0);
                     setStats(newStats);
                     setConfirmClear(false);
                   });
