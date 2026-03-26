@@ -29,7 +29,10 @@ export default function ProfilePage() {
   const updateMutation = useMutation({
     ...trpc.user.updateProfile.mutationOptions(),
     onSuccess: (updatedUser) => {
-      queryClient.invalidateQueries();
+      // Only refetch the profile query — setViewer handles the rest.
+      queryClient.invalidateQueries({
+        queryKey: trpc.user.getByUsername.queryKey({ username }),
+      });
       // Update the viewer context so the sidebar and other components
       // reflect the new name/username immediately.
       setViewer(updatedUser);
