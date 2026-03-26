@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Check, X, Loader2, Camera, ChevronDown } from "lucide-react";
 import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
 import { UserAvatar } from "@/lib/components/user-avatar";
@@ -14,6 +14,7 @@ type EditingField = "firstName" | "lastName" | "username" | null;
 export default function SettingsPage() {
   const { viewer, setViewer } = useViewer();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editValue, setEditValue] = useState("");
@@ -53,6 +54,11 @@ export default function SettingsPage() {
     ...trpc.user.updateProfile.mutationOptions(),
     onSuccess: (updatedUser) => {
       setViewer(updatedUser);
+      // Update the profile page cache so navigating there shows fresh data.
+      queryClient.setQueryData(
+        trpc.user.getByUsername.queryKey({ username: updatedUser.username }),
+        updatedUser,
+      );
       setEditingField(null);
       setEditValue("");
       setError(null);
