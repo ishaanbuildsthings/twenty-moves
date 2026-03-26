@@ -5,10 +5,10 @@ export interface IUser {
   username: string;
   firstName: string;
   lastName: string;
+  wcaId: string | null;
 }
 
 export interface IPrivateUser extends IUser {
-  wcaId: string | null;
   createdAt: Date;
 }
 
@@ -18,13 +18,13 @@ export function userToIUser(user: User): IUser {
     username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
+    wcaId: user.wcaId,
   };
 }
 
 export function userToIPrivateUser(user: User): IPrivateUser {
   return {
     ...userToIUser(user),
-    wcaId: user.wcaId,
     createdAt: user.createdAt,
   };
 }

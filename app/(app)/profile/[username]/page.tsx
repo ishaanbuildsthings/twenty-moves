@@ -159,14 +159,14 @@ export default function ProfilePage() {
             <p className="text-sm font-semibold">WCA ID</p>
             <p className="text-xs text-muted-foreground">World Cube Association profile</p>
           </div>
-          {privateUser?.wcaId ? (
+          {user.wcaId ? (
             <a
-              href={`https://www.worldcubeassociation.org/persons/${privateUser.wcaId}`}
+              href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-sm text-primary hover:underline"
             >
-              {privateUser.wcaId}
+              {user.wcaId}
               <ExternalLink className="w-3 h-3" />
             </a>
           ) : isOwnProfile ? (

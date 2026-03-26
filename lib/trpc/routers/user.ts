@@ -21,8 +21,8 @@ export const userRouter = createTRPCRouter({
       return userToIUser(user);
     }),
 
-  // Fetch a user by username. Returns private data (wcaId, createdAt)
-  // if the viewer is looking at their own profile.
+  // Fetch a user by username. Returns private data if the viewer is
+  // looking at their own profile.
   getByUsername: authedProcedure
     .input(z.object({ username: z.string() }))
     .query(async ({ ctx, input }) => {
