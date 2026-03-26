@@ -79,8 +79,8 @@ export function AppSidebar() {
             <DropdownMenuTrigger render={<button />} className="flex items-center gap-2 w-full rounded-md px-1 py-1 hover:bg-[oklch(0.24_0.005_60)] transition-colors">
               <UserAvatar user={viewer} size="sm" rounded="xl" />
               <div className="flex flex-col items-start overflow-hidden group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-semibold truncate w-full">{viewer.firstName}</span>
-                <span className="text-xs text-muted-foreground truncate w-full">@{viewer.username}</span>
+                <span className="text-sm font-semibold truncate w-full text-left">{viewer.firstName}</span>
+                <span className="text-xs text-muted-foreground truncate w-full text-left">@{viewer.username}</span>
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-48">
