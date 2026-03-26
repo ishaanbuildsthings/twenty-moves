@@ -11,10 +11,7 @@ export const userRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const user = await userService(ctx).getByUsername(input.username);
       const isOwn = user.id === ctx.viewer.userId;
-      return {
-        user: isOwn ? userToIPrivateUser(user) : userToIUser(user),
-        isOwnProfile: isOwn,
-      };
+      return isOwn ? userToIPrivateUser(user) : userToIUser(user);
     }),
 
   // Update the current user's profile.

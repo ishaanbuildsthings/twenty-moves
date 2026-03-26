@@ -29,10 +29,11 @@ export default function ProfilePage() {
   const updateMutation = useMutation({
     ...trpc.user.updateProfile.mutationOptions(),
     onSuccess: (updatedUser) => {
-      // Only refetch the profile query — setViewer handles the rest.
-      queryClient.invalidateQueries({
-        queryKey: trpc.user.getByUsername.queryKey({ username }),
-      });
+      // Update cache directly with mutation response — no refetch needed.
+      queryClient.setQueryData(
+        trpc.user.getByUsername.queryKey({ username }),
+        updatedUser,
+      );
       // Update the viewer context so the sidebar and other components
       // reflect the new name/username immediately.
       setViewer(updatedUser);
@@ -60,7 +61,8 @@ export default function ProfilePage() {
     );
   }
 
-  const { user, isOwnProfile } = profileQuery.data;
+  const user = profileQuery.data;
+  const isOwnProfile = viewer.id === user.id;
   const privateUser = isOwnProfile ? (user as IPrivateUser) : null;
 
   const startEditing = () => {
