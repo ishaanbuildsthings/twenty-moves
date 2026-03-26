@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
 
-type ProfileTab = "overview" | "collection" | "followers" | "clubs";
+type ProfileTab = "overview" | "collection" | "clubs";
 
 // Mock data for placeholder UI
 const MOCK_RATINGS = [
@@ -63,7 +63,6 @@ export default function ProfilePage() {
   const tabs: { key: ProfileTab; label: string; icon: React.ReactNode; comingSoon?: boolean }[] = [
     { key: "overview", label: "Overview", icon: <Trophy className="w-4 h-4" /> },
     { key: "collection", label: "Collection", icon: <Puzzle className="w-4 h-4" /> },
-    { key: "followers", label: "Followers", icon: <Users className="w-4 h-4" /> },
     { key: "clubs", label: "Clubs", icon: <Users className="w-4 h-4" />, comingSoon: true },
   ];
 
@@ -93,10 +92,9 @@ export default function ProfilePage() {
               <p className="text-muted-foreground">
                 {user.firstName} {user.lastName}
               </p>
-              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                <span>📅 Joined Jan 2025</span>
-                <span>👥 <strong className="text-foreground">12</strong> Followers</span>
-                <span>👥 <strong className="text-foreground">8</strong> Following</span>
+              <div className="flex items-center gap-4 mt-2 text-sm">
+                <span><strong className="text-foreground font-extrabold">12</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
+                <span><strong className="text-foreground font-extrabold">8</strong> <span className="text-muted-foreground text-xs">Following</span></span>
               </div>
             </div>
           </div>
@@ -226,15 +224,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {activeTab === "followers" && (
-          <div className="text-center py-12">
-            <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
-            <p className="text-muted-foreground font-semibold">Followers</p>
-            <p className="text-sm text-muted-foreground/60 mt-1">
-              {isOwnProfile ? "Your followers will appear here" : `${user.firstName}'s followers will appear here`}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
