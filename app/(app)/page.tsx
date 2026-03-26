@@ -24,7 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { X, Copy, Check, Trash2, ChevronDown, Settings } from "lucide-react";
+import { X, Copy, Check, Trash2, ChevronDown, Settings, PanelRightClose, PanelRightOpen } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -80,6 +80,7 @@ export default function TimerPage() {
   const [totalSolveCount, setTotalSolveCount] = useState(0);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Whether there are more solves in IDB beyond what's currently loaded.
@@ -444,11 +445,20 @@ export default function TimerPage() {
         </div>
 
       {/* Right panel — stats + solves list */}
-      <aside className="w-56 shrink-0 border-l border-border flex flex-col bg-card">
+      <aside className={`shrink-0 border-l border-border flex flex-col bg-card transition-all ${rightPanelOpen ? "w-56" : "w-10"}`}>
+        {/* Collapse toggle */}
+        <button
+          className="flex items-center justify-center p-2 hover:bg-muted transition-colors border-b border-border"
+          onClick={() => setRightPanelOpen(!rightPanelOpen)}
+          title={rightPanelOpen ? "Collapse panel" : "Expand panel"}
+        >
+          {rightPanelOpen ? <PanelRightClose className="w-4 h-4 text-muted-foreground" /> : <PanelRightOpen className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        {rightPanelOpen && <>
         {/* Stats table — current & best */}
         {stats && (
           <div className="border-b border-border">
-            <p className="px-3 pt-3 pb-1 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5" suppressHydrationWarning>
+            <p className="px-3 pt-3 pb-1 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 border-b border-border" suppressHydrationWarning>
               <span className="text-base leading-none">📈</span> Stats
             </p>
             {/* Column headers */}
@@ -645,6 +655,7 @@ export default function TimerPage() {
             </button>
           )}
         </div>
+        </>}
       </aside>
       </div>
     </div>
