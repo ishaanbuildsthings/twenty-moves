@@ -164,7 +164,7 @@ export default function ProfilePage() {
                         <EventIcon event={config} size={36} />
                         <div>
                           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{config.name}</span>
-                          <p className="text-3xl font-black text-foreground leading-none" style={{ fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.02em" }}>{r.rating}</p>
+                          <p className="text-3xl font-extrabold text-foreground leading-none">{r.rating}</p>
                         </div>
                       </div>
                     </div>
