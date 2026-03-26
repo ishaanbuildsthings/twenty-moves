@@ -106,6 +106,11 @@ export default function ProfilePage() {
                 <span><strong className="text-foreground font-extrabold">8</strong> <span className="text-muted-foreground text-xs">Following</span></span>
               </div>
             </div>
+            {user.bio && (
+              <div className="border-l border-border pl-5 ml-2 max-w-xs">
+                <p className="text-sm text-muted-foreground">{user.bio}</p>
+              </div>
+            )}
           </div>
 
           {isOwnProfile && (

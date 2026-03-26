@@ -10,7 +10,7 @@ import { UserAvatar } from "@/lib/components/user-avatar";
 import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
 import { useSettings } from "@/lib/context/settings";
 
-type EditingField = "firstName" | "lastName" | "username" | null;
+type EditingField = "firstName" | "lastName" | "username" | "bio" | null;
 
 export default function SettingsPage() {
   const { viewer, setViewer } = useViewer();
@@ -314,6 +314,56 @@ export default function SettingsPage() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Bio */}
+        <div className="flex items-start justify-between py-3 border-b border-border">
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground mb-0.5">Bio</p>
+            {editingField === "bio" ? (
+              <div className="space-y-1">
+                <textarea
+                  className="bg-muted rounded-md px-2 py-1 text-sm w-full border-2 border-transparent focus:outline-none resize-none"
+                  rows={3}
+                  maxLength={100}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Escape") cancelEditing(); }}
+                  autoFocus
+                />
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">{editValue.length}/100</p>
+                  <div className="flex gap-1">
+                    <button
+                      className="p-1 rounded-md hover:bg-primary/20 text-primary transition-colors disabled:opacity-40"
+                      onClick={() => updateMutation.mutate({ bio: editValue })}
+                      disabled={updateMutation.isPending}
+                    >
+                      {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    </button>
+                    <button
+                      className="p-1 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+                      onClick={cancelEditing}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-muted-foreground italic">
+                {viewer.bio || "No bio yet"}
+              </p>
+            )}
+          </div>
+          {editingField !== "bio" && (
+            <button
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors ml-2"
+              onClick={() => startEditing("bio")}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {error && (
