@@ -7,6 +7,7 @@ interface UserAvatarProps {
   user: {
     profilePictureUrl: string | null;
     firstName: string;
+    lastName: string;
     username: string;
   };
   size?: "sm" | "md" | "lg";
@@ -47,7 +48,7 @@ export function UserAvatar({
           className="w-full h-full object-cover"
         />
       ) : (
-        user.firstName[0].toUpperCase()
+        `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
       )}
     </div>
   );
