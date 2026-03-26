@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import type { IUser } from "@/lib/transforms/user";
 
 // Holds the current authenticated user and a setter to update it
@@ -19,6 +19,13 @@ export function ViewerProvider({
   children: React.ReactNode;
 }) {
   const [viewer, setViewer] = useState<IUser>(initialUser);
+
+  // Sync with server data on every navigation. The (app)/layout.tsx
+  // re-runs whoAmI on each page load and passes the fresh user as a prop.
+  // useState ignores new initialValues after mount, so we sync manually.
+  useEffect(() => {
+    setViewer(initialUser);
+  }, [initialUser]);
 
   return (
     <ViewerContext.Provider value={{ viewer, setViewer }}>
