@@ -75,8 +75,12 @@ export function AppSidebar() {
         <div className="mx-2 mb-2 rounded-lg bg-[oklch(0.18_0.005_60)] p-2">
           <DropdownMenu>
             <DropdownMenuTrigger render={<button />} className="flex items-center gap-2 w-full rounded-md px-1 py-1 hover:bg-[oklch(0.24_0.005_60)] transition-colors">
-              <div className="w-8 h-8 rounded-full bg-[oklch(0.32_0.006_60)] flex items-center justify-center text-xs font-bold shrink-0">
-                {viewer.username[0].toUpperCase()}
+              <div className="w-8 h-8 rounded-full bg-[oklch(0.32_0.006_60)] flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
+                {viewer.profilePictureUrl ? (
+                  <img src={viewer.profilePictureUrl} alt={viewer.username} className="w-full h-full object-cover" />
+                ) : (
+                  viewer.username[0].toUpperCase()
+                )}
               </div>
               <div className="flex flex-col items-start overflow-hidden group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold truncate w-full">{viewer.firstName}</span>
