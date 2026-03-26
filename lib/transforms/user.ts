@@ -8,6 +8,7 @@ export interface IUser {
   wcaId: string | null;
   profilePictureUrl: string | null;
   country: string | null;
+  bio: string | null;
 }
 
 export function userToIUser(user: User): IUser {
@@ -19,5 +20,6 @@ export function userToIUser(user: User): IUser {
     wcaId: user.wcaId,
     profilePictureUrl: user.profilePictureUrl,
     country: user.country,
+    bio: user.bio,
   };
 }
