@@ -41,7 +41,7 @@ export const userRouter = createTRPCRouter({
         { message: "Invalid profile picture URL" }
       ).nullable().optional(),
       country: z.string().length(2).nullable().optional(),
-      bio: z.string().max(100).nullable().optional(),
+      bio: z.string().max(100).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {

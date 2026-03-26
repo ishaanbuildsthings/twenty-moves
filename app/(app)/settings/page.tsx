@@ -334,7 +334,7 @@ export default function SettingsPage() {
                   <div className="flex gap-1">
                     <button
                       className="p-1 rounded-md hover:bg-primary/20 text-primary transition-colors disabled:opacity-40"
-                      onClick={() => updateMutation.mutate({ bio: editValue || null })}
+                      onClick={() => updateMutation.mutate({ bio: editValue })}
                       disabled={updateMutation.isPending}
                     >
                       {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -350,7 +350,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <p className="text-sm font-medium text-muted-foreground italic">
-                {viewer.bio ?? "No bio yet"}
+                {viewer.bio || "No bio yet"}
               </p>
             )}
           </div>
