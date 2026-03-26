@@ -448,21 +448,21 @@ export default function TimerPage() {
       <aside className={`shrink-0 border-l border-border flex flex-col bg-card transition-all ${rightPanelOpen ? "w-56" : "w-10"}`}>
         {/* Collapse toggle */}
         <button
-          className="flex items-center justify-center p-2 hover:bg-muted transition-colors border-b border-border"
+          className="flex items-center px-3 py-2 hover:bg-muted transition-colors"
           onClick={() => setRightPanelOpen(!rightPanelOpen)}
           title={rightPanelOpen ? "Collapse panel" : "Expand panel"}
         >
-          {rightPanelOpen ? <PanelRightClose className="w-4 h-4 text-muted-foreground" /> : <PanelRightOpen className="w-4 h-4 text-muted-foreground" />}
+          {rightPanelOpen ? <PanelRightClose className="w-4 h-4 text-foreground" /> : <PanelRightOpen className="w-4 h-4 text-foreground" />}
         </button>
         {rightPanelOpen && <>
         {/* Stats table — current & best */}
         {stats && (
           <div className="border-b border-border">
-            <p className="px-3 pt-3 pb-1 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 border-b border-border" suppressHydrationWarning>
+            <p className="px-3 pt-2 pb-2 text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5" suppressHydrationWarning>
               <span className="text-base leading-none">📈</span> Stats
             </p>
             {/* Column headers */}
-            <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 px-3 pb-1">
+            <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 px-3 pb-1.5">
               <span />
               <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest text-right">Current</span>
               <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest text-right">Best</span>
