@@ -6,6 +6,7 @@ export interface IUser {
   firstName: string;
   lastName: string;
   profilePictureUrl: string | null;
+  country: string | null;
 }
 
 export interface IPrivateUser extends IUser {
@@ -20,6 +21,7 @@ export function userToIUser(user: User): IUser {
     firstName: user.firstName,
     lastName: user.lastName,
     profilePictureUrl: user.profilePictureUrl,
+    country: user.country,
   };
 }
 

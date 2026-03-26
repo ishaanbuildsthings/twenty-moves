@@ -15,6 +15,7 @@ model User {
   lastName  String
   wcaId             String?
   profilePictureUrl String?
+  country           String?
   createdAt         DateTime @default(now())
   updatedAt DateTime @updatedAt
 
