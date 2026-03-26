@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
-import { useMutation } from "@tanstack/react-query";
-import { Pencil, Check, X } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Pencil, Check, X, Loader2 } from "lucide-react";
 
 type EditingField = "firstName" | "lastName" | "username" | null;
 
@@ -15,6 +15,32 @@ export default function SettingsPage() {
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editValue, setEditValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Debounced username for availability check.
+  const [debouncedUsername, setDebouncedUsername] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounce username input — only check after 400ms of no typing.
+  useEffect(() => {
+    if (editingField !== "username") return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedUsername(editValue);
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [editValue, editingField]);
+
+  // Check username availability.
+  const shouldCheckUsername =
+    editingField === "username" &&
+    debouncedUsername.length >= 3 &&
+    debouncedUsername !== viewer.username;
+
+  const usernameCheck = useQuery({
+    ...trpc.user.checkUsername.queryOptions({ username: debouncedUsername }),
+    enabled: shouldCheckUsername,
+  });
 
   const updateMutation = useMutation({
     ...trpc.user.updateProfile.mutationOptions(),
@@ -34,17 +60,23 @@ export default function SettingsPage() {
     setEditingField(field);
     setEditValue(viewer[field]);
     setError(null);
+    setDebouncedUsername("");
   };
 
   const cancelEditing = () => {
     setEditingField(null);
     setEditValue("");
     setError(null);
+    setDebouncedUsername("");
   };
 
   const saveField = () => {
     if (!editingField || editValue === viewer[editingField]) {
       cancelEditing();
+      return;
+    }
+    // Don't save if username is taken.
+    if (editingField === "username" && usernameCheck.data && !usernameCheck.data.available) {
       return;
     }
     updateMutation.mutate({ [editingField]: editValue });
@@ -54,6 +86,20 @@ export default function SettingsPage() {
     if (e.key === "Enter") saveField();
     if (e.key === "Escape") cancelEditing();
   };
+
+  // Username validation state for the UI.
+  const getUsernameStatus = () => {
+    if (editingField !== "username") return null;
+    if (editValue === viewer.username) return null;
+    if (editValue.length < 3) return { valid: false, message: "Min 3 characters" };
+    if (debouncedUsername !== editValue) return { valid: null, message: "Checking..." };
+    if (usernameCheck.isLoading) return { valid: null, message: "Checking..." };
+    if (usernameCheck.data?.available) return { valid: true, message: "Available" };
+    if (usernameCheck.data && !usernameCheck.data.available) return { valid: false, message: "Already taken" };
+    return null;
+  };
+
+  const usernameStatus = getUsernameStatus();
 
   const fields = [
     { key: "firstName" as const, label: "First name" },
@@ -74,35 +120,64 @@ export default function SettingsPage() {
         {fields.map((field) => (
           <div
             key={field.key}
-            className="flex items-center justify-between py-3 border-b border-border group"
+            className="flex items-center justify-between py-3 border-b border-border"
           >
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-0.5">{field.label}</p>
               {editingField === field.key ? (
-                <div className="flex items-center gap-2">
-                  {field.prefix && (
-                    <span className="text-muted-foreground text-sm">{field.prefix}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    {field.prefix && (
+                      <span className="text-muted-foreground text-sm">{field.prefix}</span>
+                    )}
+                    <input
+                      className={`bg-muted rounded-md px-2 py-1 text-sm flex-1 border-2 transition-colors ${
+                        field.key === "username" && usernameStatus
+                          ? usernameStatus.valid === true
+                            ? "border-green-500"
+                            : usernameStatus.valid === false
+                              ? "border-red-500"
+                              : "border-yellow-500"
+                          : "border-transparent"
+                      }`}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      autoFocus
+                    />
+                    <button
+                      className="p-1 rounded-md hover:bg-primary/20 text-primary transition-colors disabled:opacity-40"
+                      onClick={saveField}
+                      disabled={
+                        updateMutation.isPending ||
+                        (field.key === "username" && usernameStatus?.valid === false)
+                      }
+                    >
+                      {updateMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      className="p-1 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+                      onClick={cancelEditing}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {field.key === "username" && usernameStatus && (
+                    <p className={`text-xs flex items-center gap-1 ${
+                      usernameStatus.valid === true
+                        ? "text-green-500"
+                        : usernameStatus.valid === false
+                          ? "text-red-500"
+                          : "text-yellow-500"
+                    }`}>
+                      {usernameStatus.valid === null && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {usernameStatus.message}
+                    </p>
                   )}
-                  <input
-                    className="bg-muted rounded-md px-2 py-1 text-sm flex-1"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    autoFocus
-                  />
-                  <button
-                    className="p-1 rounded-md hover:bg-primary/20 text-primary transition-colors"
-                    onClick={saveField}
-                    disabled={updateMutation.isPending}
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button
-                    className="p-1 rounded-md hover:bg-muted text-muted-foreground transition-colors"
-                    onClick={cancelEditing}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
               ) : (
                 <p className="text-sm font-medium">

@@ -16,6 +16,19 @@ export const userRouter = createTRPCRouter({
       return userToIUser(user);
     }),
 
+  // Check if a username is available. Returns { available: boolean }.
+  checkUsername: authedProcedure
+    .input(z.object({ username: z.string().min(3).max(30) }))
+    .query(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.user.findUnique({
+        where: { username: input.username },
+        select: { id: true },
+      });
+      // Available if no user has it, or if it belongs to the viewer (their current username).
+      const available = !existing || existing.id === ctx.viewer.userId;
+      return { available };
+    }),
+
   // Update the current user's profile.
   updateProfile: authedProcedure
     .input(z.object({
