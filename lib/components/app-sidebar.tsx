@@ -24,10 +24,10 @@ import { useViewer } from "@/lib/hooks/useViewer";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const navItems = [
-  { label: "Practice", href: "/", icon: "⏱️", comingSoon: false },
-  { label: "Home", href: "/home", icon: "🏠", comingSoon: false },
-  { label: "Race", href: "/race", icon: "🏁", comingSoon: true },
-  { label: "Tourney", href: "/tourney", icon: "🏆", comingSoon: true },
+  { label: "Practice", href: "/", icon: "⏱️", comingSoon: false, hoverClass: "hover:bg-orange-500/15 hover:text-orange-300" },
+  { label: "Home", href: "/home", icon: "🏠", comingSoon: false, hoverClass: "hover:bg-blue-500/15 hover:text-blue-300" },
+  { label: "Race", href: "/race", icon: "🏁", comingSoon: true, hoverClass: "hover:bg-red-500/15 hover:text-red-300" },
+  { label: "Tourney", href: "/tourney", icon: "🏆", comingSoon: true, hoverClass: "hover:bg-green-500/15 hover:text-green-300" },
 ];
 
 export function AppSidebar() {
@@ -50,7 +50,7 @@ export function AppSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   {item.comingSoon ? (
-                    <SidebarMenuButton disabled className="opacity-40 cursor-not-allowed">
+                    <SidebarMenuButton disabled className={`opacity-40 cursor-not-allowed ${item.hoverClass}`}>
                       <span className="text-xl leading-none grayscale">{item.icon}</span>
                       <span className="text-base font-bold">{item.label}</span>
                       <span className="ml-auto text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Soon</span>
@@ -59,6 +59,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
+                      className={item.hoverClass}
                     >
                       <span className="text-xl leading-none">{item.icon}</span>
                       <span className="text-base font-bold">{item.label}</span>
