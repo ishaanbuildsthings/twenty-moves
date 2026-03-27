@@ -384,6 +384,7 @@ function LeaderboardOverview({
                     return (
                       <tr
                         key={entry.rank}
+                        className="border-b border-border/40 last:border-0"
                       >
                         <td className="px-4 py-2.5 w-10 text-center">
                           {rankDisplay(entry.rank)}
