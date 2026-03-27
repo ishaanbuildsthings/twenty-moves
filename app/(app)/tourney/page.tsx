@@ -4,19 +4,13 @@ import { useState, useEffect } from "react";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
 import { UserAvatar } from "@/lib/components/user-avatar";
-import { ChevronDown, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, ArrowLeft } from "lucide-react";
 import { countryCodeToFlag } from "@/lib/countries";
 import { getNextRollover, getTournamentDate } from "@/lib/tournament/date";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 type Tab = "compete" | "leaderboard";
 
-// Mock entry data — will be replaced with real API data.
+// Mock entry data for the compete tab.
 interface MockEntry {
   status: "not-started" | "in-progress" | "completed";
   solves: { timeMs: number; penalty: string | null }[];
@@ -24,7 +18,6 @@ interface MockEntry {
   totalSolves: number;
 }
 
-// Mock different states for demo purposes.
 const MOCK_ENTRIES: Partial<Record<CubeEvent, MockEntry>> = {
   [CubeEvent.THREE]: {
     status: "completed",
@@ -49,7 +42,20 @@ const MOCK_ENTRIES: Partial<Record<CubeEvent, MockEntry>> = {
   },
 };
 
-const MOCK_LEADERBOARD = [
+// Mock leaderboard entry.
+interface MockLeaderboardEntry {
+  rank: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+  country: string;
+  profilePictureUrl: string | null;
+  average: string;
+  isSelf: boolean;
+  solves: { timeMs: number; penalty: string | null }[];
+}
+
+const MOCK_LEADERBOARD: MockLeaderboardEntry[] = [
   { rank: 1, username: "cubegod99", firstName: "Max", lastName: "Chen", country: "US", profilePictureUrl: null, average: "7.23", isSelf: false, solves: [{ timeMs: 6890, penalty: null }, { timeMs: 7450, penalty: null }, { timeMs: 7120, penalty: null }, { timeMs: 8010, penalty: null }, { timeMs: 7110, penalty: null }] },
   { rank: 2, username: "speedyfingers", firstName: "Yuki", lastName: "Tanaka", country: "JP", profilePictureUrl: null, average: "8.41", isSelf: false, solves: [{ timeMs: 8120, penalty: null }, { timeMs: 9230, penalty: null }, { timeMs: 7890, penalty: null }, { timeMs: 8540, penalty: null }, { timeMs: 8560, penalty: null }] },
   { rank: 3, username: "713dream", firstName: "ishaan", lastName: "agrawal", country: "US", profilePictureUrl: null, average: "9.87", isSelf: true, solves: [{ timeMs: 9230, penalty: null }, { timeMs: 8410, penalty: null }, { timeMs: 11540, penalty: null }, { timeMs: 7890, penalty: null }, { timeMs: 10120, penalty: null }] },
@@ -59,6 +65,8 @@ const MOCK_LEADERBOARD = [
   { rank: 7, username: "twistandturn", firstName: "Ollie", lastName: "Brown", country: "GB", profilePictureUrl: null, average: "12.89", isSelf: false, solves: [{ timeMs: 12340, penalty: null }, { timeMs: 13560, penalty: null }, { timeMs: 12780, penalty: null }, { timeMs: 11230, penalty: null }, { timeMs: 0, penalty: "dnf" }] },
   { rank: 8, username: "algmaster", firstName: "Sophie", lastName: "Martin", country: "FR", profilePictureUrl: null, average: "13.21", isSelf: false, solves: [{ timeMs: 13450, penalty: null }, { timeMs: 12890, penalty: null }, { timeMs: 13320, penalty: null }, { timeMs: 14560, penalty: null }, { timeMs: 12120, penalty: null }] },
 ];
+
+// --- Helpers ---
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "00:00:00";
@@ -74,10 +82,61 @@ function formatTime(ms: number): string {
   return `${totalSeconds}.${String(centiseconds).padStart(2, "0")}`;
 }
 
+function formatSolveTime(solve: { timeMs: number; penalty: string | null }): string {
+  if (solve.penalty === "dnf") return "DNF";
+  const time = formatTime(solve.penalty === "+2" ? solve.timeMs + 2000 : solve.timeMs);
+  return solve.penalty === "+2" ? `${time}+` : time;
+}
+
+function getBestSingle(solves: { timeMs: number; penalty: string | null }[]): string {
+  const times = solves.map((s) =>
+    s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs
+  );
+  const best = Math.min(...times);
+  return best === Infinity ? "DNF" : formatTime(best);
+}
+
+function getBestWorst(solves: { timeMs: number; penalty: string | null }[]) {
+  if (solves.length !== 5) return { bestIdx: -1, worstIdx: -1 };
+  const times = solves.map((s) =>
+    s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs
+  );
+  let bestIdx = 0, worstIdx = 0;
+  times.forEach((t, i) => {
+    if (t < times[bestIdx]) bestIdx = i;
+    if (t > times[worstIdx]) worstIdx = i;
+  });
+  return { bestIdx, worstIdx };
+}
+
+function formatAo5Times(solves: { timeMs: number; penalty: string | null }[]): string {
+  if (solves.length !== 5) return solves.map(formatSolveTime).join("  ");
+  const { bestIdx, worstIdx } = getBestWorst(solves);
+  return solves
+    .map((s, i) => {
+      const formatted = formatSolveTime(s);
+      return (i === bestIdx || i === worstIdx) ? `(${formatted})` : formatted;
+    })
+    .join("  ");
+}
+
+const rankDisplay = (rank: number) => {
+  if (rank === 1) return <span className="text-xl" suppressHydrationWarning>🥇</span>;
+  if (rank === 2) return <span className="text-xl" suppressHydrationWarning>🥈</span>;
+  if (rank === 3) return <span className="text-xl" suppressHydrationWarning>🥉</span>;
+  return <span className="text-sm font-bold text-muted-foreground">{rank}</span>;
+};
+
+// Mock tournament number (will be computed from DB later).
+const TOURNAMENT_NUMBER = 47;
+
+// --- Main Page ---
+
 export default function TourneyPage() {
   const [tab, setTab] = useState<Tab>("compete");
-  const [leaderboardEvent, setLeaderboardEvent] = useState<CubeEvent>(CubeEvent.THREE);
   const [leaderboardDate, setLeaderboardDate] = useState(() => getTournamentDate());
+  // null = overview, CubeEvent = drilling into that event's full table
+  const [selectedLeaderboardEvent, setSelectedLeaderboardEvent] = useState<CubeEvent | null>(null);
   const [countdown, setCountdown] = useState("");
 
   const todayDate = getTournamentDate();
@@ -87,14 +146,13 @@ export default function TourneyPage() {
     const d = new Date(leaderboardDate + "T12:00:00Z");
     d.setUTCDate(d.getUTCDate() + (direction === "prev" ? -1 : 1));
     setLeaderboardDate(d.toISOString().slice(0, 10));
+    setSelectedLeaderboardEvent(null); // go back to overview on date change
   };
 
-  // Format date for display (e.g., "March 26, 2026")
   const displayDate = new Date(leaderboardDate + "T12:00:00Z").toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric",
   });
 
-  // Live countdown to tournament end.
   useEffect(() => {
     const update = () => {
       const remaining = getNextRollover().getTime() - Date.now();
@@ -105,25 +163,29 @@ export default function TourneyPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const eventConfig = EVENT_MAP[leaderboardEvent];
-
   return (
     <div className="flex flex-col flex-1 overflow-y-auto">
-      {/* Header + tabs */}
+      {/* Header */}
       <div className="px-6 pt-6 pb-0">
-        <div className="max-w-3xl mx-auto w-full">
-          <h1 className="text-2xl font-extrabold">Daily Tournament</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Compete against everyone. Same scrambles, same day.
-          </p>
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-2xl font-extrabold">Daily Tournament</h1>
+            <span className="text-lg font-bold text-muted-foreground">#{TOURNAMENT_NUMBER}</span>
+          </div>
 
-          {/* Tabs — page-level navigation */}
+          {/* Countdown — hero element */}
+          <div className="mt-2 flex items-center gap-3">
+            <p className="text-4xl font-extrabold font-mono tabular-nums">{countdown}</p>
+            <p className="text-sm text-muted-foreground">remaining</p>
+          </div>
+
+          {/* Tabs */}
           <div className="flex gap-1 mt-4 border-b border-border">
             <button
               className={`px-4 py-2 text-sm font-bold transition-colors relative ${
                 tab === "compete" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
-              onClick={() => setTab("compete")}
+              onClick={() => { setTab("compete"); setSelectedLeaderboardEvent(null); }}
             >
               Compete
               {tab === "compete" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
@@ -143,194 +205,34 @@ export default function TourneyPage() {
 
       {/* Tab content */}
       <div className="px-6 py-6 flex-1">
-        <div className={`mx-auto w-full space-y-6 ${tab === "leaderboard" ? "max-w-5xl" : "max-w-3xl"}`}>
+        <div className="max-w-5xl mx-auto w-full space-y-6">
           {tab === "compete" ? (
-            <>
-              {/* Countdown */}
-              <div className="rounded-lg bg-card border border-border p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Tournament ends in
-                  </p>
-                  <p className="text-2xl font-extrabold font-mono tabular-nums mt-1">
-                    {countdown}
-                  </p>
-                </div>
-                <span className="text-3xl" suppressHydrationWarning>🏆</span>
-              </div>
-
-              {/* Event grid */}
+            <div className="max-w-3xl space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {EVENT_CONFIGS.map((config) => {
-                  const entry = MOCK_ENTRIES[config.id];
-                  return (
-                    <EventCard key={config.id} config={config} entry={entry} />
-                  );
-                })}
+                {EVENT_CONFIGS.map((config) => (
+                  <EventCard key={config.id} config={config} entry={MOCK_ENTRIES[config.id]} />
+                ))}
               </div>
-            </>
-          ) : (
-            <div className="space-y-4">
-              {/* Controls row: event selector + date navigation */}
-              <div className="flex items-center justify-between gap-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 rounded-md bg-card border border-border hover:bg-muted transition-colors">
-                    <EventIcon event={eventConfig} size={20} />
-                    <span className="font-bold text-sm">{eventConfig.name}</span>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    {EVENT_CONFIGS.map((config) => (
-                      <DropdownMenuItem
-                        key={config.id}
-                        onClick={() => setLeaderboardEvent(config.id)}
-                        className={leaderboardEvent === config.id ? "bg-accent" : ""}
-                      >
-                        <EventIcon event={config} size={16} />
-                        <span>{config.name}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Date navigation */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => navigateDate("prev")}
-                    className="p-1 rounded-md hover:bg-muted transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-sm font-semibold min-w-[10rem] text-center">
-                    {isToday ? `Today — ${displayDate}` : displayDate}
-                  </span>
-                  <button
-                    onClick={() => navigateDate("next")}
-                    disabled={isToday}
-                    className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Tournament end countdown (only for today) */}
-              {isToday && (
-                <p className="text-xs text-muted-foreground">
-                  Tournament ends in <span className="font-mono font-bold">{countdown}</span>
-                </p>
-              )}
-
-              {/* Leaderboard table */}
-              {(() => {
-                const solveCount = eventConfig.tournamentSolveCount;
-                const isAo5 = solveCount === 5;
-
-                function getBestSingle(solves: { timeMs: number; penalty: string | null }[]): string {
-                  const times = solves.map((s) =>
-                    s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs
-                  );
-                  const best = Math.min(...times);
-                  return best === Infinity ? "DNF" : formatTime(best);
-                }
-
-                function getBestWorst(solves: { timeMs: number; penalty: string | null }[]) {
-                  if (solves.length !== 5) return { bestIdx: -1, worstIdx: -1 };
-                  const times = solves.map((s) =>
-                    s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs
-                  );
-                  let bestIdx = 0, worstIdx = 0;
-                  times.forEach((t, i) => {
-                    if (t < times[bestIdx]) bestIdx = i;
-                    if (t > times[worstIdx]) worstIdx = i;
-                  });
-                  return { bestIdx, worstIdx };
-                }
-
-                const rankDisplay = (rank: number) => {
-                  if (rank === 1) return <span className="text-lg" suppressHydrationWarning>🥇</span>;
-                  if (rank === 2) return <span className="text-lg" suppressHydrationWarning>🥈</span>;
-                  if (rank === 3) return <span className="text-lg" suppressHydrationWarning>🥉</span>;
-                  return <span className="text-sm font-bold text-muted-foreground">{rank}</span>;
-                };
-
-                return (
-                  <div className="rounded-lg bg-card border border-border">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                          <th className="px-3 py-2 text-left w-10">#</th>
-                          <th className="px-3 py-2 text-left">Player</th>
-                          <th className="pl-6 pr-4 py-2 text-right whitespace-nowrap">Single</th>
-                          <th className="pl-6 pr-4 py-2 text-right whitespace-nowrap">{isAo5 ? "Avg" : "Mo3"}</th>
-                          <th className="w-4" />
-                          {Array.from({ length: solveCount }).map((_, i) => (
-                            <th key={i} className="px-1.5 py-2 text-right whitespace-nowrap">{i + 1}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {MOCK_LEADERBOARD.map((entry, rowIdx) => {
-                          const { bestIdx, worstIdx } = getBestWorst(entry.solves);
-                          return (
-                            <tr
-                              key={entry.rank}
-                              className={
-                                entry.isSelf
-                                  ? "bg-primary/5"
-                                  : rowIdx % 2 === 1
-                                    ? "bg-muted/30"
-                                    : ""
-                              }
-                            >
-                              <td className="px-3 py-3 text-center">
-                                {rankDisplay(entry.rank)}
-                              </td>
-                              <td className="px-3 py-3">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <UserAvatar
-                                    user={{
-                                      username: entry.username,
-                                      firstName: entry.firstName,
-                                      lastName: entry.lastName,
-                                      profilePictureUrl: entry.profilePictureUrl,
-                                    }}
-                                    size="sm"
-                                    rounded="full"
-                                  />
-                                  <span className={`font-semibold truncate ${entry.isSelf ? "text-primary" : ""}`}>
-                                    {entry.username}
-                                  </span>
-                                  {entry.country && (
-                                    <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.country)}</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
-                                {getBestSingle(entry.solves)}
-                              </td>
-                              <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
-                                {entry.average}
-                              </td>
-                              <td />
-                              {entry.solves.map((solve, i) => {
-                                const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
-                                const display = formatSolveTime(solve);
-                                return (
-                                  <td key={i} className="px-1.5 py-3 text-right font-mono tabular-nums">
-                                    {isBestOrWorst ? `(${display})` : display}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                );
-              })()}
             </div>
+          ) : selectedLeaderboardEvent ? (
+            <EventLeaderboardDetail
+              event={selectedLeaderboardEvent}
+              date={displayDate}
+              isToday={isToday}
+              onBack={() => setSelectedLeaderboardEvent(null)}
+              navigateDate={navigateDate}
+              leaderboardDate={leaderboardDate}
+              todayDate={todayDate}
+            />
+          ) : (
+            <LeaderboardOverview
+              displayDate={displayDate}
+              isToday={isToday}
+              navigateDate={navigateDate}
+              leaderboardDate={leaderboardDate}
+              todayDate={todayDate}
+              onSelectEvent={setSelectedLeaderboardEvent}
+            />
           )}
         </div>
       </div>
@@ -338,37 +240,7 @@ export default function TourneyPage() {
   );
 }
 
-// Format a solve time, applying +2 penalty if needed.
-function formatSolveTime(solve: { timeMs: number; penalty: string | null }): string {
-  if (solve.penalty === "dnf") return "DNF";
-  const time = formatTime(solve.penalty === "+2" ? solve.timeMs + 2000 : solve.timeMs);
-  return solve.penalty === "+2" ? `${time}+` : time;
-}
-
-// For ao5: parenthesize the best and worst times (WCA convention).
-function formatAo5Times(solves: { timeMs: number; penalty: string | null }[]): string {
-  if (solves.length !== 5) return solves.map(formatSolveTime).join("  ");
-
-  const effectiveTimes = solves.map((s) => {
-    if (s.penalty === "dnf") return Infinity;
-    return s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs;
-  });
-
-  let bestIdx = 0;
-  let worstIdx = 0;
-  effectiveTimes.forEach((t, i) => {
-    if (t < effectiveTimes[bestIdx]) bestIdx = i;
-    if (t > effectiveTimes[worstIdx]) worstIdx = i;
-  });
-
-  return solves
-    .map((s, i) => {
-      const formatted = formatSolveTime(s);
-      if (i === bestIdx || i === worstIdx) return `(${formatted})`;
-      return formatted;
-    })
-    .join("  ");
-}
+// --- Compete Tab: Event Card ---
 
 function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; entry?: MockEntry }) {
   const status = entry?.status ?? "not-started";
@@ -378,7 +250,6 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
 
   return (
     <button className="rounded-lg bg-card border border-border p-4 hover:bg-muted transition-colors text-left space-y-3">
-      {/* Top row: icon + event name */}
       <div className="flex items-center gap-3">
         <EventIcon event={config} size={36} />
         <span className="font-extrabold text-lg flex-1">{config.name}</span>
@@ -387,7 +258,6 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
         </span>
       </div>
 
-      {/* Status area */}
       {status === "not-started" && (
         <div className="flex items-center gap-2 text-muted-foreground">
           <Play className="w-3.5 h-3.5" />
@@ -404,17 +274,226 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
 
       {status === "completed" && entry && (
         <div className="space-y-1.5">
-          {/* Average */}
           <div className="flex items-center justify-between">
             <span className="text-base font-mono tabular-nums font-extrabold">{entry.average}</span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Done</span>
           </div>
-          {/* Individual times with WCA formatting */}
           <p className="text-[11px] font-mono tabular-nums text-muted-foreground leading-relaxed">
             {isAo5 ? formatAo5Times(entry.solves) : entry.solves.map(formatSolveTime).join("  ")}
           </p>
         </div>
       )}
     </button>
+  );
+}
+
+// --- Leaderboard Tab: Overview (stubs for all events) ---
+
+function LeaderboardOverview({
+  displayDate, isToday, navigateDate, leaderboardDate, todayDate, onSelectEvent,
+}: {
+  displayDate: string;
+  isToday: boolean;
+  navigateDate: (dir: "prev" | "next") => void;
+  leaderboardDate: string;
+  todayDate: string;
+  onSelectEvent: (event: CubeEvent) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      {/* Date navigation */}
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={() => navigateDate("prev")} className="p-1 rounded-md hover:bg-muted transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold min-w-[10rem] text-center">
+          {isToday ? `Today — ${displayDate}` : displayDate}
+        </span>
+        <button
+          onClick={() => navigateDate("next")}
+          disabled={leaderboardDate >= todayDate}
+          className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Event stubs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {EVENT_CONFIGS.map((config) => {
+          const top3 = MOCK_LEADERBOARD.slice(0, 3);
+          const selfEntry = MOCK_LEADERBOARD.find((e) => e.isSelf);
+
+          return (
+            <button
+              key={config.id}
+              onClick={() => onSelectEvent(config.id)}
+              className="rounded-lg bg-card border border-border p-4 hover:bg-muted transition-colors text-left space-y-3"
+            >
+              {/* Event header */}
+              <div className="flex items-center gap-2">
+                <EventIcon event={config} size={24} />
+                <span className="font-bold flex-1">{config.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {config.tournamentSolveCount === 5 ? "Ao5" : "Mo3"} →
+                </span>
+              </div>
+
+              {/* Top 3 */}
+              <div className="space-y-1.5">
+                {top3.map((entry) => (
+                  <div key={entry.rank} className="flex items-center gap-2 text-sm">
+                    <span className="w-6 text-center">{rankDisplay(entry.rank)}</span>
+                    <span className={`flex-1 truncate ${entry.isSelf ? "text-primary font-semibold" : ""}`}>
+                      {entry.username}
+                    </span>
+                    {entry.country && (
+                      <span className="text-xs" suppressHydrationWarning>{countryCodeToFlag(entry.country)}</span>
+                    )}
+                    <span className="font-mono tabular-nums font-semibold text-xs">{entry.average}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Your placement (if not in top 3) */}
+              {selfEntry && selfEntry.rank > 3 && (
+                <div className="flex items-center gap-2 text-sm pt-1 border-t border-border/40">
+                  <span className="w-6 text-center text-xs font-bold text-muted-foreground">{selfEntry.rank}</span>
+                  <span className="flex-1 truncate text-primary font-semibold">You</span>
+                  <span className="font-mono tabular-nums font-semibold text-xs">{selfEntry.average}</span>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// --- Leaderboard Tab: Full table for one event ---
+
+function EventLeaderboardDetail({
+  event, onBack, displayDate, isToday, navigateDate, leaderboardDate, todayDate,
+}: {
+  event: CubeEvent;
+  onBack: () => void;
+  displayDate: string;
+  isToday: boolean;
+  navigateDate: (dir: "prev" | "next") => void;
+  leaderboardDate: string;
+  todayDate: string;
+}) {
+  const eventConfig = EVENT_MAP[event];
+  const solveCount = eventConfig.tournamentSolveCount;
+  const isAo5 = solveCount === 5;
+
+  return (
+    <div className="space-y-4">
+      {/* Back button + event name + date nav */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <EventIcon event={eventConfig} size={24} />
+          <span className="font-extrabold text-lg">{eventConfig.name}</span>
+          <span className="text-xs font-bold text-muted-foreground">
+            {isAo5 ? "Ao5" : "Mo3"}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigateDate("prev")} className="p-1 rounded-md hover:bg-muted transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-semibold min-w-[10rem] text-center">
+            {isToday ? `Today — ${displayDate}` : displayDate}
+          </span>
+          <button
+            onClick={() => navigateDate("next")}
+            disabled={leaderboardDate >= todayDate}
+            className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Full results table */}
+      <div className="rounded-lg bg-card border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <th className="px-3 py-2 text-left w-10">#</th>
+              <th className="px-3 py-2 text-left">Player</th>
+              <th className="pl-6 pr-4 py-2 text-right">Single</th>
+              <th className="pl-6 pr-4 py-2 text-right">{isAo5 ? "Avg" : "Mo3"}</th>
+              <th className="w-4" />
+              {Array.from({ length: solveCount }).map((_, i) => (
+                <th key={i} className="px-1.5 py-2 text-right">{i + 1}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {MOCK_LEADERBOARD.map((entry, rowIdx) => {
+              const { bestIdx, worstIdx } = getBestWorst(entry.solves);
+              return (
+                <tr
+                  key={entry.rank}
+                  className={
+                    entry.isSelf
+                      ? "bg-primary/5"
+                      : rowIdx % 2 === 1
+                        ? "bg-muted/30"
+                        : ""
+                  }
+                >
+                  <td className="px-3 py-3 text-center">
+                    {rankDisplay(entry.rank)}
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatar
+                        user={{
+                          username: entry.username,
+                          firstName: entry.firstName,
+                          lastName: entry.lastName,
+                          profilePictureUrl: entry.profilePictureUrl,
+                        }}
+                        size="sm"
+                        rounded="full"
+                      />
+                      <span className={`font-semibold truncate ${entry.isSelf ? "text-primary" : ""}`}>
+                        {entry.username}
+                      </span>
+                      {entry.country && (
+                        <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.country)}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                    {getBestSingle(entry.solves)}
+                  </td>
+                  <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                    {entry.average}
+                  </td>
+                  <td />
+                  {entry.solves.map((solve, i) => {
+                    const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
+                    const display = formatSolveTime(solve);
+                    return (
+                      <td key={i} className="px-1.5 py-3 text-right font-mono tabular-nums">
+                        {isBestOrWorst ? `(${display})` : display}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
