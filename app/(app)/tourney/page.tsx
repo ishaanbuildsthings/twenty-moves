@@ -339,14 +339,14 @@ function LeaderboardOverview({
               {/* Mini table — top 3 with individual solves */}
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    <th className="px-4 py-1.5 text-left w-10">#</th>
-                    <th className="py-1.5 text-left">Player</th>
-                    <th className="pl-6 pr-3 py-1.5 text-right">Single</th>
-                    <th className="pl-4 pr-3 py-1.5 text-right">{isAo5 ? "Avg" : "Mo3"}</th>
-                    <th className="w-3" />
+                  <tr className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
+                    <th className="px-4 py-2 text-left w-10">#</th>
+                    <th className="py-2 text-left">Player</th>
+                    <th className="pl-8 pr-4 py-2 text-right">Single</th>
+                    <th className="pl-6 pr-4 py-2 text-right">{isAo5 ? "Avg" : "Mo3"}</th>
+                    <th className="w-4" />
                     {Array.from({ length: solveCount }).map((_, i) => (
-                      <th key={i} className="px-1 py-1.5 text-right">{i + 1}</th>
+                      <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
                     ))}
                   </tr>
                 </thead>
@@ -362,10 +362,10 @@ function LeaderboardOverview({
                         <td className="py-2.5">
                           <span className="font-bold text-yellow-500">You</span>
                         </td>
-                        <td className="pl-6 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
+                        <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
                           {getBestSingle(selfEntry.solves)}
                         </td>
-                        <td className="pl-4 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
+                        <td className="pl-6 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
                           {selfEntry.average}
                         </td>
                         <td />
@@ -373,7 +373,7 @@ function LeaderboardOverview({
                           const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
                           const display = formatSolveTime(solve);
                           return (
-                            <td key={i} className="px-1 py-2.5 text-right font-mono tabular-nums font-bold">
+                            <td key={i} className="px-2 py-2.5 text-right font-mono tabular-nums font-bold">
                               {isBestOrWorst ? `(${display})` : display}
                             </td>
                           );
@@ -382,8 +382,8 @@ function LeaderboardOverview({
                     );
                   })()}
 
-                  {/* Top 3 */}
-                  {top3.filter((e) => !e.isSelf).slice(0, 3).map((entry, rowIdx) => {
+                  {/* Top 3 (always shown, even if you're in top 3) */}
+                  {top3.map((entry, rowIdx) => {
                     const { bestIdx, worstIdx } = getBestWorst(entry.solves);
                     return (
                       <tr
@@ -401,10 +401,10 @@ function LeaderboardOverview({
                             )}
                           </div>
                         </td>
-                        <td className="pl-6 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
+                        <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
                           {getBestSingle(entry.solves)}
                         </td>
-                        <td className="pl-4 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
+                        <td className="pl-6 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
                           {entry.average}
                         </td>
                         <td />
@@ -412,7 +412,7 @@ function LeaderboardOverview({
                           const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
                           const display = formatSolveTime(solve);
                           return (
-                            <td key={i} className="px-1 py-2.5 text-right font-mono tabular-nums font-bold">
+                            <td key={i} className="px-2 py-2.5 text-right font-mono tabular-nums font-bold">
                               {isBestOrWorst ? `(${display})` : display}
                             </td>
                           );
@@ -486,31 +486,72 @@ function EventLeaderboardDetail({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              <th className="px-3 py-2 text-left w-10">#</th>
+              <th className="px-4 py-2 text-left w-10">#</th>
               <th className="px-3 py-2 text-left">Player</th>
-              <th className="pl-6 pr-4 py-2 text-right">Single</th>
+              <th className="pl-8 pr-4 py-2 text-right">Single</th>
               <th className="pl-6 pr-4 py-2 text-right">{isAo5 ? "Avg" : "Mo3"}</th>
               <th className="w-4" />
               {Array.from({ length: solveCount }).map((_, i) => (
-                <th key={i} className="px-1.5 py-2 text-right">{i + 1}</th>
+                <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
               ))}
             </tr>
           </thead>
           <tbody>
+            {/* Your row pinned at top */}
+            {(() => {
+              const selfEntry = MOCK_LEADERBOARD.find((e) => e.isSelf);
+              if (!selfEntry) return null;
+              const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
+              return (
+                <tr className="bg-yellow-500/10 border-b-2 border-yellow-500/30">
+                  <td className="px-4 py-3 text-center text-sm font-bold text-yellow-500">
+                    {selfEntry.rank}
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatar
+                        user={{
+                          username: selfEntry.username,
+                          firstName: selfEntry.firstName,
+                          lastName: selfEntry.lastName,
+                          profilePictureUrl: selfEntry.profilePictureUrl,
+                        }}
+                        size="sm"
+                        rounded="full"
+                      />
+                      <span className="font-bold text-yellow-500">You</span>
+                      {selfEntry.country && (
+                        <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(selfEntry.country)}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                    {getBestSingle(selfEntry.solves)}
+                  </td>
+                  <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                    {selfEntry.average}
+                  </td>
+                  <td />
+                  {selfEntry.solves.map((solve, i) => {
+                    const isBW = isAo5 && (i === bestIdx || i === worstIdx);
+                    return (
+                      <td key={i} className="px-2 py-3 text-right font-mono tabular-nums font-bold">
+                        {isBW ? `(${formatSolveTime(solve)})` : formatSolveTime(solve)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })()}
+
             {MOCK_LEADERBOARD.map((entry, rowIdx) => {
               const { bestIdx, worstIdx } = getBestWorst(entry.solves);
               return (
                 <tr
                   key={entry.rank}
-                  className={
-                    entry.isSelf
-                      ? "bg-primary/5"
-                      : rowIdx % 2 === 1
-                        ? "bg-muted/30"
-                        : ""
-                  }
+                  className={rowIdx % 2 === 1 ? "bg-muted/20" : ""}
                 >
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-4 py-3 text-center">
                     {rankDisplay(entry.rank)}
                   </td>
                   <td className="px-3 py-3">
@@ -525,7 +566,7 @@ function EventLeaderboardDetail({
                         size="sm"
                         rounded="full"
                       />
-                      <span className={`font-semibold truncate ${entry.isSelf ? "text-primary" : ""}`}>
+                      <span className="font-semibold truncate">
                         {entry.username}
                       </span>
                       {entry.country && (
@@ -533,7 +574,7 @@ function EventLeaderboardDetail({
                       )}
                     </div>
                   </td>
-                  <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                  <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
                     {getBestSingle(entry.solves)}
                   </td>
                   <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
@@ -544,7 +585,7 @@ function EventLeaderboardDetail({
                     const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
                     const display = formatSolveTime(solve);
                     return (
-                      <td key={i} className="px-1.5 py-3 text-right font-mono tabular-nums">
+                      <td key={i} className="px-2 py-3 text-right font-mono tabular-nums font-bold">
                         {isBestOrWorst ? `(${display})` : display}
                       </td>
                     );
