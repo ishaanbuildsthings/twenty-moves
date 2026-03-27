@@ -36,6 +36,7 @@ model Event {
   tournaments       Tournament[]
   scrambleSets      ScrambleSet[]
   tournamentEntries TournamentEntry[]
+  practicePosts     PracticePost[]
 }
 
 
@@ -97,8 +98,9 @@ model ScrambleSet {
   createdAt DateTime @default(now())
 
   event   Event             @relation(fields: [eventId], references: [id])
-  entries TournamentEntry[]
-  solves  Solve[]
+  entries        TournamentEntry[]
+  solves         Solve[]
+  practicePosts  PracticePost[]
 }
 
 model TournamentEntry {
@@ -116,6 +118,36 @@ model TournamentEntry {
   scrambleSet  ScrambleSet @relation(fields: [scrambleSetId], references: [id])
 
   @@unique([userId, tournamentId, eventId, scrambleSetId])
+}
+
+enum PostType {
+  practice
+  tournament
+  race
+}
+
+model PracticePost {
+  id            String  @id @default(cuid())
+  postId        String  @unique
+  eventId       String
+  caption       String  @default("")
+  bestSingle    Int?
+  bestAo5       Int?
+  bestAo12      Int?
+  bestAo100     Int?
+  sessionMean   Int?
+  bestMo3       Int?
+  scrambleSetId  String
+  displaySolves      Int[]
+  numSolves   Int
+  numLikes    Int
+  numComments Int
+  youtubeUrl  String?
+  createdAt     DateTime @default(now())
+  lastUpdatedAt DateTime @updatedAt
+
+  event      Event       @relation(fields: [eventId], references: [id])
+  scrambleSet ScrambleSet @relation(fields: [scrambleSetId], references: [id])
 }
 
 model Follow {
