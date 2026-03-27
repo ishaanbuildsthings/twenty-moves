@@ -49,14 +49,14 @@ const MOCK_ENTRIES: Partial<Record<CubeEvent, MockEntry>> = {
 };
 
 const MOCK_LEADERBOARD = [
-  { rank: 1, username: "cubegod99", firstName: "Max", lastName: "Chen", country: "US", profilePictureUrl: null, average: "7.23", isSelf: false },
-  { rank: 2, username: "speedyfingers", firstName: "Yuki", lastName: "Tanaka", country: "JP", profilePictureUrl: null, average: "8.41", isSelf: false },
-  { rank: 3, username: "713dream", firstName: "ishaan", lastName: "agrawal", country: "US", profilePictureUrl: null, average: "9.87", isSelf: true },
-  { rank: 4, username: "cubemaster", firstName: "Lena", lastName: "Schmidt", country: "DE", profilePictureUrl: null, average: "10.12", isSelf: false },
-  { rank: 5, username: "rubiksfan", firstName: "Carlos", lastName: "Rivera", country: "MX", profilePictureUrl: null, average: "11.54", isSelf: false },
-  { rank: 6, username: "puzzle_pro", firstName: "Emma", lastName: "Lee", country: "KR", profilePictureUrl: null, average: "12.03", isSelf: false },
-  { rank: 7, username: "twistandturn", firstName: "Ollie", lastName: "Brown", country: "GB", profilePictureUrl: null, average: "12.89", isSelf: false },
-  { rank: 8, username: "algmaster", firstName: "Sophie", lastName: "Martin", country: "FR", profilePictureUrl: null, average: "13.21", isSelf: false },
+  { rank: 1, username: "cubegod99", firstName: "Max", lastName: "Chen", country: "US", profilePictureUrl: null, average: "7.23", isSelf: false, solves: [{ timeMs: 6890, penalty: null }, { timeMs: 7450, penalty: null }, { timeMs: 7120, penalty: null }, { timeMs: 8010, penalty: null }, { timeMs: 7110, penalty: null }] },
+  { rank: 2, username: "speedyfingers", firstName: "Yuki", lastName: "Tanaka", country: "JP", profilePictureUrl: null, average: "8.41", isSelf: false, solves: [{ timeMs: 8120, penalty: null }, { timeMs: 9230, penalty: null }, { timeMs: 7890, penalty: null }, { timeMs: 8540, penalty: null }, { timeMs: 8560, penalty: null }] },
+  { rank: 3, username: "713dream", firstName: "ishaan", lastName: "agrawal", country: "US", profilePictureUrl: null, average: "9.87", isSelf: true, solves: [{ timeMs: 9230, penalty: null }, { timeMs: 8410, penalty: null }, { timeMs: 11540, penalty: null }, { timeMs: 7890, penalty: null }, { timeMs: 10120, penalty: null }] },
+  { rank: 4, username: "cubemaster", firstName: "Lena", lastName: "Schmidt", country: "DE", profilePictureUrl: null, average: "10.12", isSelf: false, solves: [{ timeMs: 10340, penalty: null }, { timeMs: 9870, penalty: null }, { timeMs: 10150, penalty: null }, { timeMs: 11230, penalty: null }, { timeMs: 8920, penalty: null }] },
+  { rank: 5, username: "rubiksfan", firstName: "Carlos", lastName: "Rivera", country: "MX", profilePictureUrl: null, average: "11.54", isSelf: false, solves: [{ timeMs: 12340, penalty: null }, { timeMs: 10890, penalty: null }, { timeMs: 11420, penalty: null }, { timeMs: 13010, penalty: null }, { timeMs: 10560, penalty: "+2" }] },
+  { rank: 6, username: "puzzle_pro", firstName: "Emma", lastName: "Lee", country: "KR", profilePictureUrl: null, average: "12.03", isSelf: false, solves: [{ timeMs: 11560, penalty: null }, { timeMs: 12340, penalty: null }, { timeMs: 12190, penalty: null }, { timeMs: 13450, penalty: null }, { timeMs: 10230, penalty: null }] },
+  { rank: 7, username: "twistandturn", firstName: "Ollie", lastName: "Brown", country: "GB", profilePictureUrl: null, average: "12.89", isSelf: false, solves: [{ timeMs: 12340, penalty: null }, { timeMs: 13560, penalty: null }, { timeMs: 12780, penalty: null }, { timeMs: 11230, penalty: null }, { timeMs: 0, penalty: "dnf" }] },
+  { rank: 8, username: "algmaster", firstName: "Sophie", lastName: "Martin", country: "FR", profilePictureUrl: null, average: "13.21", isSelf: false, solves: [{ timeMs: 13450, penalty: null }, { timeMs: 12890, penalty: null }, { timeMs: 13320, penalty: null }, { timeMs: 14560, penalty: null }, { timeMs: 12120, penalty: null }] },
 ];
 
 function formatCountdown(ms: number): string {
@@ -178,9 +178,10 @@ export default function TourneyPage() {
 
               {/* Leaderboard table */}
               <div className="rounded-lg bg-card border border-border overflow-hidden">
-                <div className="grid grid-cols-[2.5rem_1fr_4rem] px-4 py-2 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                <div className="grid grid-cols-[2.5rem_10rem_1fr_4rem] px-4 py-2 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   <span>#</span>
                   <span>Player</span>
+                  <span>Times</span>
                   <span className="text-right">
                     {eventConfig.tournamentSolveCount === 5 ? "Ao5" : "Mo3"}
                   </span>
@@ -189,7 +190,7 @@ export default function TourneyPage() {
                 {MOCK_LEADERBOARD.map((entry) => (
                   <div
                     key={entry.rank}
-                    className={`grid grid-cols-[2.5rem_1fr_4rem] px-4 py-3 items-center border-b border-border/40 last:border-0 ${
+                    className={`grid grid-cols-[2.5rem_10rem_1fr_4rem] px-4 py-3 items-center border-b border-border/40 last:border-0 ${
                       entry.isSelf ? "bg-primary/5" : ""
                     }`}
                   >
@@ -219,6 +220,11 @@ export default function TourneyPage() {
                         <span className="text-xs text-muted-foreground">{entry.country}</span>
                       )}
                     </div>
+                    <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
+                      {eventConfig.tournamentSolveCount === 5
+                        ? formatAo5Times(entry.solves)
+                        : entry.solves.map(formatSolveTime).join("  ")}
+                    </span>
                     <span className="text-sm font-mono tabular-nums font-bold text-right">
                       {entry.average}
                     </span>
