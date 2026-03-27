@@ -86,8 +86,7 @@ model Solve {
 
   user        User         @relation(fields: [userId], references: [id])
   event       Event        @relation(fields: [eventId], references: [id])
-  scramble    Scramble     @relation(fields: [scrambleId], references: [id])
-  scrambleSet ScrambleSet? @relation(fields: [scrambleSetId], references: [id])
+  scrambleSet ScrambleSet  @relation(fields: [scrambleSetId], references: [id])
 }
 
 model Tournament {
