@@ -412,11 +412,18 @@ export default function TourneyPage() {
 
 // --- Compete Tab: Event Card ---
 
-// Get the tournament format label for an event.
+// Get the tournament format label for an event (shown on cards/badges).
+// e.g. "Ao5", "Mo3", "Bo5", "Bo3"
 function getFormatLabel(config: typeof EVENT_CONFIGS[number]): string {
   if (config.tournamentRankBy === "single") {
     return `Bo${config.tournamentSolveCount}`;
   }
+  return config.tournamentSolveCount === 5 ? "Ao5" : "Mo3";
+}
+
+// Get the stat column label for the leaderboard table.
+// BLD events rank by single but still display ao5/mo3 as a column.
+function getStatColumnLabel(config: typeof EVENT_CONFIGS[number]): string {
   return config.tournamentSolveCount === 5 ? "Ao5" : "Mo3";
 }
 
@@ -529,7 +536,7 @@ function LeaderboardOverview({
                     <th className="px-4 py-2 text-left w-10">#</th>
                     <th className="py-2 text-left">Player</th>
                     <th className="pl-8 pr-4 py-2 text-right">Single</th>
-                    <th className="pl-6 pr-4 py-2 text-right">{getFormatLabel(config)}</th>
+                    <th className="pl-6 pr-4 py-2 text-right">{getStatColumnLabel(config)}</th>
                     <th className="w-4" />
                     {Array.from({ length: solveCount }).map((_, i) => (
                       <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
@@ -680,7 +687,7 @@ function EventLeaderboardDetail({
               <th className="px-4 py-2 text-left w-10">#</th>
               <th className="px-3 py-2 text-left">Player</th>
               <th className="pl-8 pr-4 py-2 text-right">Single</th>
-              <th className="pl-6 pr-4 py-2 text-right">{getFormatLabel(eventConfig)}</th>
+              <th className="pl-6 pr-4 py-2 text-right">{getStatColumnLabel(eventConfig)}</th>
               <th className="w-4" />
               {Array.from({ length: solveCount }).map((_, i) => (
                 <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
