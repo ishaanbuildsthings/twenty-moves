@@ -33,7 +33,6 @@ model Event {
 
   solves            Solve[]
   personalBests     PersonalBest[]
-  tournaments       Tournament[]
   scrambleSets      ScrambleSet[]
   tournamentEntries TournamentEntry[]
   practicePosts     PracticePost[]
@@ -81,15 +80,15 @@ model Solve {
   scrambleSet ScrambleSet  @relation(fields: [scrambleSetId], references: [id])
 }
 
+// One tournament per day. Covers all events.
+// Individual events are tracked via TournamentEntry + ScrambleSet.
 model Tournament {
   id        String            @id @default(cuid())
   number    Int               @unique @default(autoincrement())
   name      String?           // Optional display name override (e.g. "Holiday Special")
-  eventId   String
   date      DateTime
   createdAt DateTime          @default(now())
 
-  event   Event               @relation(fields: [eventId], references: [id])
   entries TournamentEntry[]
 }
 
@@ -111,7 +110,7 @@ model TournamentEntry {
   tournamentId  String
   eventId       String
   scrambleSetId String
-  result        Int     // ms — ao5 or mo3 depending on tournament.format
+  result        Int?    // Cached result in ms for leaderboard sorting. Null until enough solves to compute.
   createdAt     DateTime @default(now())
 
   user         User        @relation(fields: [userId], references: [id])
