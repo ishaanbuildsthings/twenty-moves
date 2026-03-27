@@ -36,6 +36,7 @@ model Event {
   tournaments       Tournament[]
   scrambleSets      ScrambleSet[]
   tournamentEntries TournamentEntry[]
+  practicePosts     PracticePost[]
 }
 
 
@@ -97,8 +98,9 @@ model ScrambleSet {
   createdAt DateTime @default(now())
 
   event   Event             @relation(fields: [eventId], references: [id])
-  entries TournamentEntry[]
-  solves  Solve[]
+  entries        TournamentEntry[]
+  solves         Solve[]
+  practicePosts  PracticePost[]
 }
 
 model TournamentEntry {
