@@ -6,7 +6,7 @@ import { EventIcon } from "@/lib/components/event-icon";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { ChevronLeft, ChevronRight, Play, ArrowLeft } from "lucide-react";
 import { countryCodeToFlag } from "@/lib/countries";
-import { getNextRollover, getTournamentDate } from "@/lib/tournament/date";
+import { getNextRollover } from "@/lib/tournament/date";
 
 type Tab = "compete" | "leaderboard";
 
@@ -134,24 +134,18 @@ const TOURNAMENT_NUMBER = 47;
 
 export default function TourneyPage() {
   const [tab, setTab] = useState<Tab>("compete");
-  const [leaderboardDate, setLeaderboardDate] = useState(() => getTournamentDate());
+  // Contest number for leaderboard navigation. Current contest is the default.
+  const [viewingContest, setViewingContest] = useState(TOURNAMENT_NUMBER);
   // null = overview, CubeEvent = drilling into that event's full table
   const [selectedLeaderboardEvent, setSelectedLeaderboardEvent] = useState<CubeEvent | null>(null);
   const [countdown, setCountdown] = useState("");
 
-  const todayDate = getTournamentDate();
-  const isToday = leaderboardDate === todayDate;
+  const isCurrent = viewingContest === TOURNAMENT_NUMBER;
 
-  const navigateDate = (direction: "prev" | "next") => {
-    const d = new Date(leaderboardDate + "T12:00:00Z");
-    d.setUTCDate(d.getUTCDate() + (direction === "prev" ? -1 : 1));
-    setLeaderboardDate(d.toISOString().slice(0, 10));
-    setSelectedLeaderboardEvent(null); // go back to overview on date change
+  const navigateContest = (direction: "prev" | "next") => {
+    setViewingContest((n) => n + (direction === "prev" ? -1 : 1));
+    setSelectedLeaderboardEvent(null);
   };
-
-  const displayDate = new Date(leaderboardDate + "T12:00:00Z").toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
-  });
 
   useEffect(() => {
     const update = () => {
@@ -168,10 +162,14 @@ export default function TourneyPage() {
       {/* Header */}
       <div className="px-6 pt-6 pb-0">
         <div className="max-w-5xl mx-auto w-full">
-          <h1 className="text-3xl font-extrabold">Daily Contest {TOURNAMENT_NUMBER}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            <span className="font-mono font-bold">{countdown}</span> remaining
-          </p>
+          <h1 className="text-3xl font-extrabold">Daily Contest {viewingContest}</h1>
+          {isCurrent ? (
+            <p className="text-sm text-muted-foreground mt-1">
+              <span className="font-mono font-bold">{countdown}</span> remaining
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-1">Ended</p>
+          )}
 
           {/* Tabs */}
           <div className="flex gap-1 mt-4 border-b border-border">
@@ -211,20 +209,16 @@ export default function TourneyPage() {
           ) : selectedLeaderboardEvent ? (
             <EventLeaderboardDetail
               event={selectedLeaderboardEvent}
-              displayDate={displayDate}
-              isToday={isToday}
+              contestNumber={viewingContest}
+              currentContestNumber={TOURNAMENT_NUMBER}
               onBack={() => setSelectedLeaderboardEvent(null)}
-              navigateDate={navigateDate}
-              leaderboardDate={leaderboardDate}
-              todayDate={todayDate}
+              navigateContest={navigateContest}
             />
           ) : (
             <LeaderboardOverview
-              displayDate={displayDate}
-              isToday={isToday}
-              navigateDate={navigateDate}
-              leaderboardDate={leaderboardDate}
-              todayDate={todayDate}
+              contestNumber={viewingContest}
+              currentContestNumber={TOURNAMENT_NUMBER}
+              navigateContest={navigateContest}
               onSelectEvent={setSelectedLeaderboardEvent}
             />
           )}
@@ -284,28 +278,30 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
 // --- Leaderboard Tab: Overview (stubs for all events) ---
 
 function LeaderboardOverview({
-  displayDate, isToday, navigateDate, leaderboardDate, todayDate, onSelectEvent,
+  contestNumber, currentContestNumber, navigateContest, onSelectEvent,
 }: {
-  displayDate: string;
-  isToday: boolean;
-  navigateDate: (dir: "prev" | "next") => void;
-  leaderboardDate: string;
-  todayDate: string;
+  contestNumber: number;
+  currentContestNumber: number;
+  navigateContest: (dir: "prev" | "next") => void;
   onSelectEvent: (event: CubeEvent) => void;
 }) {
   return (
     <div className="space-y-6">
-      {/* Date navigation */}
+      {/* Contest navigation */}
       <div className="flex items-center justify-end gap-2">
-        <button onClick={() => navigateDate("prev")} className="p-1 rounded-md hover:bg-muted transition-colors">
+        <button
+          onClick={() => navigateContest("prev")}
+          disabled={contestNumber <= 1}
+          className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <span className="text-sm font-semibold min-w-[10rem] text-center">
-          {isToday ? `Today — ${displayDate}` : displayDate}
+          Contest {contestNumber}{contestNumber === currentContestNumber ? " (Current)" : ""}
         </span>
         <button
-          onClick={() => navigateDate("next")}
-          disabled={leaderboardDate >= todayDate}
+          onClick={() => navigateContest("next")}
+          disabled={contestNumber >= currentContestNumber}
           className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronRight className="w-4 h-4" />
@@ -435,15 +431,13 @@ function LeaderboardOverview({
 // --- Leaderboard Tab: Full table for one event ---
 
 function EventLeaderboardDetail({
-  event, onBack, displayDate, isToday, navigateDate, leaderboardDate, todayDate,
+  event, onBack, contestNumber, currentContestNumber, navigateContest,
 }: {
   event: CubeEvent;
   onBack: () => void;
-  displayDate: string;
-  isToday: boolean;
-  navigateDate: (dir: "prev" | "next") => void;
-  leaderboardDate: string;
-  todayDate: string;
+  contestNumber: number;
+  currentContestNumber: number;
+  navigateContest: (dir: "prev" | "next") => void;
 }) {
   const eventConfig = EVENT_MAP[event];
   const solveCount = eventConfig.tournamentSolveCount;
@@ -465,15 +459,19 @@ function EventLeaderboardDetail({
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => navigateDate("prev")} className="p-1 rounded-md hover:bg-muted transition-colors">
+          <button
+            onClick={() => navigateContest("prev")}
+            disabled={contestNumber <= 1}
+            className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-sm font-semibold min-w-[10rem] text-center">
-            {isToday ? `Today — ${displayDate}` : displayDate}
+            Contest {contestNumber}{contestNumber === currentContestNumber ? " (Current)" : ""}
           </span>
           <button
-            onClick={() => navigateDate("next")}
-            disabled={leaderboardDate >= todayDate}
+            onClick={() => navigateContest("next")}
+            disabled={contestNumber >= currentContestNumber}
             className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronRight className="w-4 h-4" />
