@@ -351,12 +351,12 @@ function LeaderboardOverview({
                   {selfEntry && (() => {
                     const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
                     return (
-                      <tr className="bg-muted/40 border-b border-border/60">
-                        <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-primary">
+                      <tr className="bg-orange-500/5 border-l-2 border-l-orange-500 border-b-2 border-b-orange-500/20">
+                        <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-orange-400">
                           {selfEntry.rank}
                         </td>
                         <td className="py-2.5">
-                          <span className="font-semibold text-primary">{selfEntry.username}</span>
+                          <span className="font-semibold text-orange-400">{selfEntry.username}</span>
                         </td>
                         <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
                           {getBestSingle(selfEntry.solves)}
@@ -501,8 +501,8 @@ function EventLeaderboardDetail({
               if (!selfEntry) return null;
               const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
               return (
-                <tr className="bg-muted/40 border-b-2 border-primary/30">
-                  <td className="px-4 py-3 text-center text-sm font-bold text-primary">
+                <tr className="bg-orange-500/5 border-l-2 border-l-orange-500 border-b-2 border-b-orange-500/20">
+                  <td className="px-4 py-3 text-center text-sm font-bold text-orange-400">
                     {selfEntry.rank}
                   </td>
                   <td className="px-3 py-3">
@@ -517,7 +517,7 @@ function EventLeaderboardDetail({
                         size="sm"
                         rounded="full"
                       />
-                      <span className="font-semibold text-primary">{selfEntry.username}</span>
+                      <span className="font-semibold text-orange-400">{selfEntry.username}</span>
                       {selfEntry.country && (
                         <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(selfEntry.country)}</span>
                       )}
