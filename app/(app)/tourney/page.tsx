@@ -366,13 +366,13 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-yellow-500">
             <Play className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">Continue</span>
+            <span className="text-xs font-semibold">Continue ({completedSolves}/{totalSolves})</span>
           </div>
           <p className="text-[11px] font-mono tabular-nums text-muted-foreground leading-relaxed">
             {Array.from({ length: totalSolves }, (_, i) =>
               i < entry.solves.length
                 ? formatSolveTime(entry.solves[i])
-                : "──"
+                : "-.--"
             ).join("  ")}
           </p>
         </div>
