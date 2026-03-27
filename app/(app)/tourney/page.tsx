@@ -62,16 +62,56 @@ interface MockLeaderboardEntry {
   solves: { timeMs: number; penalty: string | null }[];
 }
 
-const MOCK_LEADERBOARD: MockLeaderboardEntry[] = [
-  { rank: 1, username: "cubegod99", firstName: "Max", lastName: "Chen", country: "US", profilePictureUrl: null, average: "7.23", isSelf: false, solves: [{ timeMs: 6890, penalty: null }, { timeMs: 7450, penalty: null }, { timeMs: 7120, penalty: null }, { timeMs: 8010, penalty: null }, { timeMs: 7110, penalty: null }] },
-  { rank: 2, username: "speedyfingers", firstName: "Yuki", lastName: "Tanaka", country: "JP", profilePictureUrl: null, average: "8.41", isSelf: false, solves: [{ timeMs: 8120, penalty: null }, { timeMs: 9230, penalty: null }, { timeMs: 7890, penalty: null }, { timeMs: 8540, penalty: null }, { timeMs: 8560, penalty: null }] },
-  { rank: 3, username: "713dream", firstName: "ishaan", lastName: "agrawal", country: "US", profilePictureUrl: null, average: "9.87", isSelf: true, solves: [{ timeMs: 9230, penalty: null }, { timeMs: 8410, penalty: null }, { timeMs: 11540, penalty: null }, { timeMs: 7890, penalty: null }, { timeMs: 10120, penalty: null }] },
-  { rank: 4, username: "cubemaster", firstName: "Lena", lastName: "Schmidt", country: "DE", profilePictureUrl: null, average: "10.12", isSelf: false, solves: [{ timeMs: 10340, penalty: null }, { timeMs: 9870, penalty: null }, { timeMs: 10150, penalty: null }, { timeMs: 11230, penalty: null }, { timeMs: 8920, penalty: null }] },
-  { rank: 5, username: "rubiksfan", firstName: "Carlos", lastName: "Rivera", country: "MX", profilePictureUrl: null, average: "11.54", isSelf: false, solves: [{ timeMs: 12340, penalty: null }, { timeMs: 10890, penalty: null }, { timeMs: 11420, penalty: null }, { timeMs: 13010, penalty: null }, { timeMs: 10560, penalty: "+2" }] },
-  { rank: 6, username: "puzzle_pro", firstName: "Emma", lastName: "Lee", country: "KR", profilePictureUrl: null, average: "12.03", isSelf: false, solves: [{ timeMs: 11560, penalty: null }, { timeMs: 12340, penalty: null }, { timeMs: 12190, penalty: null }, { timeMs: 13450, penalty: null }, { timeMs: 10230, penalty: null }] },
-  { rank: 7, username: "twistandturn", firstName: "Ollie", lastName: "Brown", country: "GB", profilePictureUrl: null, average: "12.89", isSelf: false, solves: [{ timeMs: 12340, penalty: null }, { timeMs: 13560, penalty: null }, { timeMs: 12780, penalty: null }, { timeMs: 11230, penalty: null }, { timeMs: 0, penalty: "dnf" }] },
-  { rank: 8, username: "algmaster", firstName: "Sophie", lastName: "Martin", country: "FR", profilePictureUrl: null, average: "13.21", isSelf: false, solves: [{ timeMs: 13450, penalty: null }, { timeMs: 12890, penalty: null }, { timeMs: 13320, penalty: null }, { timeMs: 14560, penalty: null }, { timeMs: 12120, penalty: null }] },
-];
+const RESULTS_PER_PAGE = 25;
+
+// Generate 60 mock leaderboard entries.
+const MOCK_NAMES = [
+  ["Max", "Chen", "US"], ["Yuki", "Tanaka", "JP"], ["ishaan", "agrawal", "US"],
+  ["Lena", "Schmidt", "DE"], ["Carlos", "Rivera", "MX"], ["Emma", "Lee", "KR"],
+  ["Ollie", "Brown", "GB"], ["Sophie", "Martin", "FR"], ["Raj", "Patel", "IN"],
+  ["Mia", "Kim", "CA"], ["Noah", "Müller", "DE"], ["Ava", "Li", "CN"],
+  ["Liam", "Wilson", "AU"], ["Chloe", "Yamada", "JP"], ["Ethan", "Rossi", "IT"],
+  ["Sakura", "Ito", "JP"], ["Felix", "Svensson", "SE"], ["Zara", "Ali", "PK"],
+  ["Leo", "Santos", "BR"], ["Luna", "Park", "KR"], ["Oscar", "Berg", "NO"],
+  ["Aria", "Singh", "IN"], ["Hugo", "Dubois", "FR"], ["Isla", "Murphy", "IE"],
+  ["Kai", "Nakamura", "JP"], ["Maya", "Johansson", "SE"], ["Ravi", "Kumar", "IN"],
+  ["Nora", "Andersen", "DK"], ["Amir", "Hassan", "EG"], ["Ivy", "Zhang", "CN"],
+  ["Finn", "O'Brien", "IE"], ["Suki", "Watanabe", "JP"], ["Marco", "Bianchi", "IT"],
+  ["Elena", "Petrova", "RU"], ["Tao", "Wang", "CN"], ["Hana", "Choi", "KR"],
+  ["Lars", "Nielsen", "DK"], ["Amara", "Okafor", "NG"], ["Soren", "Larsen", "DK"],
+  ["Mei", "Huang", "TW"], ["Diego", "Lopez", "AR"], ["Freya", "Olsen", "NO"],
+  ["Yuto", "Sato", "JP"], ["Clara", "Fischer", "DE"], ["Omar", "Khoury", "LB"],
+  ["Ines", "Silva", "PT"], ["Anton", "Novak", "CZ"], ["Priya", "Sharma", "IN"],
+  ["Mateo", "Garcia", "ES"], ["Lily", "Thompson", "NZ"], ["Axel", "Eriksson", "SE"],
+  ["Nadia", "Kovacs", "HU"], ["Jin", "Park", "KR"], ["Rosa", "Fernandez", "CL"],
+  ["Erik", "Holm", "FI"], ["Yuna", "Takahashi", "JP"], ["Sam", "Baker", "US"],
+  ["Tina", "Bauer", "AT"], ["Aiden", "Moore", "US"], ["Kira", "Suzuki", "JP"],
+] as const;
+
+const MOCK_LEADERBOARD: MockLeaderboardEntry[] = MOCK_NAMES.map(([firstName, lastName, country], i) => {
+  const baseTime = 6500 + i * 400 + Math.floor(Math.random() * 200);
+  const solves = Array.from({ length: 5 }, () => ({
+    timeMs: baseTime + Math.floor(Math.random() * 3000 - 1000),
+    penalty: Math.random() < 0.03 ? "dnf" as const : Math.random() < 0.05 ? "+2" as const : null,
+  }));
+  const validTimes = solves
+    .map((s) => s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs)
+    .sort((a, b) => a - b);
+  const avg = validTimes.length >= 5
+    ? (validTimes[1] + validTimes[2] + validTimes[3]) / 3
+    : validTimes.reduce((a, b) => a + b, 0) / validTimes.length;
+  return {
+    rank: i + 1,
+    username: `${firstName.toLowerCase()}${lastName.toLowerCase().slice(0, 3)}`,
+    firstName: firstName as string,
+    lastName: lastName as string,
+    country: country as string,
+    profilePictureUrl: null,
+    average: formatTime(Math.round(avg)),
+    isSelf: i === 27, // Put "you" at rank 28
+    solves,
+  };
+});
 
 // --- Helpers ---
 
@@ -151,6 +191,7 @@ export default function TourneyPage() {
   const validEvent = selectedLeaderboardEvent && EVENT_MAP[selectedLeaderboardEvent]
     ? selectedLeaderboardEvent
     : null;
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
   const [countdown, setCountdown] = useState("");
   const isCurrent = viewingContest === TOURNAMENT_NUMBER;
@@ -177,7 +218,11 @@ export default function TourneyPage() {
   };
 
   const setSelectedEvent = (event: CubeEvent | null) => {
-    updateParams({ event: event });
+    updateParams({ event: event, page: null });
+  };
+
+  const setPage = (p: number) => {
+    updateParams({ page: p === 1 ? null : String(p) });
   };
 
   const navigateContest = (direction: "prev" | "next") => {
@@ -252,6 +297,8 @@ export default function TourneyPage() {
               onBack={() => setSelectedEvent(null)}
               navigateContest={navigateContest}
               onChangeEvent={setSelectedEvent}
+              page={page}
+              onPageChange={setPage}
             />
           ) : (
             <LeaderboardOverview
@@ -470,7 +517,7 @@ function LeaderboardOverview({
 // --- Leaderboard Tab: Full table for one event ---
 
 function EventLeaderboardDetail({
-  event, onBack, contestNumber, currentContestNumber, navigateContest, onChangeEvent,
+  event, onBack, contestNumber, currentContestNumber, navigateContest, onChangeEvent, page, onPageChange,
 }: {
   event: CubeEvent;
   onBack: () => void;
@@ -478,10 +525,20 @@ function EventLeaderboardDetail({
   currentContestNumber: number;
   navigateContest: (dir: "prev" | "next") => void;
   onChangeEvent: (event: CubeEvent) => void;
+  page: number;
+  onPageChange: (page: number) => void;
 }) {
   const eventConfig = EVENT_MAP[event];
   const solveCount = eventConfig.tournamentSolveCount;
   const isAo5 = solveCount === 5;
+
+  const totalPages = Math.ceil(MOCK_LEADERBOARD.length / RESULTS_PER_PAGE);
+  const currentPage = Math.min(page, totalPages);
+  const pageEntries = MOCK_LEADERBOARD.slice(
+    (currentPage - 1) * RESULTS_PER_PAGE,
+    currentPage * RESULTS_PER_PAGE
+  );
+  const selfEntry = MOCK_LEADERBOARD.find((e) => e.isSelf);
 
   return (
     <div className="space-y-4">
@@ -552,7 +609,6 @@ function EventLeaderboardDetail({
           <tbody>
             {/* Your row pinned at top */}
             {(() => {
-              const selfEntry = MOCK_LEADERBOARD.find((e) => e.isSelf);
               if (!selfEntry) return null;
               const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
               return (
@@ -597,7 +653,7 @@ function EventLeaderboardDetail({
               );
             })()}
 
-            {MOCK_LEADERBOARD.map((entry, rowIdx) => {
+            {pageEntries.map((entry, rowIdx) => {
               const { bestIdx, worstIdx } = getBestWorst(entry.solves);
               return (
                 <tr
@@ -649,6 +705,39 @@ function EventLeaderboardDetail({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ← Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              className={`w-8 h-8 text-sm rounded-md transition-colors ${
+                p === currentPage
+                  ? "bg-primary text-primary-foreground font-bold"
+                  : "hover:bg-muted"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            className="px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
