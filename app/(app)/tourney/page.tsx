@@ -247,24 +247,23 @@ export default function TourneyPage() {
       <div className="px-6 pt-6 pb-0">
         <div className="max-w-5xl mx-auto w-full">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigateContest("prev")}
-              disabled={viewingContest <= 1}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
             <h1 className="text-3xl font-extrabold">Daily Contest {viewingContest}</h1>
-            <button
-              onClick={() => navigateContest("next")}
-              disabled={viewingContest >= TOURNAMENT_NUMBER}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-            {isCurrent && (
-              <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Current</span>
-            )}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => navigateContest("prev")}
+                disabled={viewingContest <= 1}
+                className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => navigateContest("next")}
+                disabled={viewingContest >= TOURNAMENT_NUMBER}
+                className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
           {isCurrent ? (
             <p className="text-sm text-muted-foreground mt-1">
