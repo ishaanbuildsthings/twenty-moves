@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
 import { UserAvatar } from "@/lib/components/user-avatar";
-import { ChevronDown, Play } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { countryCodeToFlag } from "@/lib/countries";
-import { getNextRollover } from "@/lib/tournament/date";
+import { getNextRollover, getTournamentDate } from "@/lib/tournament/date";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,7 +77,22 @@ function formatTime(ms: number): string {
 export default function TourneyPage() {
   const [tab, setTab] = useState<Tab>("compete");
   const [leaderboardEvent, setLeaderboardEvent] = useState<CubeEvent>(CubeEvent.THREE);
+  const [leaderboardDate, setLeaderboardDate] = useState(() => getTournamentDate());
   const [countdown, setCountdown] = useState("");
+
+  const todayDate = getTournamentDate();
+  const isToday = leaderboardDate === todayDate;
+
+  const navigateDate = (direction: "prev" | "next") => {
+    const d = new Date(leaderboardDate + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() + (direction === "prev" ? -1 : 1));
+    setLeaderboardDate(d.toISOString().slice(0, 10));
+  };
+
+  // Format date for display (e.g., "March 26, 2026")
+  const displayDate = new Date(leaderboardDate + "T12:00:00Z").toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric",
+  });
 
   // Live countdown to tournament end.
   useEffect(() => {
@@ -156,26 +171,55 @@ export default function TourneyPage() {
             </>
           ) : (
             <div className="space-y-4">
-              {/* Event selector */}
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 rounded-md bg-card border border-border hover:bg-muted transition-colors">
-                  <EventIcon event={eventConfig} size={20} />
-                  <span className="font-bold text-sm">{eventConfig.name}</span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  {EVENT_CONFIGS.map((config) => (
-                    <DropdownMenuItem
-                      key={config.id}
-                      onClick={() => setLeaderboardEvent(config.id)}
-                      className={leaderboardEvent === config.id ? "bg-accent" : ""}
-                    >
-                      <EventIcon event={config} size={16} />
-                      <span>{config.name}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Controls row: event selector + date navigation */}
+              <div className="flex items-center justify-between gap-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 rounded-md bg-card border border-border hover:bg-muted transition-colors">
+                    <EventIcon event={eventConfig} size={20} />
+                    <span className="font-bold text-sm">{eventConfig.name}</span>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {EVENT_CONFIGS.map((config) => (
+                      <DropdownMenuItem
+                        key={config.id}
+                        onClick={() => setLeaderboardEvent(config.id)}
+                        className={leaderboardEvent === config.id ? "bg-accent" : ""}
+                      >
+                        <EventIcon event={config} size={16} />
+                        <span>{config.name}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Date navigation */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => navigateDate("prev")}
+                    className="p-1 rounded-md hover:bg-muted transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm font-semibold min-w-[10rem] text-center">
+                    {isToday ? `Today — ${displayDate}` : displayDate}
+                  </span>
+                  <button
+                    onClick={() => navigateDate("next")}
+                    disabled={isToday}
+                    className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tournament end countdown (only for today) */}
+              {isToday && (
+                <p className="text-xs text-muted-foreground">
+                  Tournament ends in <span className="font-mono font-bold">{countdown}</span>
+                </p>
+              )}
 
               {/* Leaderboard table */}
               {(() => {
@@ -217,22 +261,26 @@ export default function TourneyPage() {
                         <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
                           <th className="px-3 py-2 text-left w-10">#</th>
                           <th className="px-3 py-2 text-left">Player</th>
-                          <th className="px-2 py-2 text-right w-16 border-l border-border">Single</th>
-                          <th className="px-2 py-2 text-right w-16 border-l border-border">{isAo5 ? "Avg" : "Mo3"}</th>
+                          <th className="px-4 py-2 text-right">Single</th>
+                          <th className="px-4 py-2 text-right">{isAo5 ? "Avg" : "Mo3"}</th>
                           {Array.from({ length: solveCount }).map((_, i) => (
-                            <th key={i} className="px-2 py-2 text-right w-16">{i + 1}</th>
+                            <th key={i} className="px-3 py-2 text-right">{i + 1}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {MOCK_LEADERBOARD.map((entry) => {
+                        {MOCK_LEADERBOARD.map((entry, rowIdx) => {
                           const { bestIdx, worstIdx } = getBestWorst(entry.solves);
                           return (
                             <tr
                               key={entry.rank}
-                              className={`border-b border-border/40 last:border-0 ${
-                                entry.isSelf ? "bg-primary/5" : ""
-                              }`}
+                              className={
+                                entry.isSelf
+                                  ? "bg-primary/5"
+                                  : rowIdx % 2 === 1
+                                    ? "bg-muted/30"
+                                    : ""
+                              }
                             >
                               <td className="px-3 py-3 text-center">
                                 {rankDisplay(entry.rank)}
@@ -257,17 +305,17 @@ export default function TourneyPage() {
                                   )}
                                 </div>
                               </td>
-                              <td className="px-2 py-3 text-right font-mono tabular-nums font-bold border-l border-border">
+                              <td className="px-4 py-3 text-right font-mono tabular-nums font-bold">
                                 {getBestSingle(entry.solves)}
                               </td>
-                              <td className="px-2 py-3 text-right font-mono tabular-nums font-bold border-l border-border">
+                              <td className="px-4 py-3 text-right font-mono tabular-nums font-bold">
                                 {entry.average}
                               </td>
                               {entry.solves.map((solve, i) => {
                                 const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
                                 const display = formatSolveTime(solve);
                                 return (
-                                  <td key={i} className="px-2 py-3 text-right font-mono tabular-nums text-muted-foreground">
+                                  <td key={i} className="px-3 py-3 text-right font-mono tabular-nums">
                                     {isBestOrWorst ? `(${display})` : display}
                                   </td>
                                 );
