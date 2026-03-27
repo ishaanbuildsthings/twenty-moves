@@ -168,9 +168,9 @@ function formatAo5Times(solves: { timeMs: number; penalty: string | null }[]): s
 }
 
 const rankDisplay = (rank: number) => {
-  if (rank === 1) return <span className="text-xl" suppressHydrationWarning>🥇</span>;
-  if (rank === 2) return <span className="text-xl" suppressHydrationWarning>🥈</span>;
-  if (rank === 3) return <span className="text-xl" suppressHydrationWarning>🥉</span>;
+  if (rank === 1) return <span className="text-xl" style={{ filter: "hue-rotate(0deg) saturate(1.5)" }} suppressHydrationWarning>🏆</span>;
+  if (rank === 2) return <span className="text-xl grayscale brightness-150" suppressHydrationWarning>🏆</span>;
+  if (rank === 3) return <span className="text-xl" style={{ filter: "hue-rotate(-20deg) saturate(0.6) brightness(0.8)" }} suppressHydrationWarning>🏆</span>;
   return <span className="text-sm font-bold text-muted-foreground">{rank}</span>;
 };
 
@@ -369,11 +369,7 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
             <span className="text-xs font-semibold">Continue ({completedSolves}/{totalSolves})</span>
           </div>
           <p className="text-[11px] font-mono tabular-nums text-muted-foreground leading-relaxed">
-            {Array.from({ length: totalSolves }, (_, i) =>
-              i < entry.solves.length
-                ? formatSolveTime(entry.solves[i])
-                : "-.--"
-            ).join("  ")}
+            {entry.solves.map(formatSolveTime).join("  ")}
           </p>
         </div>
       )}
