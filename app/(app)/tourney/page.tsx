@@ -351,27 +351,51 @@ function LeaderboardOverview({
                   </tr>
                 </thead>
                 <tbody>
-                  {top3.map((entry, rowIdx) => {
+                  {/* Your row pinned at top */}
+                  {selfEntry && (() => {
+                    const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
+                    return (
+                      <tr className="bg-yellow-500/10 border-b-2 border-yellow-500/30">
+                        <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-yellow-500">
+                          {selfEntry.rank}
+                        </td>
+                        <td className="py-2.5">
+                          <span className="font-bold text-yellow-500">You</span>
+                        </td>
+                        <td className="pl-6 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
+                          {getBestSingle(selfEntry.solves)}
+                        </td>
+                        <td className="pl-4 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
+                          {selfEntry.average}
+                        </td>
+                        <td />
+                        {selfEntry.solves.map((solve, i) => {
+                          const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
+                          const display = formatSolveTime(solve);
+                          return (
+                            <td key={i} className="px-1 py-2.5 text-right font-mono tabular-nums font-bold">
+                              {isBestOrWorst ? `(${display})` : display}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })()}
+
+                  {/* Top 3 */}
+                  {top3.filter((e) => !e.isSelf).slice(0, 3).map((entry, rowIdx) => {
                     const { bestIdx, worstIdx } = getBestWorst(entry.solves);
                     return (
                       <tr
                         key={entry.rank}
-                        className={
-                          entry.isSelf
-                            ? "bg-primary/5"
-                            : rowIdx % 2 === 1
-                              ? "bg-muted/20"
-                              : ""
-                        }
+                        className={rowIdx % 2 === 1 ? "bg-muted/20" : ""}
                       >
                         <td className="px-4 py-2.5 w-10 text-center">
                           {rankDisplay(entry.rank)}
                         </td>
                         <td className="py-2.5">
                           <div className="flex items-center gap-2">
-                            <span className={`font-semibold ${entry.isSelf ? "text-primary" : ""}`}>
-                              {entry.username}
-                            </span>
+                            <span className="font-semibold">{entry.username}</span>
                             {entry.country && (
                               <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.country)}</span>
                             )}
@@ -388,7 +412,7 @@ function LeaderboardOverview({
                           const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
                           const display = formatSolveTime(solve);
                           return (
-                            <td key={i} className="px-1 py-2.5 text-right font-mono tabular-nums text-sm">
+                            <td key={i} className="px-1 py-2.5 text-right font-mono tabular-nums font-bold">
                               {isBestOrWorst ? `(${display})` : display}
                             </td>
                           );
@@ -396,37 +420,6 @@ function LeaderboardOverview({
                       </tr>
                     );
                   })}
-
-                  {/* Your placement if outside top 3 */}
-                  {selfEntry && selfEntry.rank > 3 && (() => {
-                    const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
-                    return (
-                      <tr className="bg-primary/5 border-t border-border/40">
-                        <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-muted-foreground">
-                          {selfEntry.rank}
-                        </td>
-                        <td className="py-2.5">
-                          <span className="font-semibold text-primary">You</span>
-                        </td>
-                        <td className="pl-6 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
-                          {getBestSingle(selfEntry.solves)}
-                        </td>
-                        <td className="pl-4 pr-3 py-2.5 text-right font-mono tabular-nums font-bold">
-                          {selfEntry.average}
-                        </td>
-                        <td />
-                        {selfEntry.solves.map((solve, i) => {
-                          const isBestOrWorst = isAo5 && (i === bestIdx || i === worstIdx);
-                          const display = formatSolveTime(solve);
-                          return (
-                            <td key={i} className="px-1 py-2.5 text-right font-mono tabular-nums text-sm">
-                              {isBestOrWorst ? `(${display})` : display}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })()}
                 </tbody>
               </table>
 
