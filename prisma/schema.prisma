@@ -8,80 +8,63 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  supabaseId String   @unique
-  username   String   @unique
-  firstName String
-  lastName  String
+  id                String   @id @default(cuid())
+  supabaseId        String   @unique
+  username          String   @unique
+  firstName         String
+  lastName          String
   wcaId             String?
   profilePictureUrl String?
   country           String?
   bio               String   @default("")
   createdAt         DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime @updatedAt
 
-  solves        Solve[]
-  personalBests PersonalBest[]
-  followers     Follow[]       @relation("followee")
-  following     Follow[]       @relation("follower")
+  tournamentEntries DailyTournamentEntry[]
+  followers         Follow[]               @relation("followee")
+  following         Follow[]               @relation("follower")
 }
 
-model Event {
-  id   String @id @default(cuid())
-  name String @unique
+// A reusable group of scrambles. Used by tournaments, races, and
+// head-to-head battles so all participants solve the same scrambles.
+model ScrambleSet {
+  id        String   @id @default(cuid())
+  event     String   // CubeEvent enum value (e.g. "333", "222")
+  scrambles Json     // Array of scramble strings
+  count     Int      // Number of scrambles in the set
+  createdAt DateTime @default(now())
 
-  solves        Solve[]
-  scrambles     Scramble[]
-  personalBests PersonalBest[]
+  dailyTournaments DailyTournament[]
 }
 
-model Scramble {
-  id      String @id @default(cuid())
-  eventId String
-  moves   String
+// One tournament per event per day. Links to a shared ScrambleSet.
+model DailyTournament {
+  id            String   @id @default(cuid())
+  date          String   // UTC date string, e.g. "2026-03-26"
+  event         String   // CubeEvent enum value
+  scrambleSetId String
+  createdAt     DateTime @default(now())
 
-  event  Event   @relation(fields: [eventId], references: [id])
-  solves Solve[]
+  scrambleSet ScrambleSet            @relation(fields: [scrambleSetId], references: [id])
+  entries     DailyTournamentEntry[]
+
+  @@unique([date, event])
 }
 
-enum PbType {
-  single
-  avg5
-  avg12
-  avg50
-  avg100
-}
+// One entry per user per tournament. Tracks their solves and result.
+model DailyTournamentEntry {
+  id           String    @id @default(cuid())
+  tournamentId String
+  userId       String
+  results      Json      @default("[]") // Array of { timeMs: number, penalty: string | null }
+  average      Int?      // Computed after all solves complete. Null while in progress.
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
 
-model PersonalBest {
-  id      String @id @default(cuid())
-  userId  String
-  eventId String
-  time    String
-  type    PbType
+  tournament DailyTournament @relation(fields: [tournamentId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
 
-  user  User  @relation(fields: [userId], references: [id])
-  event Event @relation(fields: [eventId], references: [id])
-
-  @@unique([userId, eventId, type])
-}
-
-enum Penalty {
-  plus_two
-  dnf
-}
-
-model Solve {
-  id         String   @id @default(cuid())
-  userId     String
-  eventId    String
-  scrambleId String
-  time       Float
-  penalty    Penalty?
-  createdAt  DateTime @default(now())
-
-  user     User     @relation(fields: [userId], references: [id])
-  event    Event    @relation(fields: [eventId], references: [id])
-  scramble Scramble @relation(fields: [scrambleId], references: [id])
+  @@unique([tournamentId, userId])
 }
 
 model Follow {
