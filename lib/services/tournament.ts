@@ -106,6 +106,114 @@ export function tournamentService(ctx: ServiceContext) {
       return { enteredEvents, unenteredEvents };
     },
 
+    // Leaderboard overview — top 3 + viewer's entry for ALL events.
+    // Used on the leaderboard landing page (stubbed cards).
+    getLeaderboardOverview: async (tournamentId: string) => {
+      // Get all distinct events that have entries in this tournament.
+      const eventGroups = await prisma.tournamentEntry.groupBy({
+        by: ["eventId"],
+        where: { tournamentId, result: { not: null } },
+        _count: true,
+      });
+
+      const overviewByEvent = await Promise.all(
+        eventGroups.map(async (group) => {
+          // Top 3 for this event.
+          const top3 = await prisma.tournamentEntry.findMany({
+            where: { tournamentId, eventId: group.eventId, result: { not: null } },
+            orderBy: { result: "asc" },
+            take: 3,
+            include: {
+              user: {
+                select: {
+                  id: true, username: true, firstName: true, lastName: true,
+                  profilePictureUrl: true, country: true,
+                },
+              },
+            },
+          });
+
+          // Get solves for top 3.
+          const top3ScrambleSetIds = top3.map((e) => e.scrambleSetId);
+          const top3UserIds = top3.map((e) => e.userId);
+          const top3Solves = top3ScrambleSetIds.length > 0
+            ? await prisma.solve.findMany({
+                where: {
+                  scrambleSetId: { in: top3ScrambleSetIds },
+                  userId: { in: top3UserIds },
+                },
+                orderBy: { scrambleSetIndex: "asc" },
+              })
+            : [];
+
+          const solvesMap = new Map<string, typeof top3Solves>();
+          for (const solve of top3Solves) {
+            const key = `${solve.scrambleSetId}:${solve.userId}`;
+            const existing = solvesMap.get(key) ?? [];
+            existing.push(solve);
+            solvesMap.set(key, existing);
+          }
+
+          // Viewer's entry for this event.
+          const viewerEntry = await prisma.tournamentEntry.findFirst({
+            where: { tournamentId, eventId: group.eventId, userId: viewer.userId },
+          });
+
+          let viewerRank: number | null = null;
+          let viewerSolves: typeof top3Solves = [];
+          if (viewerEntry?.result != null) {
+            const betterCount = await prisma.tournamentEntry.count({
+              where: {
+                tournamentId, eventId: group.eventId,
+                result: { not: null, lt: viewerEntry.result },
+              },
+            });
+            viewerRank = betterCount + 1;
+
+            viewerSolves = await prisma.solve.findMany({
+              where: {
+                scrambleSetId: viewerEntry.scrambleSetId,
+                userId: viewer.userId,
+              },
+              orderBy: { scrambleSetIndex: "asc" },
+            });
+          }
+
+          return {
+            eventId: group.eventId,
+            totalCompetitors: group._count,
+            top3: top3.map((entry, i) => {
+              const key = `${entry.scrambleSetId}:${entry.userId}`;
+              const entrySolves = solvesMap.get(key) ?? [];
+              return {
+                rank: i + 1,
+                user: entry.user,
+                result: entry.result,
+                solves: entrySolves.map((s) => ({
+                  timeMs: s.time,
+                  penalty: s.penalty,
+                  scrambleSetIndex: s.scrambleSetIndex,
+                })),
+              };
+            }),
+            viewerEntry: viewerEntry
+              ? {
+                  rank: viewerRank,
+                  result: viewerEntry.result,
+                  solves: viewerSolves.map((s) => ({
+                    timeMs: s.time,
+                    penalty: s.penalty,
+                    scrambleSetIndex: s.scrambleSetIndex,
+                  })),
+                }
+              : null,
+          };
+        })
+      );
+
+      return overviewByEvent;
+    },
+
     // Get paginated leaderboard for a specific event in a tournament.
     getLeaderboard: async (
       tournamentId: string,

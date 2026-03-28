@@ -31,7 +31,34 @@ export const tournamentRouter = createTRPCRouter({
       };
     }),
 
-  // Get the leaderboard for a specific event in a contest.
+  // Leaderboard overview — top 3 + viewer's entry for all events.
+  getLeaderboardOverview: authedProcedure
+    .input(
+      z.object({
+        tournamentNumber: z.number().int().positive().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const service = tournamentService(ctx);
+      const tournament = await service.getTournament(input.tournamentNumber);
+      if (!tournament) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
+      }
+
+      const overview = await service.getLeaderboardOverview(tournament.id);
+
+      return {
+        tournament: {
+          id: tournament.id,
+          number: tournament.number,
+          name: tournament.name,
+          datePST: tournament.datePST,
+        },
+        events: overview,
+      };
+    }),
+
+  // Get the full paginated leaderboard for a specific event.
   getLeaderboard: authedProcedure
     .input(
       z.object({
