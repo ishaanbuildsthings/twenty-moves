@@ -370,14 +370,15 @@ function EventCard({
   const totalSolves = config.tournamentSolveCount;
   const formatLabel = getFormatLabel(config);
 
-  // Determine status from real data.
+  // Determine status from solve count, not result. A user with 4/5 ao5
+  // solves has a non-null result but hasn't finished — still "in-progress".
   let status: "not-started" | "in-progress" | "completed";
-  if (!enteredEvent) {
+  if (!enteredEvent || enteredEvent.solves.length === 0) {
     status = "not-started";
-  } else if (enteredEvent.result !== null) {
+  } else if (enteredEvent.solves.length >= totalSolves) {
     status = "completed";
   } else {
-    status = enteredEvent.solves.length > 0 ? "in-progress" : "not-started";
+    status = "in-progress";
   }
 
   const completedSolves = enteredEvent?.solves.length ?? 0;
