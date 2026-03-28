@@ -6,9 +6,12 @@ import { EVENT_MAP } from "@/lib/cubing/events";
 import { eventService } from "@/lib/services/event";
 import { postService } from "@/lib/services/post";
 
-// Infinity (all-DNF average) can't be stored as Int — treat as null.
-function finiteOrNull(n: number | null): number | null {
-  if (n === null || !isFinite(n)) return null;
+const DNF_SENTINEL = 999_999_999;
+
+// Infinity (all-DNF average) can't be stored as Int — use sentinel value.
+function finiteOrDnf(n: number | null): number | null {
+  if (n === null) return null;
+  if (!isFinite(n)) return DNF_SENTINEL;
   return n;
 }
 
@@ -54,11 +57,11 @@ export const postRouter = createTRPCRouter({
         eventId: dbEvent.id,
         caption: input.caption,
         youtubeUrl: input.youtubeUrl,
-        bestSingle: finiteOrNull(stats.bestSingle),
-        bestAo5: finiteOrNull(stats.bestAo5),
-        bestAo12: finiteOrNull(stats.bestAo12),
-        bestAo100: finiteOrNull(stats.bestAo100),
-        bestMo3: finiteOrNull(stats.bestMo3),
+        bestSingle: finiteOrDnf(stats.bestSingle),
+        bestAo5: finiteOrDnf(stats.bestAo5),
+        bestAo12: finiteOrDnf(stats.bestAo12),
+        bestAo100: finiteOrDnf(stats.bestAo100),
+        bestMo3: finiteOrDnf(stats.bestMo3),
         displaySolves: input.solves.slice(0, displayCount).map((s) => s.timeMs),
         numSolves: input.solves.length,
         solves: input.solves,
