@@ -110,7 +110,9 @@ model TournamentEntry {
   tournamentId  String
   eventId       String
   scrambleSetId String
-  result        Int?    // Cached result in ms for leaderboard sorting. Null until enough solves to compute.
+  result        Int?    // Cached result in ms for leaderboard sorting.
+                        // null = in progress (not enough solves yet).
+                        // 999_999_999 (DNF_RESULT) = completed but DNF.
   createdAt     DateTime @default(now())
 
   user         User        @relation(fields: [userId], references: [id])
