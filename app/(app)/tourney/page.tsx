@@ -698,7 +698,6 @@ function EventLeaderboardDetail({
             <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
               <EventIcon event={eventConfig} size={24} />
               <span className="font-extrabold text-lg">{eventConfig.name}</span>
-              <span className="text-xs font-bold text-muted-foreground">{getFormatLabel(eventConfig)}</span>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
@@ -714,12 +713,13 @@ function EventLeaderboardDetail({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {leaderboardQuery.data && (
-            <span className="text-sm text-muted-foreground">
-              {leaderboardQuery.data.total} competitors
-            </span>
-          )}
+          <span className="text-xs font-bold text-muted-foreground">{getFormatLabel(eventConfig)}</span>
         </div>
+        {leaderboardQuery.data && leaderboardQuery.data.total > 0 && (
+          <span className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * RESULTS_PER_PAGE + 1}–{Math.min(currentPage * RESULTS_PER_PAGE, leaderboardQuery.data.total)} of {leaderboardQuery.data.total}
+          </span>
+        )}
       </div>
 
       {leaderboardQuery.isLoading ? (
