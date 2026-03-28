@@ -90,19 +90,25 @@ model Tournament {
   datePST   String            // PST date string, e.g. "2026-03-26". The tournament "day" in Pacific time.
   createdAt DateTime          @default(now())
 
-  entries TournamentEntry[]
+  entries     TournamentEntry[]
+  scrambleSets ScrambleSet[]
 }
 
 model ScrambleSet {
-  id        String   @id @default(cuid())
-  eventId   String
-  scrambles Json     // String[] — ordered list of move strings
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  eventId       String
+  tournamentId  String?  // Set for tournament scramble sets, null for practice posts.
+  scrambles     Json     // String[] — ordered list of move strings
+  createdAt     DateTime @default(now())
 
-  event   Event             @relation(fields: [eventId], references: [id])
-  entries        TournamentEntry[]
-  solves         Solve[]
-  practicePosts  PracticePost[]
+  event         Event             @relation(fields: [eventId], references: [id])
+  tournament    Tournament?       @relation(fields: [tournamentId], references: [id])
+  entries       TournamentEntry[]
+  solves        Solve[]
+  practicePosts PracticePost[]
+
+  // One scramble set per event per tournament.
+  @@unique([tournamentId, eventId])
 }
 
 model TournamentEntry {

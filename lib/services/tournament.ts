@@ -1,5 +1,9 @@
 import type { PrismaClient } from "@/app/generated/prisma/client";
 import type { ViewerContext } from "@/lib/viewer-context";
+import { getCurrentTournamentDatePST } from "@/lib/tournament/date";
+import { generateScramble } from "@/lib/cubing/scramble";
+import { EVENT_CONFIGS } from "@/lib/cubing/events";
+
 export type ServiceContext = {
   prisma: PrismaClient;
   viewer: ViewerContext;
@@ -11,16 +15,66 @@ export function tournamentService(ctx: ServiceContext) {
   const { prisma, viewer } = ctx;
 
   return {
-    // Find a tournament by number, or get the latest tournament.
-    // When no number is provided, we simply fetch the most recent
-    // tournament — no date computation needed, avoids timezone issues.
+    // Find a tournament by number, or find/create today's tournament.
+    // When no number is provided, checks if the latest tournament
+    // matches today's PST date. If not, creates a new tournament
+    // with scramble sets for all events.
     getTournament: async (number?: number) => {
       if (number !== undefined) {
         return prisma.tournament.findUnique({ where: { number } });
       }
-      return prisma.tournament.findFirst({
+
+      const todayPST = getCurrentTournamentDatePST();
+
+      // Check if the latest tournament is for today.
+      const latest = await prisma.tournament.findFirst({
         orderBy: { number: "desc" },
       });
+
+      if (latest && latest.datePST === todayPST) {
+        return latest;
+      }
+
+      // Need to create a new tournament for today.
+      // Look up all Event records to map CubeEvent names → database UUIDs.
+      const dbEvents = await prisma.event.findMany();
+      const eventNameToId = new Map(dbEvents.map((e) => [e.name, e.id]));
+
+      // Use a try/catch for the race condition — if another request
+      // creates it first, the unique constraint on datePST catches it.
+      try {
+        return await prisma.$transaction(async (tx) => {
+          const tournament = await tx.tournament.create({
+            data: { datePST: todayPST },
+          });
+
+          // Create scramble sets for all events.
+          for (const eventConfig of EVENT_CONFIGS) {
+            const dbEventId = eventNameToId.get(eventConfig.id);
+            if (!dbEventId) continue; // Skip if event not in DB
+
+            const scrambles: string[] = [];
+            for (let i = 0; i < eventConfig.tournamentSolveCount; i++) {
+              scrambles.push(generateScramble(eventConfig.id));
+            }
+
+            await tx.scrambleSet.create({
+              data: {
+                eventId: dbEventId,
+                tournamentId: tournament.id,
+                scrambles,
+              },
+            });
+          }
+
+          return tournament;
+        });
+      } catch {
+        // Another request created the tournament — read it.
+        return prisma.tournament.findFirst({
+          where: { datePST: todayPST },
+        });
+      }
     },
 
     // Get the viewer's status across all events for a tournament.
