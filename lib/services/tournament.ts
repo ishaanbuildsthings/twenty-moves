@@ -114,16 +114,17 @@ export function tournamentService(ctx: ServiceContext) {
     // Leaderboard overview — top 3 + viewer's entry for ALL events.
     // Used on the leaderboard landing page (stubbed cards).
     getLeaderboardOverview: async (tournamentId: string) => {
-      // Get all distinct events that have entries in this tournament.
-      const eventGroups = await prisma.tournamentEntry.groupBy({
+      // Get all distinct events with ANY entries (including in-progress)
+      // so the competitor count includes everyone.
+      const allEventGroups = await prisma.tournamentEntry.groupBy({
         by: ["eventId"],
-        where: { tournamentId, result: { not: null } },
+        where: { tournamentId },
         _count: true,
       });
 
       const overviewByEvent = await Promise.all(
-        eventGroups.map(async (group) => {
-          // Top 3 for this event.
+        allEventGroups.map(async (group) => {
+          // Top 3 for this event — only entries with finished results.
           const top3 = await prisma.tournamentEntry.findMany({
             where: { tournamentId, eventId: group.eventId, result: { not: null } },
             orderBy: { result: "asc" },
