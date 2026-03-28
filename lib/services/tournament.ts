@@ -1,7 +1,5 @@
 import type { PrismaClient } from "@/app/generated/prisma/client";
 import type { ViewerContext } from "@/lib/viewer-context";
-import { getTournamentDate } from "@/lib/tournament/date";
-
 export type ServiceContext = {
   prisma: PrismaClient;
   viewer: ViewerContext;
@@ -11,14 +9,15 @@ export function tournamentService(ctx: ServiceContext) {
   const { prisma, viewer } = ctx;
 
   return {
-    // Find a tournament by number, or get today's tournament.
+    // Find a tournament by number, or get the latest tournament.
+    // When no number is provided, we simply fetch the most recent
+    // tournament — no date computation needed, avoids timezone issues.
     getTournament: async (number?: number) => {
-      if (number) {
+      if (number !== undefined) {
         return prisma.tournament.findUnique({ where: { number } });
       }
-      const todayDate = getTournamentDate();
       return prisma.tournament.findFirst({
-        where: { date: new Date(todayDate) },
+        orderBy: { number: "desc" },
       });
     },
 

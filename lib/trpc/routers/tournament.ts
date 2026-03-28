@@ -25,7 +25,7 @@ export const tournamentRouter = createTRPCRouter({
           id: tournament.id,
           number: tournament.number,
           name: tournament.name,
-          date: tournament.date.toISOString(),
+          datePST: tournament.datePST,
         },
         events,
       };
@@ -66,7 +66,7 @@ export const tournamentRouter = createTRPCRouter({
           id: tournament.id,
           number: tournament.number,
           name: tournament.name,
-          date: tournament.date.toISOString(),
+          datePST: tournament.datePST,
         },
         ...leaderboard,
       };
