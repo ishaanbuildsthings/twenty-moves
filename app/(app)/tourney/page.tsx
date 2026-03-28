@@ -45,8 +45,8 @@ function formatTime(ms: number): string {
 
 function formatSolveTime(solve: { timeMs: number; penalty: string | null }): string {
   if (solve.penalty === "dnf") return "DNF";
-  const time = formatTime(solve.penalty === "+2" ? solve.timeMs + 2000 : solve.timeMs);
-  return solve.penalty === "+2" ? `${time}+` : time;
+  const time = formatTime(solve.penalty === "plus_two" ? solve.timeMs + 2000 : solve.timeMs);
+  return solve.penalty === "plus_two" ? `${time}+` : time;
 }
 
 function formatResultTime(resultMs: number): string {
@@ -56,7 +56,7 @@ function formatResultTime(resultMs: number): string {
 
 function getBestSingle(solves: { timeMs: number; penalty: string | null }[]): string {
   const times = solves.map((s) =>
-    s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs
+    s.penalty === "dnf" ? Infinity : s.penalty === "plus_two" ? s.timeMs + 2000 : s.timeMs
   );
   const best = Math.min(...times);
   return best === Infinity ? "DNF" : formatTime(best);
@@ -65,13 +65,20 @@ function getBestSingle(solves: { timeMs: number; penalty: string | null }[]): st
 function getBestWorst(solves: { timeMs: number; penalty: string | null }[]) {
   if (solves.length !== 5) return { bestIdx: -1, worstIdx: -1 };
   const times = solves.map((s) =>
-    s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs
+    s.penalty === "dnf" ? Infinity : s.penalty === "plus_two" ? s.timeMs + 2000 : s.timeMs
   );
   let bestIdx = 0, worstIdx = 0;
   times.forEach((t, i) => {
     if (t < times[bestIdx]) bestIdx = i;
-    if (t > times[worstIdx]) worstIdx = i;
+    // Use >= for worst so ties pick the last occurrence,
+    // ensuring bestIdx and worstIdx are different when possible.
+    if (t >= times[worstIdx] && i !== bestIdx) worstIdx = i;
   });
+  // If all times are identical, just pick indices 0 and 4.
+  if (bestIdx === worstIdx && times.length > 1) {
+    worstIdx = times.length - 1;
+    if (worstIdx === bestIdx) bestIdx = 0;
+  }
   return { bestIdx, worstIdx };
 }
 
@@ -106,30 +113,18 @@ function getStatColumnLabel(config: typeof EVENT_CONFIGS[number]): string {
   return config.tournamentSolveCount === 5 ? "Ao5" : "Mo3";
 }
 
-// Map DB penalty enum to SolveForStats penalty type.
-function mapPenalty(p: string | null): "+2" | "dnf" | null {
-  if (p === "plus_two") return "+2";
-  if (p === "dnf") return "dnf";
-  return null;
-}
-
-// Convert API solve data to SolveForStats for compute functions.
-function toSolveForStats(solves: { timeMs: number; penalty: string | null }[]): SolveForStats[] {
-  return solves.map((s) => ({ timeMs: s.timeMs, penalty: mapPenalty(s.penalty) }));
-}
-
 // Compute display values (single, average/mean) from solves based on event config.
 // Uses the shared compute functions so display is always correct.
 function computeDisplayStats(solves: { timeMs: number; penalty: string | null }[], config: typeof EVENT_CONFIGS[number]) {
-  const mapped = toSolveForStats(solves);
-  const single = computeBestSingle(mapped);
+  const stats = solves as SolveForStats[];
+  const single = computeBestSingle(stats);
   const singleStr = single === null ? "—" : single === Infinity ? "DNF" : formatTime(single);
 
   let avg: number | null = null;
   if (config.tournamentSolveCount === 5) {
-    avg = computeAo5(mapped);
+    avg = computeAo5(stats);
   } else if (config.tournamentSolveCount === 3) {
-    avg = computeMo3(mapped);
+    avg = computeMo3(stats);
   }
   const avgStr = avg === null ? "—" : avg === Infinity ? "DNF" : formatTime(avg);
 

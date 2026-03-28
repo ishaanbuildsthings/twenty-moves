@@ -7,14 +7,14 @@ const DNF = Infinity;
 
 export interface SolveForStats {
   timeMs: number;
-  penalty: "+2" | "dnf" | null;
+  penalty: "plus_two" | "dnf" | null;
 }
 
 // Returns the effective solve time accounting for penalties.
-// +2 adds 2000ms. DNF returns Infinity.
+// plus_two adds 2000ms. DNF returns Infinity.
 export function effectiveTime(solve: SolveForStats): number {
   if (solve.penalty === "dnf") return DNF;
-  if (solve.penalty === "+2") return solve.timeMs + 2000;
+  if (solve.penalty === "plus_two") return solve.timeMs + 2000;
   return solve.timeMs;
 }
 

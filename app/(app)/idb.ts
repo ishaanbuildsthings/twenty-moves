@@ -65,7 +65,7 @@ const STATS_STORE = "stats"; // precomputed per-event averages, keyed by event
 // IDB index name for querying solves by event + date
 const SOLVES_BY_EVENT_DATE = "by-event-date";
 
-export type Penalty = "+2" | "dnf" | null;
+export type Penalty = "plus_two" | "dnf" | null;
 
 export interface Solve {
   id: number;

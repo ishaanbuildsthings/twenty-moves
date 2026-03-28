@@ -65,9 +65,9 @@ function formatTime(ms: number): string {
 function formatSolveTime(solve: Solve): string {
   if (solve.penalty === "dnf") return "DNF";
   const time = formatTime(
-    solve.penalty === "+2" ? solve.timeMs + 2000 : solve.timeMs
+    solve.penalty === "plus_two" ? solve.timeMs + 2000 : solve.timeMs
   );
-  return solve.penalty === "+2" ? `${time}+` : time;
+  return solve.penalty === "plus_two" ? `${time}+` : time;
 }
 
 export default function TimerPage() {
@@ -602,7 +602,7 @@ export default function TimerPage() {
 
                       {/* Penalty toggle */}
                       <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
-                        {([null, "+2", "dnf"] as const).map((p) => (
+                        {([null, "plus_two", "dnf"] as const).map((p) => (
                           <button
                             key={p ?? "ok"}
                             className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition-colors ${
@@ -612,7 +612,7 @@ export default function TimerPage() {
                             }`}
                             onClick={() => handlePenalty(solve.id, p)}
                           >
-                            {p === null ? "None" : p === "+2" ? "+2" : "DNF"}
+                            {p === null ? "None" : p === "plus_two" ? "+2" : "DNF"}
                           </button>
                         ))}
                       </div>
