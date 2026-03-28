@@ -18,7 +18,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
-import { effectiveTime, type EventStats } from "@/lib/cubing/stats";
+import { effectiveTime, DNF_SENTINEL, type EventStats } from "@/lib/cubing/stats";
 import {
   Popover,
   PopoverContent,
@@ -50,7 +50,7 @@ import {
 type TimerState = "idle" | "inspecting" | "holding" | "ready" | "running";
 
 function formatTime(ms: number): string {
-  if (ms === Infinity) return "DNF";
+  if (ms >= DNF_SENTINEL) return "DNF";
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -527,6 +527,13 @@ export default function TimerPage() {
                   </span>
                 </div>
               )}
+              <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
+                <span className="text-xs font-semibold text-muted-foreground">Mean</span>
+                <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  {stats.sessionMean !== null ? formatTime(stats.sessionMean) : "-"}
+                </span>
+                <span />
+              </div>
             </div>
           </div>
         )}

@@ -53,6 +53,7 @@ export const postRouter = createTRPCRouter({
         bestAo12: stats.bestAo12,
         bestAo100: stats.bestAo100,
         bestMo3: stats.bestMo3,
+        sessionMean: stats.sessionMean,
         displaySolves: input.solves.slice(0, displayCount).map((s) => s.timeMs),
         numSolves: input.solves.length,
         solves: input.solves,
