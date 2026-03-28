@@ -128,7 +128,12 @@ function computeDisplayStats(solves: { timeMs: number; penalty: string | null }[
   }
   const avgStr = avg === null ? "—" : avg === Infinity ? "DNF" : formatTime(avg);
 
-  return { singleStr, avgStr };
+  // The ranking result — what determines your position on the leaderboard.
+  // For BLD events ranked by single, this is the best single.
+  // For everything else, this is the average/mean.
+  const rankingResult = config.tournamentRankBy === "single" ? singleStr : avgStr;
+
+  return { singleStr, avgStr, rankingResult };
 }
 
 // --- Loading Spinner ---
@@ -421,18 +426,15 @@ function EventCard({
   const completedSolves = enteredEvent?.solves.length ?? 0;
 
   // Compute display result from solves using shared compute functions.
-  const { avgStr: resultDisplay } = enteredEvent
+  const displayStats = enteredEvent
     ? computeDisplayStats(enteredEvent.solves, config)
-    : { avgStr: null };
+    : null;
 
   return (
     <button className="rounded-lg bg-card border border-border p-4 hover:bg-muted transition-colors text-left space-y-3">
       <div className="flex items-center gap-3">
         <EventIcon event={config} size={36} />
         <span className="font-extrabold text-lg flex-1">{config.name}</span>
-        <span className="text-xs font-bold text-muted-foreground">
-          {formatLabel}
-        </span>
       </div>
 
       {status === "not-started" && (
@@ -442,7 +444,10 @@ function EventCard({
             <span className="text-xs font-semibold">Start</span>
           </div>
           {totalCompetitors > 0 && (
-            <span className="text-[10px] text-muted-foreground">{totalCompetitors} competing</span>
+            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              {totalCompetitors} competing
+            </span>
           )}
         </div>
       )}
@@ -455,7 +460,10 @@ function EventCard({
               <span className="text-xs font-semibold">Continue ({completedSolves}/{totalSolves})</span>
             </div>
             {totalCompetitors > 0 && (
-              <span className="text-[10px] text-muted-foreground">{totalCompetitors} competing</span>
+              <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                {totalCompetitors} competing
+              </span>
             )}
           </div>
           <p className="text-[11px] font-mono tabular-nums text-muted-foreground leading-relaxed">
@@ -464,15 +472,26 @@ function EventCard({
         </div>
       )}
 
-      {status === "completed" && enteredEvent && (
+      {status === "completed" && enteredEvent && displayStats && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-base font-mono tabular-nums font-extrabold">{resultDisplay}</span>
-            {enteredEvent.rank && (
-              <span className="text-[10px] font-bold text-primary">
-                #{enteredEvent.rank} / {totalCompetitors}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-base font-mono tabular-nums font-extrabold">{displayStats.rankingResult}</span>
+              <span className="text-xs font-bold text-muted-foreground">{formatLabel}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {enteredEvent.rank && (
+                <span className="text-[10px] font-bold text-primary">
+                  #{enteredEvent.rank}
+                </span>
+              )}
+              {totalCompetitors > 0 && (
+                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  {totalCompetitors}
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-[11px] font-mono tabular-nums text-muted-foreground leading-relaxed">
             {config.tournamentSolveCount === 5 && config.tournamentRankBy === "average"
