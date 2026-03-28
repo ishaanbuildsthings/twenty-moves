@@ -5,6 +5,11 @@ export type ServiceContext = {
   viewer: ViewerContext;
 };
 
+// Sentinel value for DNF results. Stored as result on TournamentEntry
+// when all solves are completed but the result is DNF. Sorts after all
+// real times but before null (in-progress).
+export const DNF_RESULT = 999_999_999;
+
 export function tournamentService(ctx: ServiceContext) {
   const { prisma, viewer } = ctx;
 
@@ -282,19 +287,9 @@ export function tournamentService(ctx: ServiceContext) {
       });
 
       let viewerRank: number | null = null;
-      if (viewerEntry?.result != null) {
-        const betterCount = await prisma.tournamentEntry.count({
-          where: {
-            tournamentId, eventId,
-            result: { not: null, lt: viewerEntry.result },
-          },
-        });
-        viewerRank = betterCount + 1;
-      }
-
-      // Get viewer's solves.
       let viewerSolves: typeof solves = [];
       if (viewerEntry) {
+        // Always fetch viewer's solves, even with null result (partial progress).
         viewerSolves = await prisma.solve.findMany({
           where: {
             scrambleSetId: viewerEntry.scrambleSetId,
@@ -302,6 +297,25 @@ export function tournamentService(ctx: ServiceContext) {
           },
           orderBy: { scrambleSetIndex: "asc" },
         });
+
+        if (viewerEntry.result !== null) {
+          const betterCount = await prisma.tournamentEntry.count({
+            where: {
+              tournamentId, eventId,
+              result: { not: null, lt: viewerEntry.result },
+            },
+          });
+          viewerRank = betterCount + 1;
+        } else {
+          // No result yet — rank after all finishers.
+          const finisherCount = await prisma.tournamentEntry.count({
+            where: {
+              tournamentId, eventId,
+              result: { not: null },
+            },
+          });
+          viewerRank = finisherCount + 1;
+        }
       }
 
       return {
