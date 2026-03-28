@@ -259,12 +259,19 @@ export function tournamentService(ctx: ServiceContext) {
     },
 
     // Get paginated leaderboard for a specific event in a tournament.
+    // eventName is the CubeEvent enum value (e.g., "333", "pyram"),
+    // which we resolve to the database Event UUID.
     getLeaderboard: async (
       tournamentId: string,
-      eventId: string,
+      eventName: string,
       page: number,
       pageSize: number
     ) => {
+      // Resolve event name to database ID.
+      const event = await prisma.event.findFirst({ where: { name: eventName } });
+      if (!event) return { total: 0, entries: [], viewerEntry: null };
+      const eventId = event.id;
+
       const offset = (page - 1) * pageSize;
 
       // Total entries (all competitors, including in-progress).
