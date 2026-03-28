@@ -429,59 +429,56 @@ function EventCard({
     : null;
 
   return (
-    <button className="flex items-center gap-4 w-full px-4 py-3 rounded-lg hover:bg-muted/60 transition-colors text-left border-b border-border/40 last:border-0">
-      {/* Event icon + name */}
-      <div className="flex items-center gap-3 w-24 shrink-0">
-        <EventIcon event={config} size={28} />
+    <button className="w-full px-4 py-3 rounded-lg hover:bg-muted/60 transition-colors text-left border-b border-border/40 last:border-0">
+      {/* Header line: icon + name + format + result + rank */}
+      <div className="flex items-center gap-3">
+        <EventIcon event={config} size={24} />
         <span className="font-extrabold">{config.name}</span>
-      </div>
-
-      {/* Result + format + solve times OR Start/Continue button */}
-      <div className="flex-1 min-w-0">
+        <span className="text-sm text-muted-foreground">{formatLabel}</span>
         {status === "completed" && displayStats && (
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-mono tabular-nums font-extrabold text-base">{displayStats.rankingResult}</span>
-            <span className="text-xs font-bold text-muted-foreground">{formatLabel}</span>
-            <span className="font-mono tabular-nums text-sm text-muted-foreground">
-              {config.tournamentSolveCount === 5 && config.tournamentRankBy === "average"
-                ? formatAo5Times(enteredEvent!.solves)
-                : enteredEvent!.solves.map(formatSolveTime).join("  ")}
-            </span>
-          </div>
+          <>
+            <span className="font-mono tabular-nums font-extrabold">{displayStats.rankingResult}</span>
+            {enteredEvent?.rank && (
+              <span className="text-sm text-muted-foreground">
+                #{enteredEvent.rank} / {totalCompetitors}
+              </span>
+            )}
+          </>
         )}
-        {status === "in-progress" && enteredEvent && (
-          <div className="flex items-center gap-3">
-            <span className="font-mono tabular-nums text-sm text-muted-foreground">
-              {enteredEvent.solves.map(formatSolveTime).join("  ")}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Rank + competitors */}
-      <div className="flex items-center gap-3 shrink-0">
-        {status === "completed" && enteredEvent?.rank && (
-          <span className="text-xs font-bold text-primary">#{enteredEvent.rank}</span>
-        )}
-        {totalCompetitors > 0 && (
+        {status === "not-started" && totalCompetitors > 0 && (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            {totalCompetitors}
+            {totalCompetitors} competing
           </span>
+        )}
+        {status === "in-progress" && totalCompetitors > 0 && (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            {totalCompetitors} competing
+          </span>
+        )}
+        <span className="flex-1" />
+        {/* Right side: Start / Continue */}
+        {status === "not-started" && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Play className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold">Start</span>
+          </div>
+        )}
+        {status === "in-progress" && (
+          <div className="flex items-center gap-2 text-yellow-500">
+            <Play className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold">Continue ({completedSolves}/{totalSolves})</span>
+          </div>
         )}
       </div>
 
-      {/* Start / Continue button (right-aligned for not-started and in-progress) */}
-      {status === "not-started" && (
-        <div className="flex items-center gap-2 text-muted-foreground shrink-0">
-          <Play className="w-3.5 h-3.5" />
-          <span className="text-xs font-semibold">Start</span>
-        </div>
-      )}
-      {status === "in-progress" && (
-        <div className="flex items-center gap-2 text-yellow-500 shrink-0">
-          <Play className="w-3.5 h-3.5" />
-          <span className="text-xs font-semibold">Continue ({completedSolves}/{totalSolves})</span>
+      {/* Detail line: solve times */}
+      {enteredEvent && enteredEvent.solves.length > 0 && (
+        <div className="mt-1 ml-9 font-mono tabular-nums text-sm text-muted-foreground">
+          {config.tournamentSolveCount === 5 && config.tournamentRankBy === "average"
+            ? formatAo5Times(enteredEvent.solves)
+            : enteredEvent.solves.map(formatSolveTime).join("  ")}
         </div>
       )}
     </button>
