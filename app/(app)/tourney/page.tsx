@@ -430,45 +430,44 @@ function EventCard({
 
   return (
     <button className="w-full px-4 py-3 rounded-lg hover:bg-muted/60 transition-colors text-left border-b border-border/40 last:border-0">
-      {/* Header line: icon + name + format + result + rank */}
+      {/* Header line: icon + name + format + result on left, rank/action on right */}
       <div className="flex items-center gap-3">
         <EventIcon event={config} size={24} />
         <span className="font-extrabold">{config.name}</span>
-        <span className="text-sm text-muted-foreground">{formatLabel}</span>
+        <span className="font-extrabold text-muted-foreground">{formatLabel}</span>
         {status === "completed" && displayStats && (
-          <>
-            <span className="font-mono tabular-nums font-extrabold">{displayStats.rankingResult}</span>
-            {enteredEvent?.rank && (
-              <span className="text-sm text-muted-foreground">
-                #{enteredEvent.rank} / {totalCompetitors}
-              </span>
-            )}
-          </>
-        )}
-        {status === "not-started" && totalCompetitors > 0 && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            {totalCompetitors} competing
-          </span>
-        )}
-        {status === "in-progress" && totalCompetitors > 0 && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            {totalCompetitors} competing
-          </span>
+          <span className="font-mono tabular-nums font-extrabold">{displayStats.rankingResult}</span>
         )}
         <span className="flex-1" />
-        {/* Right side: Start / Continue */}
+        {/* Right side */}
+        {status === "completed" && enteredEvent?.rank && (
+          <span className="flex items-center gap-2 text-sm font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span>#{enteredEvent.rank} / {totalCompetitors}</span>
+          </span>
+        )}
         {status === "not-started" && (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Play className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">Start</span>
+          <div className="flex items-center gap-2">
+            {totalCompetitors > 0 && (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                {totalCompetitors}
+              </span>
+            )}
+            <Play className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground">Start</span>
           </div>
         )}
         {status === "in-progress" && (
-          <div className="flex items-center gap-2 text-yellow-500">
-            <Play className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">Continue ({completedSolves}/{totalSolves})</span>
+          <div className="flex items-center gap-2">
+            {totalCompetitors > 0 && (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                {totalCompetitors}
+              </span>
+            )}
+            <Play className="w-3.5 h-3.5 text-yellow-500" />
+            <span className="text-xs font-semibold text-yellow-500">Continue ({completedSolves}/{totalSolves})</span>
           </div>
         )}
       </div>
