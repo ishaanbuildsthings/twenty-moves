@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
 import { UserAvatar } from "@/lib/components/user-avatar";
-import { ChevronDown, ChevronLeft, ChevronRight, Play, ArrowLeft } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Play, ArrowLeft, Loader2 } from "lucide-react";
 import { countryCodeToFlag } from "@/lib/countries";
 import {
   DropdownMenu,
@@ -14,178 +14,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getNextRollover } from "@/lib/tournament/date";
-import { useContestStatus, useLeaderboard } from "@/lib/hooks/useTournament";
+import { useContestStatus, useLeaderboard, useLeaderboardOverview } from "@/lib/hooks/useTournament";
 
 type Tab = "compete" | "leaderboard";
 
-// Mock entry data for the compete tab.
-interface MockEntry {
-  status: "not-started" | "in-progress" | "completed";
-  solves: { timeMs: number; penalty: string | null }[];
-  average: string | null;
-  totalSolves: number;
-  rank?: number;
-  totalCompetitors: number;
-}
-
-const MOCK_ENTRIES: Partial<Record<CubeEvent, MockEntry>> = {
-  [CubeEvent.THREE]: {
-    status: "completed",
-    solves: [
-      { timeMs: 9230, penalty: null },
-      { timeMs: 8410, penalty: null },
-      { timeMs: 11540, penalty: null },
-      { timeMs: 7890, penalty: null },
-      { timeMs: 10120, penalty: null },
-    ],
-    average: "9.26",
-    totalSolves: 5,
-    rank: 3,
-    totalCompetitors: 847,
-  },
-  [CubeEvent.TWO]: {
-    status: "in-progress",
-    solves: [
-      { timeMs: 3210, penalty: null },
-      { timeMs: 4560, penalty: "+2" },
-    ],
-    average: null,
-    totalSolves: 5,
-    totalCompetitors: 623,
-  },
-};
-
-// Mock leaderboard entry.
-interface MockLeaderboardEntry {
-  rank: number;
-  username: string;
-  firstName: string;
-  lastName: string;
-  country: string;
-  profilePictureUrl: string | null;
-  average: string;
-  single: string;
-  isSelf: boolean;
-  solves: { timeMs: number; penalty: string | null }[];
-}
-
+const DNF_RESULT = 999_999_999;
 const RESULTS_PER_PAGE = 25;
-
-// Generate 60 mock leaderboard entries.
-const MOCK_NAMES = [
-  ["Max", "Chen", "US"], ["Yuki", "Tanaka", "JP"], ["ishaan", "agrawal", "US"],
-  ["Lena", "Schmidt", "DE"], ["Carlos", "Rivera", "MX"], ["Emma", "Lee", "KR"],
-  ["Ollie", "Brown", "GB"], ["Sophie", "Martin", "FR"], ["Raj", "Patel", "IN"],
-  ["Mia", "Kim", "CA"], ["Noah", "Müller", "DE"], ["Ava", "Li", "CN"],
-  ["Liam", "Wilson", "AU"], ["Chloe", "Yamada", "JP"], ["Ethan", "Rossi", "IT"],
-  ["Sakura", "Ito", "JP"], ["Felix", "Svensson", "SE"], ["Zara", "Ali", "PK"],
-  ["Leo", "Santos", "BR"], ["Luna", "Park", "KR"], ["Oscar", "Berg", "NO"],
-  ["Aria", "Singh", "IN"], ["Hugo", "Dubois", "FR"], ["Isla", "Murphy", "IE"],
-  ["Kai", "Nakamura", "JP"], ["Maya", "Johansson", "SE"], ["Ravi", "Kumar", "IN"],
-  ["Nora", "Andersen", "DK"], ["Amir", "Hassan", "EG"], ["Ivy", "Zhang", "CN"],
-  ["Finn", "O'Brien", "IE"], ["Suki", "Watanabe", "JP"], ["Marco", "Bianchi", "IT"],
-  ["Elena", "Petrova", "RU"], ["Tao", "Wang", "CN"], ["Hana", "Choi", "KR"],
-  ["Lars", "Nielsen", "DK"], ["Amara", "Okafor", "NG"], ["Soren", "Larsen", "DK"],
-  ["Mei", "Huang", "TW"], ["Diego", "Lopez", "AR"], ["Freya", "Olsen", "NO"],
-  ["Yuto", "Sato", "JP"], ["Clara", "Fischer", "DE"], ["Omar", "Khoury", "LB"],
-  ["Ines", "Silva", "PT"], ["Anton", "Novak", "CZ"], ["Priya", "Sharma", "IN"],
-  ["Mateo", "Garcia", "ES"], ["Lily", "Thompson", "NZ"], ["Axel", "Eriksson", "SE"],
-  ["Nadia", "Kovacs", "HU"], ["Jin", "Park", "KR"], ["Rosa", "Fernandez", "CL"],
-  ["Erik", "Holm", "FI"], ["Yuna", "Takahashi", "JP"], ["Sam", "Baker", "US"],
-  ["Tina", "Bauer", "AT"], ["Aiden", "Moore", "US"], ["Kira", "Suzuki", "JP"],
-] as const;
-
-// Seeded random to avoid hydration mismatches.
-function seededRandom(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807 + 0) % 2147483647;
-    return s / 2147483647;
-  };
-}
-
-// Generate mock leaderboard entries for a given event config.
-function generateMockLeaderboard(config: typeof EVENT_CONFIGS[number]): MockLeaderboardEntry[] {
-  const solveCount = config.tournamentSolveCount;
-  const rankBy = config.tournamentRankBy;
-  // Use event id as seed for deterministic mock data.
-  const seed = config.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const rand = seededRandom(seed);
-
-  const entries = MOCK_NAMES.map(([firstName, lastName, country], i) => {
-    const baseTime = 6500 + i * 400 + Math.floor(rand() * 200);
-    const solves = Array.from({ length: solveCount }, () => ({
-      timeMs: baseTime + Math.floor(rand() * 3000 - 1000),
-      penalty: rand() < 0.03 ? "dnf" as const : rand() < 0.05 ? "+2" as const : null,
-    }));
-
-    const effectiveTimes = solves.map((s) =>
-      s.penalty === "dnf" ? Infinity : s.penalty === "+2" ? s.timeMs + 2000 : s.timeMs
-    );
-
-    // Compute average based on format.
-    let avg: number;
-    if (solveCount === 5 && rankBy === "average") {
-      // Ao5: drop best and worst, average middle 3.
-      const sorted = [...effectiveTimes].sort((a, b) => a - b);
-      const middle = sorted.slice(1, 4);
-      avg = middle.some((t) => t === Infinity) ? Infinity : Math.round(middle.reduce((a, b) => a + b, 0) / 3);
-    } else if (solveCount === 3 && rankBy === "average") {
-      // Mo3: mean of all 3.
-      avg = effectiveTimes.some((t) => t === Infinity) ? Infinity : Math.round(effectiveTimes.reduce((a, b) => a + b, 0) / 3);
-    } else {
-      // Bo5/Bo3 (BLD): use average for display, but ranking is by single.
-      if (solveCount === 5) {
-        const sorted = [...effectiveTimes].sort((a, b) => a - b);
-        const middle = sorted.slice(1, 4);
-        avg = middle.some((t) => t === Infinity) ? Infinity : Math.round(middle.reduce((a, b) => a + b, 0) / 3);
-      } else {
-        avg = effectiveTimes.some((t) => t === Infinity) ? Infinity : Math.round(effectiveTimes.reduce((a, b) => a + b, 0) / 3);
-      }
-    }
-
-    const single = Math.min(...effectiveTimes);
-
-    return {
-      rank: 0, // computed after sort
-      username: `${(firstName as string).toLowerCase()}${(lastName as string).toLowerCase().slice(0, 3)}`,
-      firstName: firstName as string,
-      lastName: lastName as string,
-      country: country as string,
-      profilePictureUrl: null,
-      average: avg === Infinity ? "DNF" : formatTime(avg),
-      single: single === Infinity ? "DNF" : formatTime(single),
-      isSelf: i === 27,
-      solves,
-    };
-  });
-
-  // Sort by the right metric.
-  entries.sort((a, b) => {
-    if (rankBy === "single") {
-      const aVal = a.single === "DNF" ? Infinity : parseFloat(a.single);
-      const bVal = b.single === "DNF" ? Infinity : parseFloat(b.single);
-      return aVal - bVal;
-    }
-    const aVal = a.average === "DNF" ? Infinity : parseFloat(a.average);
-    const bVal = b.average === "DNF" ? Infinity : parseFloat(b.average);
-    return aVal - bVal;
-  });
-
-  // Assign ranks.
-  entries.forEach((e, i) => { e.rank = i + 1; });
-
-  return entries;
-}
-
-// Cache generated leaderboards to avoid regenerating on every render.
-const leaderboardCache: Partial<Record<CubeEvent, MockLeaderboardEntry[]>> = {};
-function getMockLeaderboard(config: typeof EVENT_CONFIGS[number]): MockLeaderboardEntry[] {
-  if (!leaderboardCache[config.id]) {
-    leaderboardCache[config.id] = generateMockLeaderboard(config);
-  }
-  return leaderboardCache[config.id]!;
-}
 
 // --- Helpers ---
 
@@ -207,6 +41,11 @@ function formatSolveTime(solve: { timeMs: number; penalty: string | null }): str
   if (solve.penalty === "dnf") return "DNF";
   const time = formatTime(solve.penalty === "+2" ? solve.timeMs + 2000 : solve.timeMs);
   return solve.penalty === "+2" ? `${time}+` : time;
+}
+
+function formatResultTime(resultMs: number): string {
+  if (resultMs === DNF_RESULT) return "DNF";
+  return formatTime(resultMs);
 }
 
 function getBestSingle(solves: { timeMs: number; penalty: string | null }[]): string {
@@ -248,8 +87,29 @@ const rankDisplay = (rank: number) => {
   return <span className="text-sm font-bold text-muted-foreground">{rank}</span>;
 };
 
-// Mock tournament number (will be computed from DB later).
-const TOURNAMENT_NUMBER = 47;
+// Get the tournament format label for an event (shown on cards/badges).
+function getFormatLabel(config: typeof EVENT_CONFIGS[number]): string {
+  if (config.tournamentRankBy === "single") {
+    return `Bo${config.tournamentSolveCount}`;
+  }
+  return config.tournamentSolveCount === 5 ? "Ao5" : "Mo3";
+}
+
+// Get the stat column label for the leaderboard table.
+function getStatColumnLabel(config: typeof EVENT_CONFIGS[number]): string {
+  return config.tournamentSolveCount === 5 ? "Ao5" : "Mo3";
+}
+
+// --- Loading Spinner ---
+
+function LoadingSpinner({ message }: { message?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+      <Loader2 className="w-6 h-6 animate-spin" />
+      {message && <p className="text-sm">{message}</p>}
+    </div>
+  );
+}
 
 // --- Main Page ---
 
@@ -257,38 +117,38 @@ export default function TourneyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Fetch contest status (defaults to latest tournament when no number given).
+  const contestStatusQuery = useContestStatus();
+
+  const currentTournamentNumber = contestStatusQuery.data?.tournament?.number;
+
   // Read state from URL params, with defaults.
   const tab: Tab = searchParams.get("tab") === "leaderboard" ? "leaderboard" : "compete";
-  const viewingContest = Number(searchParams.get("contest")) || TOURNAMENT_NUMBER;
+  const viewingContest = Number(searchParams.get("contest")) || currentTournamentNumber;
   const selectedLeaderboardEvent = (searchParams.get("event") as CubeEvent) || null;
-  // Validate the event param is a real event.
   const validEvent = selectedLeaderboardEvent && EVENT_MAP[selectedLeaderboardEvent]
     ? selectedLeaderboardEvent
     : null;
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
-  // Fetch real contest status from the API.
-  // Falls back to mock data when no tournament exists in the DB yet.
-  const contestStatusQuery = useContestStatus(
-    viewingContest !== TOURNAMENT_NUMBER ? viewingContest : undefined
-  );
-  const leaderboardQuery = useLeaderboard(
-    viewingContest,
-    validEvent ?? CubeEvent.THREE,
-    page,
-    RESULTS_PER_PAGE
+  // When viewing a specific (non-latest) contest, fetch that contest's status.
+  const specificContestQuery = useContestStatus(
+    viewingContest && viewingContest !== currentTournamentNumber ? viewingContest : undefined
   );
 
-  // Use real tournament number if available, otherwise fall back to mock.
-  const currentTournamentNumber = contestStatusQuery.data?.tournament?.number ?? TOURNAMENT_NUMBER;
+  // The active contest data — either the specific one or the latest.
+  const activeContestData = viewingContest && viewingContest !== currentTournamentNumber
+    ? specificContestQuery.data
+    : contestStatusQuery.data;
+  const activeContestLoading = viewingContest && viewingContest !== currentTournamentNumber
+    ? specificContestQuery.isLoading
+    : contestStatusQuery.isLoading;
 
   const [countdown, setCountdown] = useState("");
   const isCurrent = viewingContest === currentTournamentNumber;
 
-  // Contest date comes from the API (datePST on the tournament).
-  // Falls back to empty string when data isn't loaded yet.
-  const contestDateStr = contestStatusQuery.data?.tournament?.datePST
-    ? new Date(contestStatusQuery.data.tournament.datePST + "T12:00:00").toLocaleDateString("en-US", {
+  const contestDateStr = activeContestData?.tournament?.datePST
+    ? new Date(activeContestData.tournament.datePST + "T12:00:00").toLocaleDateString("en-US", {
         month: "short", day: "numeric", year: "numeric",
       })
     : "";
@@ -323,8 +183,8 @@ export default function TourneyPage() {
   };
 
   const navigateContest = (direction: "prev" | "next") => {
+    if (!viewingContest) return;
     const next = viewingContest + (direction === "prev" ? -1 : 1);
-    // Reset to overview when switching contests.
     updateParams({ contest: String(next), event: null, page: null });
   };
 
@@ -338,6 +198,23 @@ export default function TourneyPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Show loading state while we don't even know the tournament number yet.
+  if (contestStatusQuery.isLoading) {
+    return (
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        <LoadingSpinner message="Loading tournament..." />
+      </div>
+    );
+  }
+
+  if (!currentTournamentNumber) {
+    return (
+      <div className="flex flex-col flex-1 overflow-y-auto items-center justify-center py-16">
+        <p className="text-muted-foreground">No tournament found.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-y-auto">
       {/* Header */}
@@ -348,14 +225,14 @@ export default function TourneyPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => navigateContest("prev")}
-                disabled={viewingContest <= 1}
+                disabled={!viewingContest || viewingContest <= 1}
                 className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={() => navigateContest("next")}
-                disabled={viewingContest >= TOURNAMENT_NUMBER}
+                disabled={!viewingContest || viewingContest >= currentTournamentNumber}
                 className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -398,16 +275,14 @@ export default function TourneyPage() {
       <div className="px-6 py-6 flex-1">
         <div className="max-w-5xl mx-auto w-full space-y-6">
           {tab === "compete" ? (
-            <div className="max-w-3xl space-y-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {EVENT_CONFIGS.map((config) => (
-                  <EventCard key={config.id} config={config} entry={MOCK_ENTRIES[config.id]} />
-                ))}
-              </div>
-            </div>
-          ) : validEvent ? (
+            <CompeteTab
+              contestData={activeContestData}
+              isLoading={activeContestLoading}
+            />
+          ) : validEvent && viewingContest ? (
             <EventLeaderboardDetail
               event={validEvent}
+              tournamentNumber={viewingContest}
               onBack={() => setSelectedEvent(null)}
               onChangeEvent={setSelectedEvent}
               page={page}
@@ -415,6 +290,7 @@ export default function TourneyPage() {
             />
           ) : (
             <LeaderboardOverview
+              tournamentNumber={viewingContest}
               onSelectEvent={setSelectedEvent}
             />
           )}
@@ -424,30 +300,96 @@ export default function TourneyPage() {
   );
 }
 
+// --- Compete Tab ---
+
+type ContestStatusData = {
+  tournament: { id: string; number: number; name: string | null; datePST: string };
+  events: {
+    enteredEvents: {
+      eventId: string;
+      entryId: string;
+      scrambleSetId: string;
+      scrambles: string[];
+      result: number | null;
+      solves: { id: string; scrambleSetIndex: number; timeMs: number; penalty: string | null }[];
+      rank: number | null;
+      totalCompetitors: number;
+    }[];
+    unenteredEvents: {
+      eventId: string;
+      totalCompetitors: number;
+    }[];
+  };
+};
+
+function CompeteTab({
+  contestData,
+  isLoading,
+}: {
+  contestData: ContestStatusData | undefined;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <LoadingSpinner message="Loading events..." />;
+  }
+
+  const enteredMap = new Map(
+    (contestData?.events.enteredEvents ?? []).map((e) => [e.eventId, e])
+  );
+  const unenteredMap = new Map(
+    (contestData?.events.unenteredEvents ?? []).map((e) => [e.eventId, e])
+  );
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {EVENT_CONFIGS.map((config) => {
+          const entered = enteredMap.get(config.id);
+          const unentered = unenteredMap.get(config.id);
+          return (
+            <EventCard
+              key={config.id}
+              config={config}
+              enteredEvent={entered}
+              totalCompetitors={entered?.totalCompetitors ?? unentered?.totalCompetitors ?? 0}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // --- Compete Tab: Event Card ---
 
-// Get the tournament format label for an event (shown on cards/badges).
-// e.g. "Ao5", "Mo3", "Bo5", "Bo3"
-function getFormatLabel(config: typeof EVENT_CONFIGS[number]): string {
-  if (config.tournamentRankBy === "single") {
-    return `Bo${config.tournamentSolveCount}`;
-  }
-  return config.tournamentSolveCount === 5 ? "Ao5" : "Mo3";
-}
-
-// Get the stat column label for the leaderboard table.
-// BLD events rank by single but still display ao5/mo3 as a column.
-function getStatColumnLabel(config: typeof EVENT_CONFIGS[number]): string {
-  return config.tournamentSolveCount === 5 ? "Ao5" : "Mo3";
-}
-
-function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; entry?: MockEntry }) {
-  const status = entry?.status ?? "not-started";
-  const completedSolves = entry?.solves.length ?? 0;
+function EventCard({
+  config,
+  enteredEvent,
+  totalCompetitors,
+}: {
+  config: typeof EVENT_CONFIGS[number];
+  enteredEvent?: ContestStatusData["events"]["enteredEvents"][number];
+  totalCompetitors: number;
+}) {
   const totalSolves = config.tournamentSolveCount;
   const formatLabel = getFormatLabel(config);
-  // Mock: show a default competitor count even for events without an entry.
-  const totalCompetitors = entry?.totalCompetitors ?? 412;
+
+  // Determine status from real data.
+  let status: "not-started" | "in-progress" | "completed";
+  if (!enteredEvent) {
+    status = "not-started";
+  } else if (enteredEvent.result !== null) {
+    status = "completed";
+  } else {
+    status = enteredEvent.solves.length > 0 ? "in-progress" : "not-started";
+  }
+
+  const completedSolves = enteredEvent?.solves.length ?? 0;
+
+  // Compute display result for completed entries.
+  const resultDisplay = enteredEvent?.result !== null && enteredEvent?.result !== undefined
+    ? formatResultTime(enteredEvent.result)
+    : null;
 
   return (
     <button className="rounded-lg bg-card border border-border p-4 hover:bg-muted transition-colors text-left space-y-3">
@@ -471,7 +413,7 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
         </div>
       )}
 
-      {status === "in-progress" && entry && (
+      {status === "in-progress" && enteredEvent && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-yellow-500">
@@ -483,25 +425,25 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
             )}
           </div>
           <p className="text-[11px] font-mono tabular-nums text-muted-foreground leading-relaxed">
-            {entry.solves.map(formatSolveTime).join("  ")}
+            {enteredEvent.solves.map(formatSolveTime).join("  ")}
           </p>
         </div>
       )}
 
-      {status === "completed" && entry && (
+      {status === "completed" && enteredEvent && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-base font-mono tabular-nums font-extrabold">{entry.average}</span>
-            {entry.rank && (
+            <span className="text-base font-mono tabular-nums font-extrabold">{resultDisplay}</span>
+            {enteredEvent.rank && (
               <span className="text-[10px] font-bold text-primary">
-                #{entry.rank} / {totalCompetitors}
+                #{enteredEvent.rank} / {totalCompetitors}
               </span>
             )}
           </div>
           <p className="text-[11px] font-mono tabular-nums text-muted-foreground leading-relaxed">
             {config.tournamentSolveCount === 5 && config.tournamentRankBy === "average"
-              ? formatAo5Times(entry.solves)
-              : entry.solves.map(formatSolveTime).join("  ")}
+              ? formatAo5Times(enteredEvent.solves)
+              : enteredEvent.solves.map(formatSolveTime).join("  ")}
           </p>
         </div>
       )}
@@ -509,27 +451,45 @@ function EventCard({ config, entry }: { config: typeof EVENT_CONFIGS[number]; en
   );
 }
 
-// --- Leaderboard Tab: Overview (stubs for all events) ---
+// --- Leaderboard Tab: Overview (top 3 + viewer for all events) ---
 
 function LeaderboardOverview({
+  tournamentNumber,
   onSelectEvent,
 }: {
+  tournamentNumber: number | undefined;
   onSelectEvent: (event: CubeEvent) => void;
 }) {
+  const overviewQuery = useLeaderboardOverview(tournamentNumber);
+
+  if (overviewQuery.isLoading) {
+    return <LoadingSpinner message="Loading leaderboard..." />;
+  }
+
+  if (!overviewQuery.data || overviewQuery.data.events.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <p className="text-muted-foreground">No leaderboard data yet.</p>
+      </div>
+    );
+  }
+
+  const eventDataMap = new Map(
+    overviewQuery.data.events.map((e) => [e.eventId, e])
+  );
+
   return (
     <div className="space-y-6">
-
-      {/* Event sections — vertically stacked */}
       <div className="space-y-6">
         {EVENT_CONFIGS.map((config) => {
-          const leaderboard = getMockLeaderboard(config);
-          const top3 = leaderboard.slice(0, 3);
-          const selfEntry = leaderboard.find((e) => e.isSelf);
+          const eventData = eventDataMap.get(config.id);
+          if (!eventData || eventData.top3.length === 0) return null;
+
           const solveCount = config.tournamentSolveCount;
 
           return (
             <div key={config.id}>
-              {/* Event header — above the table */}
+              {/* Event header */}
               <div className="flex items-center gap-3 mb-2">
                 <EventIcon event={config} size={24} />
                 <span className="font-extrabold text-base flex-1">{config.name}</span>
@@ -542,94 +502,104 @@ function LeaderboardOverview({
               </div>
 
               <div className="rounded-lg bg-card border border-border overflow-hidden">
-
-              {/* Mini table — top 3 with individual solves */}
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
-                    <th className="px-4 py-2 text-left w-10">#</th>
-                    <th className="py-2 text-left">Player</th>
-                    <th className="pl-8 pr-4 py-2 text-right">Single</th>
-                    <th className="pl-6 pr-4 py-2 text-right">{getStatColumnLabel(config)}</th>
-                    <th className="w-4" />
-                    {Array.from({ length: solveCount }).map((_, i) => (
-                      <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Your row pinned at top */}
-                  {selfEntry && (() => {
-                    const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
-                    return (
-                      <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
-                        <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-orange-400">
-                          {selfEntry.rank}
-                        </td>
-                        <td className="py-2.5">
-                          <span className="font-semibold text-orange-400">{selfEntry.username}</span>
-                        </td>
-                        <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
-                          {getBestSingle(selfEntry.solves)}
-                        </td>
-                        <td className="pl-6 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
-                          {selfEntry.average}
-                        </td>
-                        <td />
-                        {selfEntry.solves.map((solve, i) => {
-                          const isBestOrWorst = solveCount === 5 && (i === bestIdx || i === worstIdx);
-                          const display = formatSolveTime(solve);
-                          return (
-                            <td key={i} className="px-2 py-2.5 text-right font-mono tabular-nums font-bold">
-                              {isBestOrWorst ? `(${display})` : display}
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
+                      <th className="px-4 py-2 text-left w-10">#</th>
+                      <th className="py-2 text-left">Player</th>
+                      <th className="pl-8 pr-4 py-2 text-right">Single</th>
+                      <th className="pl-6 pr-4 py-2 text-right">{getStatColumnLabel(config)}</th>
+                      <th className="w-4" />
+                      {Array.from({ length: solveCount }).map((_, i) => (
+                        <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Viewer row pinned at top */}
+                    {eventData.viewerEntry && (() => {
+                      const viewer = eventData.viewerEntry;
+                      const { bestIdx, worstIdx } = getBestWorst(viewer.solves);
+                      const resultStr = viewer.result !== null
+                        ? formatResultTime(viewer.result)
+                        : "—";
+                      return (
+                        <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
+                          <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-orange-400">
+                            {viewer.rank ?? "—"}
+                          </td>
+                          <td className="py-2.5">
+                            <span className="font-semibold text-orange-400">You</span>
+                          </td>
+                          <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
+                            {viewer.solves.length > 0 ? getBestSingle(viewer.solves) : "—"}
+                          </td>
+                          <td className="pl-6 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
+                            {resultStr}
+                          </td>
+                          <td />
+                          {viewer.solves.map((solve, i) => {
+                            const isBestOrWorst = solveCount === 5 && (i === bestIdx || i === worstIdx);
+                            const display = formatSolveTime(solve);
+                            return (
+                              <td key={i} className="px-2 py-2.5 text-right font-mono tabular-nums font-bold">
+                                {isBestOrWorst ? `(${display})` : display}
+                              </td>
+                            );
+                          })}
+                          {/* Fill empty solve columns if viewer has fewer solves */}
+                          {Array.from({ length: solveCount - viewer.solves.length }).map((_, i) => (
+                            <td key={`empty-${i}`} className="px-2 py-2.5 text-right font-mono tabular-nums text-muted-foreground">
+                              —
                             </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })()}
+                          ))}
+                        </tr>
+                      );
+                    })()}
 
-                  {/* Top 3 (always shown, even if you're in top 3) */}
-                  {top3.map((entry, rowIdx) => {
-                    const { bestIdx, worstIdx } = getBestWorst(entry.solves);
-                    return (
-                      <tr
-                        key={entry.rank}
-                        className="border-b border-border/40 last:border-0"
-                      >
-                        <td className="px-4 py-2.5 w-10 text-center">
-                          {rankDisplay(entry.rank)}
-                        </td>
-                        <td className="py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{entry.username}</span>
-                            {entry.country && (
-                              <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.country)}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
-                          {getBestSingle(entry.solves)}
-                        </td>
-                        <td className="pl-6 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
-                          {entry.average}
-                        </td>
-                        <td />
-                        {entry.solves.map((solve, i) => {
-                          const isBestOrWorst = solveCount === 5 && (i === bestIdx || i === worstIdx);
-                          const display = formatSolveTime(solve);
-                          return (
-                            <td key={i} className="px-2 py-2.5 text-right font-mono tabular-nums font-bold">
-                              {isBestOrWorst ? `(${display})` : display}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
+                    {/* Top 3 */}
+                    {eventData.top3.map((entry, rowIdx) => {
+                      const { bestIdx, worstIdx } = getBestWorst(entry.solves);
+                      const resultStr = entry.result !== null
+                        ? formatResultTime(entry.result)
+                        : "—";
+                      return (
+                        <tr
+                          key={entry.rank}
+                          className="border-b border-border/40 last:border-0"
+                        >
+                          <td className="px-4 py-2.5 w-10 text-center">
+                            {rankDisplay(entry.rank)}
+                          </td>
+                          <td className="py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{entry.user.username}</span>
+                              {entry.user.country && (
+                                <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.user.country)}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
+                            {getBestSingle(entry.solves)}
+                          </td>
+                          <td className="pl-6 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
+                            {resultStr}
+                          </td>
+                          <td />
+                          {entry.solves.map((solve, i) => {
+                            const isBestOrWorst = solveCount === 5 && (i === bestIdx || i === worstIdx);
+                            const display = formatSolveTime(solve);
+                            return (
+                              <td key={i} className="px-2 py-2.5 text-right font-mono tabular-nums font-bold">
+                                {isBestOrWorst ? `(${display})` : display}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           );
@@ -642,9 +612,10 @@ function LeaderboardOverview({
 // --- Leaderboard Tab: Full table for one event ---
 
 function EventLeaderboardDetail({
-  event, onBack, onChangeEvent, page, onPageChange,
+  event, tournamentNumber, onBack, onChangeEvent, page, onPageChange,
 }: {
   event: CubeEvent;
+  tournamentNumber: number;
   onBack: () => void;
   onChangeEvent: (event: CubeEvent) => void;
   page: number;
@@ -652,19 +623,17 @@ function EventLeaderboardDetail({
 }) {
   const eventConfig = EVENT_MAP[event];
   const solveCount = eventConfig.tournamentSolveCount;
-  const leaderboard = getMockLeaderboard(eventConfig);
 
-  const totalPages = Math.ceil(leaderboard.length / RESULTS_PER_PAGE);
-  const currentPage = Math.min(page, totalPages);
-  const pageEntries = leaderboard.slice(
-    (currentPage - 1) * RESULTS_PER_PAGE,
-    currentPage * RESULTS_PER_PAGE
-  );
-  const selfEntry = leaderboard.find((e) => e.isSelf);
+  const leaderboardQuery = useLeaderboard(tournamentNumber, event, page, RESULTS_PER_PAGE);
+
+  const totalPages = leaderboardQuery.data
+    ? Math.ceil(leaderboardQuery.data.total / RESULTS_PER_PAGE)
+    : 0;
+  const currentPage = Math.min(page, Math.max(1, totalPages));
 
   return (
     <div className="space-y-4">
-      {/* Back button + event name + date nav */}
+      {/* Back button + event name */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-md hover:bg-muted transition-colors">
@@ -693,152 +662,164 @@ function EventLeaderboardDetail({
         </div>
       </div>
 
-      {/* Full results table */}
-      <div className="rounded-lg bg-card border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              <th className="px-4 py-2 text-left w-10">#</th>
-              <th className="px-3 py-2 text-left">Player</th>
-              <th className="pl-8 pr-4 py-2 text-right">Single</th>
-              <th className="pl-6 pr-4 py-2 text-right">{getStatColumnLabel(eventConfig)}</th>
-              <th className="w-4" />
-              {Array.from({ length: solveCount }).map((_, i) => (
-                <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {/* Your row pinned at top */}
-            {(() => {
-              if (!selfEntry) return null;
-              const { bestIdx, worstIdx } = getBestWorst(selfEntry.solves);
-              return (
-                <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
-                  <td className="px-4 py-3 text-center text-sm font-bold text-orange-400">
-                    {selfEntry.rank}
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <UserAvatar
-                        user={{
-                          username: selfEntry.username,
-                          firstName: selfEntry.firstName,
-                          lastName: selfEntry.lastName,
-                          profilePictureUrl: selfEntry.profilePictureUrl,
-                        }}
-                        size="sm"
-                        rounded="full"
-                      />
-                      <span className="font-semibold text-orange-400">{selfEntry.username}</span>
-                      {selfEntry.country && (
-                        <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(selfEntry.country)}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
-                    {getBestSingle(selfEntry.solves)}
-                  </td>
-                  <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
-                    {selfEntry.average}
-                  </td>
-                  <td />
-                  {selfEntry.solves.map((solve, i) => {
-                    const isBW = solveCount === 5 && (i === bestIdx || i === worstIdx);
-                    return (
-                      <td key={i} className="px-2 py-3 text-right font-mono tabular-nums font-bold">
-                        {isBW ? `(${formatSolveTime(solve)})` : formatSolveTime(solve)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })()}
-
-            {pageEntries.map((entry, rowIdx) => {
-              const { bestIdx, worstIdx } = getBestWorst(entry.solves);
-              return (
-                <tr
-                  key={entry.rank}
-                  className={rowIdx % 2 === 1 ? "bg-muted/60" : ""}
-                >
-                  <td className="px-4 py-3 text-center">
-                    {rankDisplay(entry.rank)}
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <UserAvatar
-                        user={{
-                          username: entry.username,
-                          firstName: entry.firstName,
-                          lastName: entry.lastName,
-                          profilePictureUrl: entry.profilePictureUrl,
-                        }}
-                        size="sm"
-                        rounded="full"
-                      />
-                      <span className="font-semibold truncate">
-                        {entry.username}
-                      </span>
-                      {entry.country && (
-                        <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.country)}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
-                    {getBestSingle(entry.solves)}
-                  </td>
-                  <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
-                    {entry.average}
-                  </td>
-                  <td />
-                  {entry.solves.map((solve, i) => {
-                    const isBestOrWorst = solveCount === 5 && (i === bestIdx || i === worstIdx);
-                    const display = formatSolveTime(solve);
-                    return (
-                      <td key={i} className="px-2 py-3 text-right font-mono tabular-nums font-bold">
-                        {isBestOrWorst ? `(${display})` : display}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-            className="px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            ← Prev
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => onPageChange(p)}
-              className={`w-8 h-8 text-sm rounded-md transition-colors ${
-                p === currentPage
-                  ? "bg-primary text-primary-foreground font-bold"
-                  : "hover:bg-muted"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-            className="px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            Next →
-          </button>
+      {leaderboardQuery.isLoading ? (
+        <LoadingSpinner message="Loading results..." />
+      ) : !leaderboardQuery.data || leaderboardQuery.data.entries.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <p className="text-muted-foreground">No entries yet for this event.</p>
         </div>
+      ) : (
+        <>
+          {/* Full results table */}
+          <div className="rounded-lg bg-card border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left w-10">#</th>
+                  <th className="px-3 py-2 text-left">Player</th>
+                  <th className="pl-8 pr-4 py-2 text-right">Single</th>
+                  <th className="pl-6 pr-4 py-2 text-right">{getStatColumnLabel(eventConfig)}</th>
+                  <th className="w-4" />
+                  {Array.from({ length: solveCount }).map((_, i) => (
+                    <th key={i} className="px-2 py-2 text-right">{i + 1}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* Viewer row pinned at top */}
+                {(() => {
+                  const viewer = leaderboardQuery.data!.viewerEntry;
+                  if (!viewer) return null;
+                  const { bestIdx, worstIdx } = getBestWorst(viewer.solves);
+                  const resultStr = viewer.result !== null
+                    ? formatResultTime(viewer.result)
+                    : "—";
+                  return (
+                    <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
+                      <td className="px-4 py-3 text-center text-sm font-bold text-orange-400">
+                        {viewer.rank ?? "—"}
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="font-semibold text-orange-400">You</span>
+                      </td>
+                      <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                        {viewer.solves.length > 0 ? getBestSingle(viewer.solves) : "—"}
+                      </td>
+                      <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                        {resultStr}
+                      </td>
+                      <td />
+                      {viewer.solves.map((solve, i) => {
+                        const isBW = solveCount === 5 && (i === bestIdx || i === worstIdx);
+                        return (
+                          <td key={i} className="px-2 py-3 text-right font-mono tabular-nums font-bold">
+                            {isBW ? `(${formatSolveTime(solve)})` : formatSolveTime(solve)}
+                          </td>
+                        );
+                      })}
+                      {Array.from({ length: solveCount - viewer.solves.length }).map((_, i) => (
+                        <td key={`empty-${i}`} className="px-2 py-3 text-right font-mono tabular-nums text-muted-foreground">
+                          —
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })()}
+
+                {leaderboardQuery.data!.entries.map((entry, rowIdx) => {
+                  const { bestIdx, worstIdx } = getBestWorst(entry.solves);
+                  const resultStr = entry.result !== null
+                    ? formatResultTime(entry.result)
+                    : "—";
+                  return (
+                    <tr
+                      key={entry.rank}
+                      className={rowIdx % 2 === 1 ? "bg-muted/60" : ""}
+                    >
+                      <td className="px-4 py-3 text-center">
+                        {rankDisplay(entry.rank)}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <UserAvatar
+                            user={{
+                              username: entry.user.username,
+                              firstName: entry.user.firstName,
+                              lastName: entry.user.lastName,
+                              profilePictureUrl: entry.user.profilePictureUrl,
+                            }}
+                            size="sm"
+                            rounded="full"
+                          />
+                          <span className="font-semibold truncate">
+                            {entry.user.username}
+                          </span>
+                          {entry.user.country && (
+                            <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.user.country)}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                        {entry.solves.length > 0 ? getBestSingle(entry.solves) : "—"}
+                      </td>
+                      <td className="pl-6 pr-4 py-3 text-right font-mono tabular-nums font-bold">
+                        {resultStr}
+                      </td>
+                      <td />
+                      {entry.solves.map((solve, i) => {
+                        const isBestOrWorst = solveCount === 5 && (i === bestIdx || i === worstIdx);
+                        const display = formatSolveTime(solve);
+                        return (
+                          <td key={i} className="px-2 py-3 text-right font-mono tabular-nums font-bold">
+                            {isBestOrWorst ? `(${display})` : display}
+                          </td>
+                        );
+                      })}
+                      {Array.from({ length: solveCount - entry.solves.length }).map((_, i) => (
+                        <td key={`empty-${i}`} className="px-2 py-3 text-right font-mono tabular-nums text-muted-foreground">
+                          —
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <button
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                ← Prev
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => onPageChange(p)}
+                  className={`w-8 h-8 text-sm rounded-md transition-colors ${
+                    p === currentPage
+                      ? "bg-primary text-primary-foreground font-bold"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1.5 text-sm font-semibold rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

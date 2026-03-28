@@ -14,6 +14,17 @@ export function useContestStatus(contestNumber?: number) {
   );
 }
 
+// Fetches the leaderboard overview (top 3 + viewer) for all events.
+// If no tournament number is provided, fetches the current tournament.
+export function useLeaderboardOverview(tournamentNumber?: number) {
+  const trpc = useTRPC();
+  return useQuery(
+    trpc.tournament.getLeaderboardOverview.queryOptions({
+      tournamentNumber,
+    })
+  );
+}
+
 // Fetches the leaderboard for a specific event in a contest.
 export function useLeaderboard(
   tournamentNumber: number,
