@@ -32,13 +32,9 @@ function formatCountdown(ms: number): string {
 }
 
 
-function toSolveForStats(s: { timeMs: number; penalty: string | null }): SolveForStats {
-  return { timeMs: s.timeMs, penalty: s.penalty as SolveForStats["penalty"] };
-}
-
-function getBestWorst(solves: { timeMs: number; penalty: string | null }[]) {
+function getBestWorst(solves: SolveForStats[]) {
   if (solves.length !== 5) return { bestIdx: -1, worstIdx: -1 };
-  const times = solves.map((s) => effectiveTime(toSolveForStats(s)));
+  const times = solves.map((s) => effectiveTime(s));
   let bestIdx = 0, worstIdx = 0;
   times.forEach((t, i) => {
     if (t < times[bestIdx]) bestIdx = i;
@@ -54,7 +50,7 @@ function getBestWorst(solves: { timeMs: number; penalty: string | null }[]) {
   return { bestIdx, worstIdx };
 }
 
-function formatAo5Times(solves: { timeMs: number; penalty: string | null }[]): string {
+function formatAo5Times(solves: SolveForStats[]): string {
   if (solves.length !== 5) return solves.map(formatSolveTime).join("  ");
   const { bestIdx, worstIdx } = getBestWorst(solves);
   return solves
@@ -87,7 +83,7 @@ function getStatColumnLabel(config: typeof EVENT_CONFIGS[number]): string {
 
 // Compute display values (single, average/mean) from solves based on event config.
 // Uses the shared compute functions so display is always correct.
-function computeDisplayStats(solves: { timeMs: number; penalty: string | null }[], config: typeof EVENT_CONFIGS[number]) {
+function computeDisplayStats(solves: SolveForStats[], config: typeof EVENT_CONFIGS[number]) {
   const stats = solves as SolveForStats[];
   const single = computeBestSingle(stats);
   const singleStr = single === null ? "—" : formatTime(single);
@@ -327,7 +323,7 @@ type ContestStatusData = {
       scrambleSetId: string;
       scrambles: string[];
       result: number | null;
-      solves: { id: string; scrambleSetIndex: number; timeMs: number; penalty: string | null }[];
+      solves: (SolveForStats & { id: string; scrambleSetIndex: number })[];
       rank: number | null;
       totalCompetitors: number;
     }[];
