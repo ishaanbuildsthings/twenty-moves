@@ -473,13 +473,23 @@ function EventCard({
       </div>
 
       {/* Detail line: solve times */}
-      {enteredEvent && enteredEvent.solves.length > 0 && (
-        <div className="mt-1 ml-9 font-mono tabular-nums text-sm text-muted-foreground">
-          {config.tournamentSolveCount === 5 && config.tournamentRankBy === "average"
-            ? formatAo5Times(enteredEvent.solves)
-            : enteredEvent.solves.map(formatSolveTime).join("  ")}
-        </div>
-      )}
+      {/* Detail line: solve times + placeholders for remaining */}
+      <div className="mt-1 ml-9 font-mono tabular-nums text-sm text-muted-foreground">
+        {(() => {
+          const solves = enteredEvent?.solves ?? [];
+          const total = config.tournamentSolveCount;
+          const remaining = total - solves.length;
+
+          // For completed ao5, use best/worst parentheses formatting.
+          if (status === "completed" && total === 5 && config.tournamentRankBy === "average" && solves.length === 5) {
+            return formatAo5Times(solves);
+          }
+
+          const solveStrs = solves.map(formatSolveTime);
+          const placeholders = Array(remaining).fill("–.––");
+          return [...solveStrs, ...placeholders].join("  ");
+        })()}
+      </div>
     </button>
   );
 }
