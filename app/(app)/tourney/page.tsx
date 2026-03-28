@@ -102,35 +102,27 @@ export default function TourneyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Fetch contest status (defaults to latest tournament when no number given).
-  const contestStatusQuery = useContestStatus();
-
-  const currentTournamentNumber = contestStatusQuery.data?.tournament?.number;
-
-  // Read state from URL params, with defaults.
+  // Read state from URL params.
   const tab: Tab = searchParams.get("tab") === "leaderboard" ? "leaderboard" : "compete";
-  const viewingContest = Number(searchParams.get("contest")) || currentTournamentNumber;
+  const contestParam = Number(searchParams.get("contest")) || undefined;
   const selectedLeaderboardEvent = (searchParams.get("event") as CubeEvent) || null;
   const validEvent = selectedLeaderboardEvent && EVENT_MAP[selectedLeaderboardEvent]
     ? selectedLeaderboardEvent
     : null;
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
-  // When viewing a specific (non-latest) contest, fetch that contest's status.
-  const specificContestQuery = useContestStatus(
-    viewingContest && viewingContest !== currentTournamentNumber ? viewingContest : undefined
-  );
+  // Single query: pass contest number from URL, or undefined for latest.
+  const contestStatusQuery = useContestStatus(contestParam);
 
-  // The active contest data — either the specific one or the latest.
-  const activeContestData = viewingContest && viewingContest !== currentTournamentNumber
-    ? specificContestQuery.data
-    : contestStatusQuery.data;
-  const activeContestLoading = viewingContest && viewingContest !== currentTournamentNumber
-    ? specificContestQuery.isLoading
-    : contestStatusQuery.isLoading;
+  const activeContestData = contestStatusQuery.data;
+  const activeContestLoading = contestStatusQuery.isLoading;
+  const viewingContest = activeContestData?.tournament?.number;
 
   const [countdown, setCountdown] = useState("");
-  const isCurrent = viewingContest === currentTournamentNumber;
+
+  // Determine if this is the current (latest) contest by checking if
+  // there's no contest param in the URL, or if it matches the returned number.
+  const isCurrent = !contestParam;
 
   const contestDateStr = activeContestData?.tournament?.datePST
     ? new Date(activeContestData.tournament.datePST + "T12:00:00").toLocaleDateString("en-US", {
@@ -192,7 +184,7 @@ export default function TourneyPage() {
     );
   }
 
-  if (!currentTournamentNumber) {
+  if (!viewingContest) {
     return (
       <div className="flex flex-col flex-1 overflow-y-auto items-center justify-center py-16">
         <p className="text-muted-foreground">No tournament found.</p>
@@ -217,7 +209,7 @@ export default function TourneyPage() {
               </button>
               <button
                 onClick={() => navigateContest("next")}
-                disabled={!viewingContest || viewingContest >= currentTournamentNumber}
+                disabled={!viewingContest || isCurrent}
                 className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="w-5 h-5" />
