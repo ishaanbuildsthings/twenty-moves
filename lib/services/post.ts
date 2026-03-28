@@ -2,7 +2,6 @@ import type { PrismaClient } from "@/app/generated/prisma/client";
 import type { ServiceContext } from "./user";
 
 type CreatePracticeSessionInput = {
-  userId: string;
   eventId: string;
   caption: string;
   youtubeUrl?: string;
@@ -34,7 +33,7 @@ export function postService(ctx: ServiceContext) {
 
         await tx.solve.createMany({
           data: input.solves.map((s, i) => ({
-            userId: input.userId,
+            userId: viewer.userId,
             eventId: input.eventId,
             scrambleSetId: scrambleSet.id,
             scrambleSetIndex: i,
@@ -45,7 +44,7 @@ export function postService(ctx: ServiceContext) {
 
         return tx.practicePost.create({
           data: {
-            userId: input.userId,
+            userId: viewer.userId,
             eventId: input.eventId,
             scrambleSetId: scrambleSet.id,
             caption: input.caption,

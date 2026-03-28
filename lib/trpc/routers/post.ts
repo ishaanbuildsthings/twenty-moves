@@ -6,14 +6,6 @@ import { EVENT_MAP } from "@/lib/cubing/events";
 import { eventService } from "@/lib/services/event";
 import { postService } from "@/lib/services/post";
 
-const DNF_SENTINEL = 999_999_999;
-
-// Infinity (all-DNF average) can't be stored as Int — use sentinel value.
-function finiteOrDnf(n: number | null): number | null {
-  if (n === null) return null;
-  if (!isFinite(n)) return DNF_SENTINEL;
-  return n;
-}
 
 const solveSchema = z.object({
   timeMs: z.number().int().positive(),
@@ -53,15 +45,14 @@ export const postRouter = createTRPCRouter({
         : 1;
 
       return postService(ctx).createPracticeSession({
-        userId: ctx.viewer.userId,
         eventId: dbEvent.id,
         caption: input.caption,
         youtubeUrl: input.youtubeUrl,
-        bestSingle: finiteOrDnf(stats.bestSingle),
-        bestAo5: finiteOrDnf(stats.bestAo5),
-        bestAo12: finiteOrDnf(stats.bestAo12),
-        bestAo100: finiteOrDnf(stats.bestAo100),
-        bestMo3: finiteOrDnf(stats.bestMo3),
+        bestSingle: stats.bestSingle,
+        bestAo5: stats.bestAo5,
+        bestAo12: stats.bestAo12,
+        bestAo100: stats.bestAo100,
+        bestMo3: stats.bestMo3,
         displaySolves: input.solves.slice(0, displayCount).map((s) => s.timeMs),
         numSolves: input.solves.length,
         solves: input.solves,

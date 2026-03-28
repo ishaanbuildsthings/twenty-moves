@@ -1,8 +1,8 @@
 import type { Penalty } from "@/app/(app)/db";
 import type { StatType } from "@/lib/cubing/events";
 
-// DNF is represented as Infinity so it naturally sorts to the end.
-const DNF = Infinity;
+// DNF is represented as a sentinel value so it naturally sorts to the end.
+const DNF = 999_999_999;
 
 interface SolveForStats {
   timeMs: number;
@@ -10,7 +10,7 @@ interface SolveForStats {
 }
 
 // Returns the effective solve time accounting for penalties.
-// +2 adds 2000ms. DNF returns Infinity.
+// +2 adds 2000ms. DNF returns 999_999_999.
 export function effectiveTime(solve: SolveForStats): number {
   if (solve.penalty === "dnf") return DNF;
   if (solve.penalty === "plus_two") return solve.timeMs + 2000;
