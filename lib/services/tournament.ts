@@ -95,21 +95,15 @@ export function tournamentService(ctx: ServiceContext) {
         };
       });
 
-      // Include competitor counts for events the viewer hasn't entered.
+      // Competitor counts for events the viewer hasn't entered.
       const unenteredEvents = totalCounts
         .filter((c) => !enteredEventIds.includes(c.eventId))
         .map((c) => ({
           eventId: c.eventId,
-          entryId: null,
-          scrambleSetId: null,
-          scrambles: null,
-          result: null,
-          solves: [] as { id: string; scrambleSetIndex: number; timeMs: number; penalty: string | null }[],
-          rank: null,
           totalCompetitors: c._count,
         }));
 
-      return [...enteredEvents, ...unenteredEvents];
+      return { enteredEvents, unenteredEvents };
     },
 
     // Get paginated leaderboard for a specific event in a tournament.
