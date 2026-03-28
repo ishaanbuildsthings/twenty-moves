@@ -239,15 +239,16 @@ export function tournamentService(ctx: ServiceContext) {
     ) => {
       const offset = (page - 1) * pageSize;
 
-      // Total entries with results.
+      // Total entries (all competitors, including in-progress).
       const total = await prisma.tournamentEntry.count({
-        where: { tournamentId, eventId, result: { not: null } },
+        where: { tournamentId, eventId },
       });
 
-      // Paginated entries sorted by result.
+      // Paginated entries — finished results first (ascending), then
+      // in-progress (null) at the end.
       const entries = await prisma.tournamentEntry.findMany({
-        where: { tournamentId, eventId, result: { not: null } },
-        orderBy: { result: "asc" },
+        where: { tournamentId, eventId },
+        orderBy: { result: { sort: "asc", nulls: "last" } },
         skip: offset,
         take: pageSize,
         include: {
