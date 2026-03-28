@@ -34,7 +34,6 @@ model Event {
 
   solves            Solve[]
   personalBests     PersonalBest[]
-  tournaments       Tournament[]
   scrambleSets      ScrambleSet[]
   tournamentEntries TournamentEntry[]
   practicePosts     PracticePost[]
@@ -43,9 +42,9 @@ model Event {
 
 enum PbType {
   single
+  mo3
   avg5
   avg12
-  avg50
   avg100
 }
 
@@ -82,26 +81,34 @@ model Solve {
   scrambleSet ScrambleSet  @relation(fields: [scrambleSetId], references: [id])
 }
 
+// One tournament per day. Covers all events.
+// Individual events are tracked via TournamentEntry + ScrambleSet.
 model Tournament {
   id        String            @id @default(cuid())
-  eventId   String
-  date      DateTime
+  number    Int               @unique @default(autoincrement())
+  name      String?           // Optional display name override (e.g. "Holiday Special")
+  datePST   String   @unique  // PST date string, e.g. "2026-03-26". The tournament "day" in Pacific time.
   createdAt DateTime          @default(now())
 
-  event   Event               @relation(fields: [eventId], references: [id])
-  entries TournamentEntry[]
+  entries     TournamentEntry[]
+  scrambleSets ScrambleSet[]
 }
 
 model ScrambleSet {
-  id        String   @id @default(cuid())
-  eventId   String
-  scrambles Json     // String[] — ordered list of move strings
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  eventId       String
+  tournamentId  String?  // Set for tournament scramble sets, null for practice posts.
+  scrambles     Json     // String[] — ordered list of move strings
+  createdAt     DateTime @default(now())
 
-  event   Event             @relation(fields: [eventId], references: [id])
-  entries        TournamentEntry[]
-  solves         Solve[]
-  practicePosts  PracticePost[]
+  event         Event             @relation(fields: [eventId], references: [id])
+  tournament    Tournament?       @relation(fields: [tournamentId], references: [id])
+  entries       TournamentEntry[]
+  solves        Solve[]
+  practicePosts PracticePost[]
+
+  // One scramble set per event per tournament.
+  @@unique([tournamentId, eventId])
 }
 
 model TournamentEntry {
@@ -110,7 +117,9 @@ model TournamentEntry {
   tournamentId  String
   eventId       String
   scrambleSetId String
-  result        Int     // ms — ao5 or mo3 depending on tournament.format
+  result        Int?    // Cached result in ms for leaderboard sorting.
+                        // null = in progress (not enough solves yet).
+                        // 999_999_999 (DNF_RESULT) = completed but DNF.
   createdAt     DateTime @default(now())
 
   user         User        @relation(fields: [userId], references: [id])

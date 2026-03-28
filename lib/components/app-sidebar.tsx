@@ -27,8 +27,8 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 const navItems = [
   { label: "Practice", href: "/", icon: "⏱️", comingSoon: false, hoverClass: "hover:bg-orange-500/15 hover:text-orange-300" },
   { label: "Home", href: "/home", icon: "🏠", comingSoon: false, hoverClass: "hover:bg-blue-500/15 hover:text-blue-300" },
-  { label: "Race", href: "/race", icon: "🏁", comingSoon: true, hoverClass: "hover:bg-red-500/15 hover:text-red-300" },
-  { label: "Tourney", href: "/tourney", icon: "🏆", comingSoon: true, hoverClass: "hover:bg-green-500/15 hover:text-green-300" },
+  { label: "Tourney", href: "/tourney", icon: "🏆", comingSoon: false, hoverClass: "hover:bg-green-500/15 hover:text-green-300" },
+  { label: "Race Rooms", href: "/race", icon: "🏁", comingSoon: true, hoverClass: "hover:bg-red-500/15 hover:text-red-300" },
 ];
 
 export function AppSidebar() {

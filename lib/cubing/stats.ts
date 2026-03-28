@@ -1,17 +1,20 @@
-import type { Penalty } from "@/app/(app)/db";
-import type { StatType } from "@/lib/cubing/events";
+// General-purpose cubing stat computation functions.
+// Used by practice (IDB), tournaments, races, etc.
+// No IDB or practice-specific logic belongs here.
 
 // DNF is represented as a sentinel value so it naturally sorts to the end.
 export const DNF_SENTINEL = 999_999_999;
 const DNF = DNF_SENTINEL;
 
-interface SolveForStats {
+export type StatType = "single" | "ao5" | "ao12" | "ao100" | "mo3";
+
+export interface SolveForStats {
   timeMs: number;
-  penalty: Penalty;
+  penalty: "plus_two" | "dnf" | null;
 }
 
 // Returns the effective solve time accounting for penalties.
-// +2 adds 2000ms. DNF returns 999_999_999.
+// plus_two adds 2000ms. DNF returns DNF_SENTINEL.
 export function effectiveTime(solve: SolveForStats): number {
   if (solve.penalty === "dnf") return DNF;
   if (solve.penalty === "plus_two") return solve.timeMs + 2000;
@@ -22,7 +25,7 @@ export function effectiveTime(solve: SolveForStats): number {
 // Removes 1 best and 1 worst, averages middle 3.
 // If more than 1 solve is DNF, the whole average is DNF.
 // Returns null if not enough solves.
-function computeAo5(solves: SolveForStats[]): number | null {
+export function computeAo5(solves: SolveForStats[]): number | null {
   if (solves.length < 5) return null;
   const times = solves.slice(0, 5).map(effectiveTime);
 
@@ -39,7 +42,7 @@ function computeAo5(solves: SolveForStats[]): number | null {
 // Removes 1 best and 1 worst, averages middle 10.
 // If more than 1 solve is DNF, the whole average is DNF.
 // Returns null if not enough solves.
-function computeAo12(solves: SolveForStats[]): number | null {
+export function computeAo12(solves: SolveForStats[]): number | null {
   if (solves.length < 12) return null;
   const times = solves.slice(0, 12).map(effectiveTime);
 
@@ -56,7 +59,7 @@ function computeAo12(solves: SolveForStats[]): number | null {
 // Removes 5 best and 5 worst, averages middle 90.
 // If more than 5 solves are DNF, the whole average is DNF.
 // Returns null if not enough solves.
-function computeAo100(solves: SolveForStats[]): number | null {
+export function computeAo100(solves: SolveForStats[]): number | null {
   if (solves.length < 100) return null;
   const recent = solves.slice(0, 100);
   const times = recent.map(effectiveTime);
@@ -73,7 +76,7 @@ function computeAo100(solves: SolveForStats[]): number | null {
 // Compute mean-of-3 (used for BLD events).
 // Straight mean of 3 solves. Any DNF makes the whole mean DNF.
 // Returns null if not enough solves.
-function computeMo3(solves: SolveForStats[]): number | null {
+export function computeMo3(solves: SolveForStats[]): number | null {
   if (solves.length < 3) return null;
   const recent = solves.slice(0, 3);
   const times = recent.map(effectiveTime);
@@ -86,7 +89,7 @@ function computeMo3(solves: SolveForStats[]): number | null {
 
 // Find the best single from all solves.
 // Returns null if no solves, DNF if all solves are DNF.
-function computeBestSingle(solves: SolveForStats[]): number | null {
+export function computeBestSingle(solves: SolveForStats[]): number | null {
   if (solves.length === 0) return null;
   let best: number = DNF;
   for (const solve of solves) {
@@ -98,10 +101,10 @@ function computeBestSingle(solves: SolveForStats[]): number | null {
   return best;
 }
 
-// Scan all solves to find the best ever ao5/ao12/ao100/mo3.
+// Scan all solves to find the best ever average using the given compute function.
 // Checks every possible window position, not just the current one.
 // Returns null if not enough solves, DNF if all windows are DNF.
-function findBestAverage(
+export function findBestAverage(
   solves: SolveForStats[],
   computeFn: (s: SolveForStats[]) => number | null
 ): number | null {

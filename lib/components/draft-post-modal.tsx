@@ -9,22 +9,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { type EventStats, DNF_SENTINEL } from "@/lib/cubing/stats";
-import { type EventConfig } from "@/lib/cubing/events";
-import { type Solve } from "@/app/(app)/db";
+import { formatTime } from "@/lib/cubing/format";
+import { type EventConfig, EVENT_MAP, getEnabledStats } from "@/lib/cubing/events";
+import { type Solve } from "@/app/(app)/idb";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
-
-function formatTime(ms: number): string {
-  if (ms >= DNF_SENTINEL) return "DNF";
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const centiseconds = Math.floor((ms % 1000) / 10);
-  if (minutes > 0) {
-    return `${minutes}:${String(seconds).padStart(2, "0")}.${String(centiseconds).padStart(2, "0")}`;
-  }
-  return `${seconds}.${String(centiseconds).padStart(2, "0")}`;
-}
 
 interface DraftPostModalProps {
   open: boolean;
@@ -68,9 +57,9 @@ export function DraftPostModal({
 
   const highlights: { label: string; value: number | null }[] = [
     { label: "Best single", value: stats.bestSingle },
-    ...(eventConfig.stats.includes("ao5") ? [{ label: "Ao5", value: stats.currentAo5 }] : []),
-    ...(eventConfig.stats.includes("ao12") ? [{ label: "Ao12", value: stats.currentAo12 }] : []),
-    ...(eventConfig.stats.includes("ao100") ? [{ label: "Ao100", value: stats.currentAo100 }] : []),
+    ...(getEnabledStats(eventConfig.id).includes("ao5") ? [{ label: "Ao5", value: stats.currentAo5 }] : []),
+    ...(getEnabledStats(eventConfig.id).includes("ao12") ? [{ label: "Ao12", value: stats.currentAo12 }] : []),
+    ...(getEnabledStats(eventConfig.id).includes("ao100") ? [{ label: "Ao100", value: stats.currentAo100 }] : []),
   ].filter((h) => h.value !== null);
 
   return (

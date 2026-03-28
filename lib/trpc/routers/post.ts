@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, authedProcedure } from "../init";
 import { recomputeStats } from "@/lib/cubing/stats";
-import { EVENT_MAP } from "@/lib/cubing/events";
+import { EVENT_MAP, getEnabledStats } from "@/lib/cubing/events";
 import { eventService } from "@/lib/services/event";
 import { postService } from "@/lib/services/post";
 
@@ -37,11 +37,12 @@ export const postRouter = createTRPCRouter({
       const stats = recomputeStats(
         input.event,
         input.solves.map((s) => ({ timeMs: s.timeMs, penalty: s.penalty ?? null })),
-        eventConfig.stats
+        getEnabledStats(eventConfig.id)
       );
 
-      const displayCount = eventConfig.stats.includes("ao5") ? 5
-        : eventConfig.stats.includes("mo3") ? 3
+      const enabledStats = getEnabledStats(eventConfig.id);
+      const displayCount = enabledStats.includes("ao5") ? 5
+        : enabledStats.includes("mo3") ? 3
         : 1;
 
       return postService(ctx).createPracticeSession({

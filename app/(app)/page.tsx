@@ -14,11 +14,13 @@ import {
   updateSolve,
   type Solve,
   type Penalty,
-} from "./db";
+} from "./idb";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
 import { effectiveTime, DNF_SENTINEL, type EventStats } from "@/lib/cubing/stats";
+import { formatTime, formatSolveTime } from "@/lib/cubing/format";
+import { getPracticeStats } from "./idb";
 import {
   Popover,
   PopoverContent,
@@ -49,26 +51,6 @@ import {
 // running    — timer is running
 type TimerState = "idle" | "inspecting" | "holding" | "ready" | "running";
 
-function formatTime(ms: number): string {
-  if (ms >= DNF_SENTINEL) return "DNF";
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const centiseconds = Math.floor((ms % 1000) / 10);
-
-  if (minutes > 0) {
-    return `${minutes}:${String(seconds).padStart(2, "0")}.${String(centiseconds).padStart(2, "0")}`;
-  }
-  return `${seconds}.${String(centiseconds).padStart(2, "0")}`;
-}
-
-function formatSolveTime(solve: Solve): string {
-  if (solve.penalty === "dnf") return "DNF";
-  const time = formatTime(
-    solve.penalty === "plus_two" ? solve.timeMs + 2000 : solve.timeMs
-  );
-  return solve.penalty === "plus_two" ? `${time}+` : time;
-}
 
 export default function TimerPage() {
   const { timerSettings, updateTimerSettings } = useSettings();
@@ -472,7 +454,7 @@ export default function TimerPage() {
             </div>
             {/* Stat rows */}
             <div className="space-y-1.5 px-3 pb-3">
-              {eventConfig.stats.includes("single") && (
+              {getPracticeStats(selectedEvent).includes("single") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Single</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
@@ -483,7 +465,7 @@ export default function TimerPage() {
                   </span>
                 </div>
               )}
-              {eventConfig.stats.includes("mo3") && (
+              {getPracticeStats(selectedEvent).includes("mo3") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Mo3</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
@@ -494,7 +476,7 @@ export default function TimerPage() {
                   </span>
                 </div>
               )}
-              {eventConfig.stats.includes("ao5") && (
+              {getPracticeStats(selectedEvent).includes("ao5") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao5</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
@@ -505,7 +487,7 @@ export default function TimerPage() {
                   </span>
                 </div>
               )}
-              {eventConfig.stats.includes("ao12") && (
+              {getPracticeStats(selectedEvent).includes("ao12") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao12</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">
@@ -516,7 +498,7 @@ export default function TimerPage() {
                   </span>
                 </div>
               )}
-              {eventConfig.stats.includes("ao100") && (
+              {getPracticeStats(selectedEvent).includes("ao100") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao100</span>
                   <span className="font-mono tabular-nums text-sm font-bold text-right">

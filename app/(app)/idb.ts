@@ -1,6 +1,16 @@
-import type { CubeEvent } from "@/lib/cubing/events";
-import { EVENT_MAP } from "@/lib/cubing/events";
-import { recomputeStats, type EventStats } from "@/lib/cubing/stats";
+import { CubeEvent, getEnabledStats } from "@/lib/cubing/events";
+import {
+  recomputeStats,
+  type SolveForStats,
+  type EventStats,
+} from "@/lib/cubing/stats";
+
+// --- Practice-specific stat types (IDB only) ---
+
+// Re-export for convenience — getPracticeStats is just getEnabledStats.
+export const getPracticeStats = getEnabledStats;
+
+export type { EventStats };
 
 const DB_NAME = "cubing-timer";
 const DB_VERSION = 1;
@@ -153,7 +163,7 @@ async function updateStatsInTx(
   event: CubeEvent
 ): Promise<EventStats> {
   const solves = await getAllSolvesForEvent(tx, event);
-  const stats = recomputeStats(event, solves, EVENT_MAP[event].stats);
+  const stats = recomputeStats(event, solves, getPracticeStats(event));
   const statsStore = tx.objectStore(STATS_STORE);
   statsStore.put(stats);
   return stats;
