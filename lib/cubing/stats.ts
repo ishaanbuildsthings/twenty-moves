@@ -123,10 +123,20 @@ export interface EventStats {
   bestAo12: number | null;
   bestAo100: number | null;
   bestMo3: number | null;
+  sessionMean: number | null;
   currentAo5: number | null;
   currentAo12: number | null;
   currentAo100: number | null;
   currentMo3: number | null;
+}
+
+// Compute session mean, excluding DNFs.
+// Returns null if no solves, DNF_SENTINEL if all solves are DNF.
+function computeSessionMean(solves: SolveForStats[]): number | null {
+  if (solves.length === 0) return null;
+  const finiteTimes = solves.map(effectiveTime).filter((t) => t < DNF_SENTINEL);
+  if (finiteTimes.length === 0) return DNF_SENTINEL;
+  return Math.round(finiteTimes.reduce((a, b) => a + b, 0) / finiteTimes.length);
 }
 
 // Recompute all stats from an array of solves (newest first).
@@ -139,6 +149,7 @@ export function recomputeStats(
   const has = (s: StatType) => enabledStats.includes(s);
 
   const bestSingle = has("single") ? computeBestSingle(solves) : null;
+  const sessionMean = computeSessionMean(solves);
 
   const currentAo5 = has("ao5") ? computeAo5(solves) : null;
   const currentAo12 = has("ao12") ? computeAo12(solves) : null;
@@ -157,6 +168,7 @@ export function recomputeStats(
     bestAo12,
     bestAo100,
     bestMo3,
+    sessionMean,
     currentAo5,
     currentAo12,
     currentAo100,

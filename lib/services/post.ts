@@ -10,6 +10,7 @@ type CreatePracticeSessionInput = {
   bestAo12: number | null;
   bestAo100: number | null;
   bestMo3: number | null;
+  sessionMean: number | null;
   displaySolves: number[];
   numSolves: number;
   solves: {
@@ -54,6 +55,7 @@ export function postService(ctx: ServiceContext) {
             bestAo12: input.bestAo12,
             bestAo100: input.bestAo100,
             bestMo3: input.bestMo3,
+            sessionMean: input.sessionMean,
             displaySolves: input.displaySolves,
             numSolves: input.numSolves,
             numLikes: 0,
