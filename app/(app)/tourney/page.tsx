@@ -447,27 +447,31 @@ function EventCard({
           </span>
         )}
         {status === "not-started" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {totalCompetitors > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 {totalCompetitors}
               </span>
             )}
-            <Play className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs font-semibold text-muted-foreground">Start</span>
+            <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold text-sm transition-colors shadow-sm">
+              <Play className="w-3.5 h-3.5 fill-current" />
+              Start
+            </div>
           </div>
         )}
         {status === "in-progress" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {totalCompetitors > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 {totalCompetitors}
               </span>
             )}
-            <Play className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-xs font-semibold text-yellow-500">Continue ({completedSolves}/{totalSolves})</span>
+            <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm transition-colors shadow-sm">
+              <Play className="w-3.5 h-3.5 fill-current" />
+              Continue ({completedSolves}/{totalSolves})
+            </div>
           </div>
         )}
       </div>
