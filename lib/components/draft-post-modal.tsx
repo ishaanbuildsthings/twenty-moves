@@ -8,14 +8,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { type EventStats } from "@/lib/cubing/stats";
+import { type EventStats, DNF_SENTINEL } from "@/lib/cubing/stats";
 import { type EventConfig } from "@/lib/cubing/events";
 import { type Solve } from "@/app/(app)/db";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
 
 function formatTime(ms: number): string {
-  if (ms >= 999_999_999) return "DNF";
+  if (ms >= DNF_SENTINEL) return "DNF";
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;

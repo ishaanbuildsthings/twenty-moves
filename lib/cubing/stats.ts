@@ -2,7 +2,8 @@ import type { Penalty } from "@/app/(app)/db";
 import type { StatType } from "@/lib/cubing/events";
 
 // DNF is represented as a sentinel value so it naturally sorts to the end.
-const DNF = 999_999_999;
+export const DNF_SENTINEL = 999_999_999;
+const DNF = DNF_SENTINEL;
 
 interface SolveForStats {
   timeMs: number;
