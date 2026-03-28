@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getNextRollover, getTournamentDate } from "@/lib/tournament/date";
+import { useContestStatus, useLeaderboard } from "@/lib/hooks/useTournament";
 
 type Tab = "compete" | "leaderboard";
 
@@ -266,8 +267,23 @@ export default function TourneyPage() {
     : null;
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
+  // Fetch real contest status from the API.
+  // Falls back to mock data when no tournament exists in the DB yet.
+  const contestStatusQuery = useContestStatus(
+    viewingContest !== TOURNAMENT_NUMBER ? viewingContest : undefined
+  );
+  const leaderboardQuery = useLeaderboard(
+    viewingContest,
+    validEvent ?? CubeEvent.THREE,
+    page,
+    RESULTS_PER_PAGE
+  );
+
+  // Use real tournament number if available, otherwise fall back to mock.
+  const currentTournamentNumber = contestStatusQuery.data?.tournament?.number ?? TOURNAMENT_NUMBER;
+
   const [countdown, setCountdown] = useState("");
-  const isCurrent = viewingContest === TOURNAMENT_NUMBER;
+  const isCurrent = viewingContest === currentTournamentNumber;
 
   // Compute the date for the viewed contest.
   // Current contest uses today's tournament date. Past contests offset by the difference.
