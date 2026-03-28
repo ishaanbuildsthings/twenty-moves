@@ -440,12 +440,9 @@ function EventCard({
         )}
         <span className="flex-1" />
         {/* Right side */}
-        {status === "completed" && enteredEvent?.rank && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold">#{enteredEvent.rank} / {totalCompetitors}</span>
-            <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold text-sm transition-colors">
-              View
-            </div>
+        {status === "completed" && (
+          <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold text-sm transition-colors">
+            View Results
           </div>
         )}
         {status === "not-started" && (
