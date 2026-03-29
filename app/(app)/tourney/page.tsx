@@ -161,8 +161,7 @@ function TournamentSolveView({
 
       // If that was the last solve, we're done.
       if (result.totalSolves >= expectedSolves) {
-        // Brief delay to show result before redirecting.
-        setTimeout(onComplete, 1500);
+        onComplete();
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to submit solve");
