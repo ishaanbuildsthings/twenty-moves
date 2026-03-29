@@ -154,15 +154,17 @@ function TournamentSolveView({
         penalty,
       });
 
+      // If that was the last solve, complete immediately
+      // before updating local state (avoids flash of finished UI).
+      if (result.totalSolves >= expectedSolves) {
+        onComplete();
+        return;
+      }
+
       // Server confirmed — update local state from response.
       setSolves(result.solves);
       setPendingTime(null);
       timer.reset();
-
-      // If that was the last solve, we're done.
-      if (result.totalSolves >= expectedSolves) {
-        onComplete();
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to submit solve");
     } finally {
