@@ -5,6 +5,7 @@ import { recomputeStats } from "@/lib/cubing/stats";
 import { EVENT_MAP, getEnabledStats } from "@/lib/cubing/events";
 import { eventService } from "@/lib/services/event";
 import { postService } from "@/lib/services/post";
+import { practicePostToIPracticePost } from "@/lib/transforms/post";
 
 
 const solveSchema = z.object({
@@ -13,7 +14,42 @@ const solveSchema = z.object({
   scramble: z.string().min(1),
 });
 
+const FEED_PAGE_SIZE = 20;
+
 export const postRouter = createTRPCRouter({
+  getFeed: authedProcedure
+    .input(
+      z.object({
+        cursor: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const followedUserIds = await ctx.prisma.follow
+        .findMany({
+          where: { followerId: ctx.viewer.userId },
+          select: { followeeId: true },
+        })
+        .then((rows) => rows.map((r) => r.followeeId));
+
+      const posts = await ctx.prisma.practicePost.findMany({
+        where: { userId: { in: followedUserIds } },
+        include: { user: true, event: true },
+        orderBy: { createdAt: "desc" },
+        take: FEED_PAGE_SIZE + 1,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+      });
+
+      let nextCursor: string | undefined;
+      if (posts.length > FEED_PAGE_SIZE) {
+        nextCursor = posts.pop()!.id;
+      }
+
+      return {
+        posts: posts.map(practicePostToIPracticePost),
+        nextCursor,
+      };
+    }),
+
   createPracticeSessionPost: authedProcedure
     .input(
       z.object({
