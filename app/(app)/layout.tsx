@@ -4,6 +4,7 @@ import { ViewerProvider } from "@/lib/context/viewer";
 import { SettingsProvider } from "@/lib/context/settings";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/lib/components/app-sidebar";
+import { Toaster } from "sonner";
 
 export default async function AppLayout({
   children,
@@ -29,6 +30,7 @@ export default async function AppLayout({
           <main className="flex flex-col flex-1 min-h-0">
             {children}
           </main>
+          <Toaster theme="dark" richColors position="bottom-center" />
         </SidebarProvider>
       </SettingsProvider>
     </ViewerProvider>

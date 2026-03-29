@@ -14,6 +14,7 @@ import { type EventConfig, EVENT_MAP, getEnabledStats } from "@/lib/cubing/event
 import { type Solve } from "@/app/(app)/idb";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface DraftPostModalProps {
   open: boolean;
@@ -53,6 +54,7 @@ export function DraftPostModal({
     setCaption("");
     setYoutubeUrl("");
     onOpenChange(false);
+    toast.success("Session posted!");
   };
 
   const highlights: { label: string; value: number | null }[] = [
