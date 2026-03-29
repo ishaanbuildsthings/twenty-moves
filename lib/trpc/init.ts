@@ -31,6 +31,9 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
   // Prevent internal errors (Prisma, DB, etc.) from leaking to the client.
   // Only intentional TRPCErrors pass through with their original message.
   errorFormatter({ shape, error }) {
+    if (error.code === "INTERNAL_SERVER_ERROR") {
+      console.error("tRPC internal error:", error.cause ?? error);
+    }
     return {
       ...shape,
       message:

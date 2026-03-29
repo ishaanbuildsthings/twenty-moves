@@ -437,5 +437,158 @@ export function tournamentService(ctx: ServiceContext) {
           : null,
       };
     },
+
+    // Start competing in an event. Creates a TournamentEntry for the
+    // viewer if one doesn't already exist. Returns the entry ID and
+    // the scramble set for that event.
+    startEvent: async (tournamentId: string, eventName: string) => {
+      // Resolve event name to database ID.
+      const event = await prisma.event.findFirst({ where: { name: eventName } });
+      if (!event) throw new Error("Event not found");
+
+      // Find the scramble set for this tournament + event.
+      const scrambleSet = await prisma.scrambleSet.findFirst({
+        where: { tournamentId, eventId: event.id },
+      });
+      if (!scrambleSet) throw new Error("Scramble set not found for this event");
+
+      // Check if entry already exists (idempotent — clicking Start twice is safe).
+      const existing = await prisma.tournamentEntry.findFirst({
+        where: { tournamentId, userId: viewer.userId, eventId: event.id },
+      });
+
+      if (existing) {
+        // Already started — return existing entry with current solves.
+        const solves = await prisma.solve.findMany({
+          where: { scrambleSetId: scrambleSet.id, userId: viewer.userId },
+          orderBy: { scrambleSetIndex: "asc" },
+        });
+        return {
+          entryId: existing.id,
+          scrambleSetId: scrambleSet.id,
+          scrambles: scrambleSet.scrambles as string[],
+          solves: solves.map((s) => ({
+            scrambleSetIndex: s.scrambleSetIndex,
+            timeMs: s.time,
+            penalty: s.penalty,
+          })),
+        };
+      }
+
+      // Create new entry.
+      const entry = await prisma.tournamentEntry.create({
+        data: {
+          userId: viewer.userId,
+          tournamentId,
+          eventId: event.id,
+          scrambleSetId: scrambleSet.id,
+        },
+      });
+
+      return {
+        entryId: entry.id,
+        scrambleSetId: scrambleSet.id,
+        scrambles: scrambleSet.scrambles as string[],
+        solves: [],
+      };
+    },
+
+    // Submit a single solve for a tournament event. Validates that the
+    // solve index is sequential and the entry belongs to the viewer.
+    // After submission, recomputes the entry's result if enough solves exist.
+    submitSolve: async (input: {
+      entryId: string;
+      scrambleSetIndex: number;
+      timeMs: number;
+      penalty: "plus_two" | "dnf" | null;
+    }) => {
+      const entry = await prisma.tournamentEntry.findUniqueOrThrow({
+        where: { id: input.entryId },
+        include: { event: true, scrambleSet: true },
+      });
+
+      // Verify the entry belongs to the viewer.
+      if (entry.userId !== viewer.userId) {
+        throw new Error("Not your entry");
+      }
+
+      // Check how many solves already exist.
+      const existingSolves = await prisma.solve.findMany({
+        where: { scrambleSetId: entry.scrambleSetId, userId: viewer.userId },
+        orderBy: { scrambleSetIndex: "asc" },
+      });
+
+      // Validate the solve index is the next expected one.
+      if (input.scrambleSetIndex !== existingSolves.length) {
+        throw new Error(`Expected solve index ${existingSolves.length}, got ${input.scrambleSetIndex}`);
+      }
+
+      // Determine the expected solve count from event config.
+      const eventConfig = EVENT_CONFIGS.find((e) => e.id === entry.event.name);
+      if (!eventConfig) throw new Error("Unknown event");
+      const expectedSolves = eventConfig.tournamentSolveCount;
+
+      // Don't allow more solves than expected.
+      if (existingSolves.length >= expectedSolves) {
+        throw new Error("All solves already submitted");
+      }
+
+      // Create the solve.
+      await prisma.solve.create({
+        data: {
+          userId: viewer.userId,
+          eventId: entry.eventId,
+          scrambleSetId: entry.scrambleSetId,
+          scrambleSetIndex: input.scrambleSetIndex,
+          time: input.timeMs,
+          penalty: input.penalty ?? undefined,
+        },
+      });
+
+      // Recompute result with the new solve included.
+      const allSolves = [...existingSolves, {
+        time: input.timeMs,
+        penalty: input.penalty,
+        scrambleSetIndex: input.scrambleSetIndex,
+      }];
+
+      const { computeAo5, computeMo3, computeBestSingle } = await import("@/lib/cubing/stats");
+
+      const solvesForStats = allSolves.map((s) => ({
+        timeMs: s.time,
+        penalty: s.penalty ?? null,
+      }));
+
+      let result: number | null = null;
+
+      if (eventConfig.tournamentRankBy === "single") {
+        // BLD events: result is best single, available from first solve.
+        result = computeBestSingle(solvesForStats);
+      } else if (solvesForStats.length >= 4 && expectedSolves === 5) {
+        // Ao5: computable with 4+ solves (missing solves treated as DNF).
+        result = computeAo5(solvesForStats);
+      } else if (solvesForStats.length >= 3 && expectedSolves === 3) {
+        // Mo3: computable when all 3 solves are in.
+        result = computeMo3(solvesForStats);
+      }
+
+      // Update the entry's cached result.
+      await prisma.tournamentEntry.update({
+        where: { id: input.entryId },
+        data: { result },
+      });
+
+      return {
+        solveIndex: input.scrambleSetIndex,
+        totalSolves: allSolves.length,
+        expectedSolves,
+        result,
+        solves: allSolves.map((s) => ({
+          scrambleSetIndex: s.scrambleSetIndex,
+          timeMs: s.time,
+          penalty: s.penalty ?? null,
+        })),
+      };
+    },
   };
 }

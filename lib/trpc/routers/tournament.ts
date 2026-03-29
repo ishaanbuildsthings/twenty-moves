@@ -92,4 +92,36 @@ export const tournamentRouter = createTRPCRouter({
         ...leaderboard,
       };
     }),
+
+  // Start competing in a tournament event. Creates entry if needed.
+  start: authedProcedure
+    .input(
+      z.object({
+        tournamentNumber: z.number().int().positive(),
+        eventId: z.string(), // CubeEvent name, e.g. "333"
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const service = tournamentService(ctx);
+      const tournament = await service.getTournament(input.tournamentNumber);
+      if (!tournament) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
+      }
+      return service.startEvent(tournament.id, input.eventId);
+    }),
+
+  // Submit a single solve for a tournament event.
+  submitSolve: authedProcedure
+    .input(
+      z.object({
+        entryId: z.string(),
+        scrambleSetIndex: z.number().int().min(0),
+        timeMs: z.number().int().positive(),
+        penalty: z.enum(["plus_two", "dnf"]).nullable().default(null),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const service = tournamentService(ctx);
+      return service.submitSolve(input);
+    }),
 });
