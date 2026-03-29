@@ -30,6 +30,51 @@ export const userRouter = createTRPCRouter({
       return { available };
     }),
 
+  // Check if the viewer is following a user.
+  isFollowing: authedProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const follow = await ctx.prisma.follow.findUnique({
+        where: {
+          followerId_followeeId: {
+            followerId: ctx.viewer.userId,
+            followeeId: input.userId,
+          },
+        },
+        select: { id: true },
+      });
+      return { following: !!follow };
+    }),
+
+  // Follow a user.
+  follow: authedProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.userId === ctx.viewer.userId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot follow yourself" });
+      }
+      await ctx.prisma.follow.create({
+        data: {
+          followerId: ctx.viewer.userId,
+          followeeId: input.userId,
+        },
+      });
+      return { success: true };
+    }),
+
+  // Unfollow a user.
+  unfollow: authedProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.follow.deleteMany({
+        where: {
+          followerId: ctx.viewer.userId,
+          followeeId: input.userId,
+        },
+      });
+      return { success: true };
+    }),
+
   // Update the current user's profile.
   updateProfile: authedProcedure
     .input(z.object({

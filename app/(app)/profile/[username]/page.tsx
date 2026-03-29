@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+
 import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
@@ -34,6 +35,40 @@ const MOCK_POSTS = [
   { id: 2, text: "Finally sub-10 ao5! Feels amazing", time: "1d ago", likes: 24 },
   { id: 3, text: "Learning F2L... it's a journey 😅", time: "3d ago", likes: 8 },
 ];
+
+function FollowButton({ userId }: { userId: string }) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  const isFollowingQuery = useQuery(
+    trpc.user.isFollowing.queryOptions({ userId })
+  );
+
+  const follow = useMutation(trpc.user.follow.mutationOptions({
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) }),
+  }));
+
+  const unfollow = useMutation(trpc.user.unfollow.mutationOptions({
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) }),
+  }));
+
+  const isFollowing = isFollowingQuery.data?.following ?? false;
+  const isPending = follow.isPending || unfollow.isPending;
+
+  return (
+    <button
+      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+        isFollowing
+          ? "bg-muted hover:bg-red-500/10 hover:text-red-500"
+          : "bg-primary text-primary-foreground hover:bg-primary/90"
+      }`}
+      disabled={isPending || isFollowingQuery.isLoading}
+      onClick={() => isFollowing ? unfollow.mutate({ userId }) : follow.mutate({ userId })}
+    >
+      {isFollowing ? "Following" : "Follow"}
+    </button>
+  );
+}
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -113,13 +148,15 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {isOwnProfile && (
+          {isOwnProfile ? (
             <Link
               href="/settings"
               className="px-4 py-2 text-sm font-semibold rounded-lg bg-muted hover:bg-muted/80 transition-colors"
             >
               Edit Profile
             </Link>
+          ) : (
+            <FollowButton userId={user.id} />
           )}
         </div>
       </div>
