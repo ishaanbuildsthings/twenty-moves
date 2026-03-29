@@ -14,7 +14,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getNextRollover } from "@/lib/tournament/date";
-import { useContestStatus, useLeaderboard, useLeaderboardOverview } from "@/lib/hooks/useTournament";
+import { useQueryClient } from "@tanstack/react-query";
+import { useContestStatus, useLeaderboard, useLeaderboardOverview, useStartEvent, useSubmitSolve } from "@/lib/hooks/useTournament";
+import { useTimer } from "@/lib/hooks/useTimer";
+import { useSettings } from "@/lib/context/settings";
+import { Settings } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { computeAo5, computeMo3, computeBestSingle, effectiveTime, DNF_SENTINEL, type SolveForStats } from "@/lib/cubing/stats";
 import { formatTime, formatSolveTime, getBestAndWorst } from "@/lib/cubing/format";
 
@@ -85,6 +96,260 @@ function computeDisplayStats(solves: SolveForStats[], config: typeof EVENT_CONFI
   return { singleStr, avgStr, rankingResult };
 }
 
+// --- Tournament Solve View ---
+// Full-screen timer UI for competing in a tournament event.
+
+function TournamentSolveView({
+  eventConfig,
+  entryId,
+  scrambles,
+  initialSolves,
+  tournamentNumber,
+  onComplete,
+  onExit,
+}: {
+  eventConfig: typeof EVENT_CONFIGS[number];
+  entryId: string;
+  scrambles: string[];
+  initialSolves: SolveForStats[];
+  tournamentNumber: number;
+  onComplete: () => void;
+  onExit: () => void;
+}) {
+  const { timerSettings, updateTimerSettings } = useSettings();
+  const submitSolve = useSubmitSolve();
+  const [solves, setSolves] = useState<SolveForStats[]>(initialSolves);
+  const [pendingTime, setPendingTime] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const currentIndex = solves.length;
+  const expectedSolves = eventConfig.tournamentSolveCount;
+  const isFinished = currentIndex >= expectedSolves;
+  const currentScramble = scrambles[currentIndex] ?? "";
+  const awaitingPenalty = pendingTime !== null;
+
+  const timer = useTimer({
+    holdDelayMs: timerSettings.holdDelayMs,
+    useInspection: timerSettings.useInspection,
+    inspectionDurationMs: timerSettings.inspectionDurationMs,
+    showTimerWhileRunning: timerSettings.showTimerWhileRunning,
+    enabled: !awaitingPenalty && !isFinished && !settingsOpen,
+    onSolveComplete: (timeMs: number) => {
+      setPendingTime(timeMs);
+    },
+  });
+
+  const handleConfirmPenalty = async (penalty: "plus_two" | "dnf" | null) => {
+    if (pendingTime === null) return;
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await submitSolve.mutateAsync({
+        entryId,
+        scrambleSetIndex: currentIndex,
+        timeMs: pendingTime,
+        penalty,
+      });
+
+      // Server confirmed — update local state from response.
+      setSolves(result.solves);
+      setPendingTime(null);
+      timer.reset();
+
+      // If that was the last solve, we're done.
+      if (result.totalSolves >= expectedSolves) {
+        // Brief delay to show result before redirecting.
+        setTimeout(onComplete, 1500);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to submit solve");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Compute current display stats from submitted solves.
+  const displayStats = solves.length > 0 ? computeDisplayStats(solves, eventConfig) : null;
+
+  return (
+    <div className="flex flex-col flex-1 overflow-hidden select-none">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onExit}
+            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+            title="Back to compete"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <EventIcon event={eventConfig} size={28} />
+          <span className="font-extrabold text-lg">{eventConfig.name}</span>
+          <span className="text-sm text-muted-foreground font-semibold">
+            {getFormatLabel(eventConfig)}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            Solve {Math.min(currentIndex + 1, expectedSolves)}/{expectedSolves}
+          </span>
+        </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+          title="Timer settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Timer area */}
+      <div className="flex flex-col flex-1 items-center justify-center gap-6 px-4">
+        {/* Scramble */}
+        {!awaitingPenalty && !isFinished && (
+          <p className="font-mono text-center text-lg max-w-xl min-h-[1.75rem]">
+            {currentScramble}
+          </p>
+        )}
+
+        {/* Timer display */}
+        {!awaitingPenalty && !isFinished && (
+          <p
+            className={`font-mono tabular-nums transition-colors ${
+              timer.state === "holding" ? "text-red-500" :
+              timer.state === "ready" ? "text-green-500" :
+              timer.state === "inspecting" ? "text-yellow-500" : ""
+            }`}
+            style={{ fontSize: "clamp(3rem, 15vw, 8rem)" }}
+          >
+            {timer.isInspecting
+              ? Math.max(0, Math.ceil((timer.inspectionDurationMs - timer.inspectionTime) / 1000))
+              : timer.state === "running" && !timer.showTimerWhileRunning
+                ? "Solve!"
+                : formatTime(timer.elapsed)}
+          </p>
+        )}
+
+        {/* Penalty selector — shown after timer stops */}
+        {awaitingPenalty && (
+          <div className="flex flex-col items-center gap-6">
+            <p className="font-mono tabular-nums font-extrabold" style={{ fontSize: "clamp(2rem, 10vw, 5rem)" }}>
+              {formatTime(pendingTime!)}
+            </p>
+            <p className="text-muted-foreground text-sm">Confirm your result</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleConfirmPenalty(null)}
+                disabled={submitting}
+                className="px-8 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-lg transition-colors disabled:opacity-50 shadow-sm"
+              >
+                OK
+              </button>
+              <button
+                onClick={() => handleConfirmPenalty("plus_two")}
+                disabled={submitting}
+                className="px-6 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold text-lg transition-colors disabled:opacity-50"
+              >
+                +2
+              </button>
+              <button
+                onClick={() => handleConfirmPenalty("dnf")}
+                disabled={submitting}
+                className="px-6 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold text-lg transition-colors disabled:opacity-50"
+              >
+                DNF
+              </button>
+            </div>
+            {submitting && <p className="text-sm text-muted-foreground">Saving...</p>}
+            {error && <p className="text-sm text-red-500">{error}</p>}
+          </div>
+        )}
+
+        {/* Finished — show result */}
+        {isFinished && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-2xl font-extrabold">Complete!</p>
+            {displayStats && (
+              <p className="font-mono tabular-nums font-extrabold text-4xl">
+                {displayStats.rankingResult}
+              </p>
+            )}
+            <p className="text-muted-foreground text-sm">Redirecting to leaderboard...</p>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom: completed solves */}
+      {solves.length > 0 && (
+        <div className="px-4 py-3 border-t border-border">
+          <div className="flex items-center gap-4 justify-center font-mono tabular-nums text-sm">
+            {solves.map((s, i) => (
+              <span key={i} className="text-muted-foreground">
+                {formatSolveTime(s)}
+              </span>
+            ))}
+            {Array(expectedSolves - solves.length).fill(null).map((_, i) => (
+              <span key={`p-${i}`} className="text-muted-foreground/30">–.––</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Timer settings dialog */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Timer Settings</DialogTitle>
+            <DialogDescription>Configure your timer for this session.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">Hold delay</p>
+                <p className="text-xs text-muted-foreground">How long to hold spacebar before ready</p>
+              </div>
+              <select
+                className="bg-muted rounded-md px-2 py-1 text-sm focus:outline-none"
+                value={timerSettings.holdDelayMs}
+                onChange={(e) => updateTimerSettings({ holdDelayMs: Number(e.target.value) })}
+              >
+                <option value={0}>None</option>
+                <option value={300}>0.3s</option>
+                <option value={500}>0.5s</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">Show timer</p>
+                <p className="text-xs text-muted-foreground">Display running time while solving</p>
+              </div>
+              <button
+                className={`w-10 h-6 rounded-full transition-colors ${timerSettings.showTimerWhileRunning ? "bg-primary" : "bg-muted"}`}
+                onClick={() => updateTimerSettings({ showTimerWhileRunning: !timerSettings.showTimerWhileRunning })}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform mx-1 ${timerSettings.showTimerWhileRunning ? "translate-x-4" : ""}`} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">Inspection</p>
+                <p className="text-xs text-muted-foreground">WCA-style 15s countdown before timing</p>
+              </div>
+              <button
+                className={`w-10 h-6 rounded-full transition-colors ${timerSettings.useInspection ? "bg-primary" : "bg-muted"}`}
+                onClick={() => updateTimerSettings({ useInspection: !timerSettings.useInspection })}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform mx-1 ${timerSettings.useInspection ? "translate-x-4" : ""}`} />
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // --- Loading Spinner ---
 
 function LoadingSpinner({ message }: { message?: string }) {
@@ -124,6 +389,35 @@ export default function TourneyPage() {
   const viewingContest = activeContestData?.tournament?.number;
 
   const [countdown, setCountdown] = useState("");
+
+  // Tournament compete state — when set, shows the solve view instead of the main page.
+  const [solvingEvent, setSolvingEvent] = useState<{
+    eventId: CubeEvent;
+    entryId: string;
+    scrambles: string[];
+    solves: SolveForStats[];
+  } | null>(null);
+
+  const startEvent = useStartEvent();
+  const queryClient = useQueryClient();
+
+  const handleStartEvent = async (eventId: CubeEvent) => {
+    if (!viewingContest) return;
+    try {
+      const result = await startEvent.mutateAsync({
+        tournamentNumber: viewingContest,
+        eventId,
+      });
+      setSolvingEvent({
+        eventId,
+        entryId: result.entryId,
+        scrambles: result.scrambles,
+        solves: result.solves.map((s) => ({ timeMs: s.timeMs, penalty: s.penalty })),
+      });
+    } catch (e) {
+      console.error("Failed to start event:", e);
+    }
+  };
 
   const isCurrent = viewingContest === latestNumber;
 
@@ -199,6 +493,28 @@ export default function TourneyPage() {
     );
   }
 
+  // If competing in an event, show the solve view instead of the main page.
+  if (solvingEvent) {
+    const eventConfig = EVENT_MAP[solvingEvent.eventId];
+    return (
+      <TournamentSolveView
+        eventConfig={eventConfig}
+        entryId={solvingEvent.entryId}
+        scrambles={solvingEvent.scrambles}
+        initialSolves={solvingEvent.solves}
+        tournamentNumber={viewingContest}
+        onComplete={() => {
+          setSolvingEvent(null);
+          // Invalidate queries so compete tab and leaderboard reflect new results.
+          contestStatusQuery.refetch();
+          // Switch to leaderboard for this event.
+          updateParams({ tab: "leaderboard", event: solvingEvent.eventId });
+        }}
+        onExit={() => setSolvingEvent(null)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-y-auto">
       {/* Header */}
@@ -268,6 +584,7 @@ export default function TourneyPage() {
                   document.getElementById(`event-${eventId}`)?.scrollIntoView({ behavior: "smooth" });
                 }, 100);
               }}
+              onStartEvent={handleStartEvent}
             />
           ) : validEvent && viewingContest ? (
             <EventLeaderboardDetail
@@ -319,10 +636,12 @@ function CompeteTab({
   contestData,
   isLoading,
   onViewEvent,
+  onStartEvent,
 }: {
   contestData: ContestStatusData | undefined;
   isLoading: boolean;
   onViewEvent: (eventId: string) => void;
+  onStartEvent: (eventId: CubeEvent) => void;
 }) {
   if (isLoading) {
     return <LoadingSpinner message="Loading events..." />;
@@ -347,6 +666,7 @@ function CompeteTab({
             enteredEvent={entered}
             totalCompetitors={entered?.totalCompetitors ?? unentered?.totalCompetitors ?? 0}
             onView={() => onViewEvent(config.id)}
+            onStart={() => onStartEvent(config.id)}
           />
         );
       })}
@@ -361,11 +681,13 @@ function EventCard({
   enteredEvent,
   totalCompetitors,
   onView,
+  onStart,
 }: {
   config: typeof EVENT_CONFIGS[number];
   enteredEvent?: ContestStatusData["events"]["enteredEvents"][number];
   totalCompetitors: number;
   onView: () => void;
+  onStart: () => void;
 }) {
   const totalSolves = config.tournamentSolveCount;
   const formatLabel = getFormatLabel(config);
@@ -436,13 +758,19 @@ function EventCard({
           </div>
         )}
         {status === "not-started" && (
-          <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold text-sm transition-colors shadow-sm">
+          <div
+            onClick={(e) => { e.stopPropagation(); onStart(); }}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold text-sm transition-colors shadow-sm cursor-pointer"
+          >
             <Play className="w-3.5 h-3.5 fill-current" />
             Start
           </div>
         )}
         {status === "in-progress" && (
-          <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm transition-colors shadow-sm">
+          <div
+            onClick={(e) => { e.stopPropagation(); onStart(); }}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm transition-colors shadow-sm cursor-pointer"
+          >
             <Play className="w-3.5 h-3.5 fill-current" />
             Continue ({completedSolves}/{totalSolves})
           </div>
