@@ -60,12 +60,18 @@ export const postRouter = createTRPCRouter({
   likePost: authedProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.prisma.postLike.create({
-        data: { userId: ctx.viewer.userId, postId: input.postId },
-      });
-      await ctx.prisma.practicePost.update({
-        where: { id: input.postId },
-        data: { numLikes: { increment: 1 } },
+      await ctx.prisma.$transaction(async (tx) => {
+        const existing = await tx.postLike.findUnique({
+          where: { userId_postId: { userId: ctx.viewer.userId, postId: input.postId } },
+        });
+        if (existing) return;
+        await tx.postLike.create({
+          data: { userId: ctx.viewer.userId, postId: input.postId },
+        });
+        await tx.practicePost.update({
+          where: { id: input.postId },
+          data: { numLikes: { increment: 1 } },
+        });
       });
       return { success: true };
     }),
@@ -73,12 +79,18 @@ export const postRouter = createTRPCRouter({
   unlikePost: authedProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.prisma.postLike.deleteMany({
-        where: { userId: ctx.viewer.userId, postId: input.postId },
-      });
-      await ctx.prisma.practicePost.update({
-        where: { id: input.postId },
-        data: { numLikes: { decrement: 1 } },
+      await ctx.prisma.$transaction(async (tx) => {
+        const existing = await tx.postLike.findUnique({
+          where: { userId_postId: { userId: ctx.viewer.userId, postId: input.postId } },
+        });
+        if (!existing) return;
+        await tx.postLike.delete({
+          where: { id: existing.id },
+        });
+        await tx.practicePost.update({
+          where: { id: input.postId },
+          data: { numLikes: { decrement: 1 } },
+        });
       });
       return { success: true };
     }),
