@@ -56,7 +56,7 @@ export default function HomePage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-lg space-y-4 p-4">
+      <div className="mx-auto max-w-2xl space-y-4 p-4">
         {posts.map((post) => (
           <PracticePostCard key={post.id} post={post} />
         ))}

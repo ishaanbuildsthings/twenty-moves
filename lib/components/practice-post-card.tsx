@@ -4,6 +4,7 @@ import { type IPracticePost } from "@/lib/transforms/post";
 import { EVENT_MAP, type CubeEvent } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
 import { DNF_SENTINEL } from "@/lib/cubing/stats";
+import { Heart, MessageCircle } from "lucide-react";
 
 function formatTime(ms: number): string {
   if (ms >= DNF_SENTINEL) return "DNF";
@@ -45,46 +46,46 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
   if (post.sessionMean !== null) highlights.push({ label: "Mean", value: post.sessionMean });
 
   return (
-    <div className="border border-border rounded-lg bg-card">
+    <div className="border border-border rounded-xl bg-card overflow-hidden">
       {/* Header — user + event + timestamp */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0">
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0">
           {post.user.profilePictureUrl ? (
             <img
               src={post.user.profilePictureUrl}
               alt={post.user.username}
-              className="w-8 h-8 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover"
             />
           ) : (
             post.user.firstName[0]
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-semibold truncate">{post.user.username}</span>
-            <span className="text-muted-foreground text-xs">·</span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold truncate">{post.user.username}</span>
             <span className="text-muted-foreground text-xs shrink-0">{timeAgo(post.createdAt)}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {eventConfig && <EventIcon event={eventConfig} size={14} />}
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            {eventConfig && <EventIcon event={eventConfig} size={16} />}
             <span>{eventConfig?.name ?? post.eventName}</span>
-            <span>· {post.numSolves} solve{post.numSolves !== 1 ? "s" : ""}</span>
+            <span className="text-muted-foreground/50">·</span>
+            <span>{post.numSolves} solve{post.numSolves !== 1 ? "s" : ""}</span>
           </div>
         </div>
       </div>
 
       {/* Stat highlights */}
       {highlights.length > 0 && (
-        <div className="flex gap-2 px-4 pb-3 flex-wrap">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(0,1fr))] gap-px bg-border mx-5 mb-4 rounded-lg overflow-hidden">
           {highlights.map((h) => (
             <div
               key={h.label}
-              className="flex flex-col items-center gap-0.5 rounded-lg border border-border px-3 py-2"
+              className="flex flex-col items-center gap-1 bg-muted/50 px-3 py-3"
             >
-              <span className="font-mono tabular-nums text-sm font-bold">
+              <span className="font-mono tabular-nums text-base font-bold">
                 {formatTime(h.value)}
               </span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
                 {h.label}
               </span>
             </div>
@@ -94,15 +95,21 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
 
       {/* Caption */}
       {post.caption && (
-        <div className="px-4 pb-3">
-          <p className="text-sm">{post.caption}</p>
+        <div className="px-5 pb-4">
+          <p className="text-sm leading-relaxed">{post.caption}</p>
         </div>
       )}
 
-      {/* Footer — likes + comments */}
-      <div className="flex items-center gap-4 px-4 py-2 border-t border-border text-xs text-muted-foreground">
-        <span>{post.numLikes} like{post.numLikes !== 1 ? "s" : ""}</span>
-        <span>{post.numComments} comment{post.numComments !== 1 ? "s" : ""}</span>
+      {/* Footer — like + comment buttons */}
+      <div className="flex items-center gap-1 px-3 py-2 border-t border-border">
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <Heart className="w-4 h-4" />
+          <span>{post.numLikes}</span>
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <MessageCircle className="w-4 h-4" />
+          <span>{post.numComments}</span>
+        </button>
       </div>
     </div>
   );
