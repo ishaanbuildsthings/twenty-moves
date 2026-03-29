@@ -85,7 +85,7 @@ model Solve {
 // Individual events are tracked via TournamentEntry + ScrambleSet.
 model Tournament {
   id        String            @id @default(cuid())
-  number    Int               @unique @default(autoincrement())
+  number    Int               @unique
   name      String?           // Optional display name override (e.g. "Holiday Special")
   datePST   String   @unique  // PST date string, e.g. "2026-03-26". The tournament "day" in Pacific time.
   createdAt DateTime          @default(now())

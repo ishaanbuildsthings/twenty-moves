@@ -44,8 +44,12 @@ export function tournamentService(ctx: ServiceContext) {
       // creates it first, the unique constraint on datePST catches it.
       try {
         return await prisma.$transaction(async (tx) => {
+          // Compute next number from actual data, not a Postgres sequence.
+          // This way nuking the table resets numbering automatically.
+          const nextNumber = (latest?.number ?? 0) + 1;
+
           const tournament = await tx.tournament.create({
-            data: { datePST: todayPST },
+            data: { datePST: todayPST, number: nextNumber },
           });
 
           // Create scramble sets for all events.
