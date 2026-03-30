@@ -74,16 +74,16 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
   );
 }
 
-type FeedPage = { posts: (IPracticePost & { liked: boolean })[]; nextCursor?: string };
+type FeedData = { pages: { posts: (IPracticePost & { liked: boolean })[]; nextCursor?: string }[]; pageParams: unknown[] };
+const FEED_KEY = [["post", "getFeed"]];
 
 function updatePostInCache(
   queryClient: ReturnType<typeof useQueryClient>,
-  queryKey: unknown[],
   postId: string,
-  updater: (post: FeedPage["posts"][number]) => FeedPage["posts"][number]
+  updater: (post: IPracticePost & { liked: boolean }) => IPracticePost & { liked: boolean }
 ) {
-  queryClient.setQueriesData<{ pages: FeedPage[]; pageParams: unknown[] }>(
-    { queryKey },
+  queryClient.setQueriesData<FeedData>(
+    { queryKey: FEED_KEY },
     (old) => {
       if (!old) return old;
       return {
@@ -100,22 +100,23 @@ function updatePostInCache(
 function LikeButton({ postId, liked, numLikes }: { postId: string; liked: boolean; numLikes: number }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const feedKey = trpc.post.getFeed.queryKey();
 
   const like = useMutation(trpc.post.likePost.mutationOptions({
-    onMutate: () => {
-      updatePostInCache(queryClient, feedKey, postId, (p) => ({ ...p, liked: true, numLikes: p.numLikes + 1 }));
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: FEED_KEY });
+      updatePostInCache(queryClient, postId, (p) => ({ ...p, liked: true, numLikes: p.numLikes + 1 }));
     },
     onError: () => {
-      updatePostInCache(queryClient, feedKey, postId, (p) => ({ ...p, liked: false, numLikes: p.numLikes - 1 }));
+      updatePostInCache(queryClient, postId, (p) => ({ ...p, liked: false, numLikes: p.numLikes - 1 }));
     },
   }));
   const unlike = useMutation(trpc.post.unlikePost.mutationOptions({
-    onMutate: () => {
-      updatePostInCache(queryClient, feedKey, postId, (p) => ({ ...p, liked: false, numLikes: p.numLikes - 1 }));
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: FEED_KEY });
+      updatePostInCache(queryClient, postId, (p) => ({ ...p, liked: false, numLikes: p.numLikes - 1 }));
     },
     onError: () => {
-      updatePostInCache(queryClient, feedKey, postId, (p) => ({ ...p, liked: true, numLikes: p.numLikes + 1 }));
+      updatePostInCache(queryClient, postId, (p) => ({ ...p, liked: true, numLikes: p.numLikes + 1 }));
     },
   }));
 
