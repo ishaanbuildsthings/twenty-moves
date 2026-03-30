@@ -13,7 +13,7 @@ const ACCENT_CSS: Record<string, { bg: string; border: string }> = {
 
 export function AccentToaster() {
   const { displaySettings } = useSettings();
-  const colors = ACCENT_CSS[displaySettings.accentColor] ?? ACCENT_CSS.blue;
+  const colors = ACCENT_CSS[displaySettings.accentColor];
 
   return (
     <Toaster
