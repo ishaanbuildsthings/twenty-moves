@@ -1,34 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
-type Mode = "signin" | "signup" | "forgot" | "reset";
+type Mode = "signin" | "signup" | "forgot";
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [mode, setMode] = useState<Mode>("signin");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [recoveryReady, setRecoveryReady] = useState(false);
-
-  // Listen for Supabase PASSWORD_RECOVERY auth event.
-  // When user clicks the reset link, Supabase exchanges the token and fires this event.
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setMode("reset");
-        setRecoveryReady(true);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +24,7 @@ export default function LoginPage() {
 
     if (mode === "forgot") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
       });
       setLoading(false);
       if (error) {
@@ -49,25 +35,8 @@ export default function LoginPage() {
       return;
     }
 
-    if (mode === "reset") {
-      if (!recoveryReady) {
-        setError("Recovery session not ready. Please click the reset link in your email again.");
-        setLoading(false);
-        return;
-      }
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-        return;
-      }
-      router.push("/");
-      router.refresh();
-      return;
-    }
-
     const { error } = mode === "signup"
-      ? await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/login` } })
+      ? await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/` } })
       : await supabase.auth.signInWithPassword({ email, password });
 
     setLoading(false);
@@ -90,7 +59,6 @@ export default function LoginPage() {
     signin: "Sign in to twenty moves",
     signup: "Create an account",
     forgot: "Reset your password",
-    reset: "Set a new password",
   }[mode];
 
   return (
@@ -98,53 +66,34 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <h1 className="text-2xl font-bold text-center">{title}</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "reset" ? (
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+            />
+          </div>
+          {mode !== "forgot" && (
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-zinc-700">
-                New password
+              <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
+                Password
               </label>
               <input
-                id="newPassword"
+                id="password"
                 type="password"
                 required
                 minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
               />
             </div>
-          ) : (
-            <>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-                />
-              </div>
-              {mode !== "forgot" && (
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-                  />
-                </div>
-              )}
-            </>
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           {message && <p className="text-sm text-green-600">{message}</p>}
@@ -159,9 +108,7 @@ export default function LoginPage() {
                 ? "Sign up"
                 : mode === "forgot"
                   ? "Send reset link"
-                  : mode === "reset"
-                    ? "Update password"
-                    : "Sign in"}
+                  : "Sign in"}
           </button>
         </form>
         <div className="space-y-2">
