@@ -205,16 +205,16 @@ export default function ProfilePage() {
                     href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                    title={user.wcaId}
+                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-semibold"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    {user.wcaId}
+                    <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
                 {isOwnProfile && !user.wcaId && (
                   <button
                     onClick={startWcaOAuth}
-                    className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-semibold"
+                    className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors font-semibold"
                   >
                     Link WCA
                   </button>
@@ -223,7 +223,7 @@ export default function ProfilePage() {
                   <button
                     onClick={() => unlinkWca.mutate()}
                     disabled={unlinkWca.isPending}
-                    className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                    className="text-xs px-1.5 py-0.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
                     title="Unlink WCA account"
                   >
                     {unlinkWca.isPending ? (
