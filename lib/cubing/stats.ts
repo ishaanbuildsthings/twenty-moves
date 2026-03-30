@@ -119,6 +119,25 @@ export function findBestAverage(
   return best;
 }
 
+// Like findBestAverage but returns the start index of the best window.
+// Returns -1 if no valid window exists.
+export function findBestAverageIndex(
+  solves: SolveForStats[],
+  computeFn: (s: SolveForStats[]) => number | null
+): number {
+  let best: number | null = null;
+  let bestIdx = -1;
+  for (let i = 0; i < solves.length; i++) {
+    const val = computeFn(solves.slice(i));
+    if (val === null) continue;
+    if (best === null || val < best) {
+      best = val;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
 export interface EventStats {
   event: string;
   bestSingle: number | null;
