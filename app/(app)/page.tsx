@@ -413,7 +413,7 @@ export default function TimerPage() {
       {/* Timer area */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col flex-1 items-center justify-center gap-6">
-        <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem]">
+        <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem] whitespace-pre-line">
           {scramble ?? ""}
         </p>
         <p
@@ -575,7 +575,7 @@ export default function TimerPage() {
 
                       {/* Scramble */}
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                        <p className="font-mono text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
                           {solve.scramble}
                         </p>
                         <button
