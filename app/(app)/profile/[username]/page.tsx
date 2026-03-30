@@ -194,18 +194,16 @@ export default function ProfilePage() {
                   </button>
                 )}
               </div>
+              {user.bio && (
+                <p className="text-sm text-muted-foreground mt-2">{user.bio}</p>
+              )}
             </div>
-            {user.bio && (
-              <div className="border-l border-border pl-5 ml-2 max-w-xs">
-                <p className="text-sm text-muted-foreground">{user.bio}</p>
-              </div>
-            )}
           </div>
 
           {isOwnProfile ? (
             <Link
               href="/settings"
-              className="px-4 py-2 text-sm font-bold rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 transition-all shadow-[0_3px_0_0_theme(colors.neutral.800),inset_0_1px_0_0_theme(colors.neutral.500)]"
+              className="px-4 py-2 text-sm font-bold rounded bg-neutral-600 text-foreground hover:bg-neutral-500 transition-colors shadow-[0_3px_0_0_#1a1a1a]"
             >
               Edit Profile
             </Link>

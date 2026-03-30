@@ -576,6 +576,7 @@ export default function TourneyPage() {
             <CompeteTab
               contestData={activeContestData}
               isLoading={activeContestLoading}
+              isCurrent={isCurrent}
               onViewEvent={(eventId) => {
                 updateParams({ tab: "leaderboard" });
                 setTimeout(() => {
@@ -633,11 +634,13 @@ type ContestStatusData = {
 function CompeteTab({
   contestData,
   isLoading,
+  isCurrent,
   onViewEvent,
   onStartEvent,
 }: {
   contestData: ContestStatusData | undefined;
   isLoading: boolean;
+  isCurrent: boolean;
   onViewEvent: (eventId: string) => void;
   onStartEvent: (eventId: CubeEvent) => void;
 }) {
@@ -663,6 +666,7 @@ function CompeteTab({
             config={config}
             enteredEvent={entered}
             totalCompetitors={entered?.totalCompetitors ?? unentered?.totalCompetitors ?? 0}
+            isCurrent={isCurrent}
             onView={() => onViewEvent(config.id)}
             onStart={() => onStartEvent(config.id)}
           />
@@ -678,12 +682,14 @@ function EventCard({
   config,
   enteredEvent,
   totalCompetitors,
+  isCurrent,
   onView,
   onStart,
 }: {
   config: typeof EVENT_CONFIGS[number];
   enteredEvent?: ContestStatusData["events"]["enteredEvents"][number];
   totalCompetitors: number;
+  isCurrent: boolean;
   onView: () => void;
   onStart: () => void;
 }) {
@@ -762,7 +768,7 @@ function EventCard({
             View
           </div>
         )}
-        {status === "not-started" && (
+        {status === "not-started" && isCurrent && (
           <div
             onClick={(e) => { e.stopPropagation(); onStart(); }}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
@@ -771,7 +777,7 @@ function EventCard({
             Start
           </div>
         )}
-        {status === "in-progress" && (
+        {status === "in-progress" && isCurrent && (
           <div
             onClick={(e) => { e.stopPropagation(); onStart(); }}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"

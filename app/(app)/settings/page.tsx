@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Check, X, Loader2, Camera, ChevronDown, ExternalLink } from "lucide-react";
+import { Pencil, Check, X, Loader2, Camera, ChevronDown, ExternalLink, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
@@ -177,7 +178,15 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col p-8 max-w-lg mx-auto w-full">
-      <h1 className="text-2xl font-bold mb-8">Settings</h1>
+      <div className="flex items-center gap-3 mb-8">
+        <Link
+          href={`/profile/${viewer.username}`}
+          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <h1 className="text-2xl font-bold">Settings</h1>
+      </div>
 
       {/* Profile section */}
       <section className="space-y-1 mb-8">
@@ -447,7 +456,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="py-3 border-b border-border">
-          <div className="flex items-start justify-between">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium mb-1">Accent color</p>
               <p className="text-xs text-muted-foreground mb-3">Pick a color for buttons and highlights</p>
