@@ -75,6 +75,13 @@ export const userRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  // Unlink the viewer's WCA account by clearing their wcaId.
+  unlinkWca: authedProcedure
+    .mutation(async ({ ctx }) => {
+      const user = await userService(ctx).update(ctx.viewer.userId, { wcaId: null });
+      return userToIUser(user);
+    }),
+
   // Update the current user's profile.
   updateProfile: authedProcedure
     .input(z.object({

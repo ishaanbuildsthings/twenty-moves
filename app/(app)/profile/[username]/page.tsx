@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { publicEnv } from "@/lib/env";
 
-import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock } from "lucide-react";
+import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock, Loader2, Unlink } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { EventIcon } from "@/lib/components/event-icon";
@@ -35,6 +36,33 @@ const MOCK_POSTS = [
   { id: 2, text: "Finally sub-10 ao5! Feels amazing", time: "1d ago", likes: 24 },
   { id: 3, text: "Learning F2L... it's a journey 😅", time: "3d ago", likes: 8 },
 ];
+
+const WCA_AUTHORIZE_URL = "https://www.worldcubeassociation.org/oauth/authorize";
+const WCA_STATE_COOKIE = "wca_oauth_state";
+
+function startWcaOAuth() {
+  const state = crypto.randomUUID();
+  // Store state in a cookie for CSRF validation in the callback.
+  document.cookie = `${WCA_STATE_COOKIE}=${state}; path=/; max-age=600; SameSite=Lax`;
+
+  const params = new URLSearchParams({
+    client_id: publicEnv().NEXT_PUBLIC_WCA_CLIENT_ID,
+    redirect_uri: `${window.location.origin}/api/wca/callback`,
+    response_type: "code",
+    scope: "public",
+    state,
+  });
+
+  window.location.href = `${WCA_AUTHORIZE_URL}?${params}`;
+}
+
+const WCA_FLASH_MESSAGES: Record<string, { message: string; type: "success" | "error" }> = {
+  linked: { message: "WCA account linked successfully!", type: "success" },
+  already_linked: { message: "This WCA account is already linked to another user.", type: "error" },
+  no_wca_id: { message: "Your WCA account doesn't have an assigned WCA ID.", type: "error" },
+  invalid_state: { message: "WCA linking failed — please try again.", type: "error" },
+  unknown: { message: "Something went wrong linking your WCA account.", type: "error" },
+};
 
 function FollowButton({ userId }: { userId: string }) {
   const trpc = useTRPC();
@@ -72,9 +100,42 @@ function FollowButton({ userId }: { userId: string }) {
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const { viewer } = useViewer();
+  const { viewer, setViewer } = useViewer();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+  const [wcaFlash, setWcaFlash] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Read WCA OAuth result from URL params on mount.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wcaStatus = params.get("wca");
+    if (wcaStatus) {
+      const reason = params.get("reason") ?? wcaStatus;
+      const flash = WCA_FLASH_MESSAGES[reason] ?? WCA_FLASH_MESSAGES[wcaStatus];
+      if (flash) setWcaFlash(flash);
+      // Clean the URL.
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("wca");
+      clean.searchParams.delete("reason");
+      window.history.replaceState({}, "", clean.toString());
+      // Refetch profile to get the updated wcaId.
+      if (wcaStatus === "linked") {
+        queryClient.invalidateQueries({ queryKey: trpc.user.getByUsername.queryKey({ username }) });
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const unlinkWca = useMutation({
+    ...trpc.user.unlinkWca.mutationOptions(),
+    onSuccess: (updatedUser) => {
+      setViewer(updatedUser);
+      queryClient.setQueryData(
+        trpc.user.getByUsername.queryKey({ username }),
+        updatedUser,
+      );
+    },
+  });
 
   const profileQuery = useQuery(
     trpc.user.getByUsername.queryOptions({ username })
@@ -107,6 +168,23 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
+      {/* WCA OAuth flash message */}
+      {wcaFlash && (
+        <div className={`mx-8 mt-4 px-4 py-2 rounded-lg text-sm font-medium ${
+          wcaFlash.type === "success"
+            ? "bg-green-500/10 text-green-500"
+            : "bg-red-500/10 text-red-500"
+        }`}>
+          {wcaFlash.message}
+          <button
+            className="ml-2 opacity-60 hover:opacity-100"
+            onClick={() => setWcaFlash(null)}
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Profile header */}
       <div className="px-8 pt-8 pb-4">
         <div className="flex items-start justify-between max-w-3xl mx-auto">
@@ -128,9 +206,32 @@ export default function ProfilePage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
+                    title={user.wcaId}
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
+                )}
+                {isOwnProfile && !user.wcaId && (
+                  <button
+                    onClick={startWcaOAuth}
+                    className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-semibold"
+                  >
+                    Link WCA
+                  </button>
+                )}
+                {isOwnProfile && user.wcaId && (
+                  <button
+                    onClick={() => unlinkWca.mutate()}
+                    disabled={unlinkWca.isPending}
+                    className="text-xs px-2 py-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                    title="Unlink WCA account"
+                  >
+                    {unlinkWca.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Unlink className="w-3 h-3" />
+                    )}
+                  </button>
                 )}
               </div>
               <p className="text-muted-foreground">
