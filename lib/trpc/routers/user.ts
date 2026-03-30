@@ -14,7 +14,12 @@ export const userRouter = createTRPCRouter({
     .input(z.object({ username: z.string() }))
     .query(async ({ ctx, input }) => {
       const user = await userService(ctx).getByUsername(input.username);
-      return userToIUser(user);
+      const medalRows = await ctx.prisma.medal.groupBy({
+        by: ["type"],
+        where: { userId: user.id },
+        _count: true,
+      });
+      return userToIUser(user, medalRows);
     }),
 
   // Check if a username is available. Returns { available: boolean }.
@@ -106,4 +111,5 @@ export const userRouter = createTRPCRouter({
         throw e;
       }
     }),
+
 });

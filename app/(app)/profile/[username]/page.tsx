@@ -15,6 +15,7 @@ import { UserAvatar } from "@/lib/components/user-avatar";
 import { EventIcon } from "@/lib/components/event-icon";
 import { countryCodeToFlag } from "@/lib/countries";
 import { CubeEvent, EVENT_MAP } from "@/lib/cubing/events";
+import { CubeLoader } from "@/lib/components/cube-loader";
 
 type ProfileTab = "overview" | "collection" | "clubs";
 
@@ -130,7 +131,7 @@ export default function ProfilePage() {
   if (profileQuery.status === "pending") {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <CubeLoader message="Loading profile..." />
       </div>
     );
   }
@@ -171,7 +172,7 @@ export default function ProfilePage() {
               <p className="text-muted-foreground">
                 {user.firstName} {user.lastName}
               </p>
-              <div className="flex items-center gap-4 mt-2 text-sm">
+              <div className="flex items-center gap-4 mt-2 text-sm flex-wrap">
                 <span><strong className="text-foreground font-extrabold">12</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
                 <span><strong className="text-foreground font-extrabold">8</strong> <span className="text-muted-foreground text-xs">Following</span></span>
                 {user.wcaId && (
@@ -179,7 +180,7 @@ export default function ProfilePage() {
                     href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${accent.bg} text-white ${accent.hover} transition-colors font-bold ${accent.shadow}`}
+                    className="inline-flex items-center gap-1 text-sm text-white hover:underline"
                   >
                     {user.wcaId}
                     <ExternalLink className="w-3 h-3" />
@@ -188,7 +189,7 @@ export default function ProfilePage() {
                 {isOwnProfile && !user.wcaId && (
                   <button
                     onClick={startWcaOAuth}
-                    className={`text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:${accent.bgSubtle} hover:${accent.text} transition-colors font-semibold`}
+                    className="text-xs px-2.5 py-1 rounded bg-neutral-600 hover:bg-neutral-500 text-white font-bold shadow-[0_2px_0_0_#1a1a1a] transition-colors"
                   >
                     Link WCA
                   </button>
@@ -203,7 +204,7 @@ export default function ProfilePage() {
           {isOwnProfile ? (
             <Link
               href="/settings"
-              className="shrink-0 self-start whitespace-nowrap px-4 py-2 text-sm font-bold rounded bg-neutral-600 text-foreground hover:bg-neutral-500 transition-colors shadow-[0_3px_0_0_#1a1a1a]"
+              className={`shrink-0 self-start whitespace-nowrap px-4 py-2 text-sm font-bold rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow}`}
             >
               Edit Profile
             </Link>
@@ -240,6 +241,27 @@ export default function ProfilePage() {
       <div className="px-8 py-6 max-w-3xl mx-auto w-full">
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* Medal Showcase */}
+            <section>
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">
+                🎖️ Medal Showcase
+              </h2>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl">🥇</span>
+                  <span className="text-lg font-extrabold tabular-nums">{user.medals.gold}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl">🥈</span>
+                  <span className="text-lg font-extrabold tabular-nums">{user.medals.silver}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl">🥉</span>
+                  <span className="text-lg font-extrabold tabular-nums">{user.medals.bronze}</span>
+                </div>
+              </div>
+            </section>
+
             {/* Personal Bests */}
             <section>
               <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">

@@ -11,6 +11,49 @@ export type ServiceContext = {
 
 import { DNF_SENTINEL } from "@/lib/cubing/stats";
 
+const MEDAL_TYPES = ["GOLD", "SILVER", "BRONZE"] as const;
+
+/**
+ * Assign medals for a completed tournament. Idempotent — skips if medals already exist.
+ * Should be called inside a transaction when creating the next day's tournament.
+ */
+async function assignMedals(prisma: PrismaClient, tournamentId: string) {
+  // Check if medals already assigned for this tournament.
+  const existing = await prisma.medal.count({ where: { tournamentId } });
+  if (existing > 0) return;
+
+  // Get all scramble sets (one per event) for this tournament.
+  const scrambleSets = await prisma.scrambleSet.findMany({
+    where: { tournamentId },
+    select: { eventId: true },
+  });
+
+  for (const { eventId } of scrambleSets) {
+    // Top 3 finished entries for this event, excluding DNFs.
+    const top3 = await prisma.tournamentEntry.findMany({
+      where: {
+        tournamentId,
+        eventId,
+        result: { not: null, lt: DNF_SENTINEL },
+      },
+      orderBy: { result: "asc" },
+      take: 3,
+      select: { userId: true },
+    });
+
+    for (let i = 0; i < top3.length; i++) {
+      await prisma.medal.create({
+        data: {
+          userId: top3[i].userId,
+          tournamentId,
+          eventId,
+          type: MEDAL_TYPES[i],
+        },
+      });
+    }
+  }
+}
+
 export function tournamentService(ctx: ServiceContext) {
   const { prisma, viewer } = ctx;
 
@@ -69,6 +112,11 @@ export function tournamentService(ctx: ServiceContext) {
                 scrambles,
               },
             });
+          }
+
+          // Assign medals for the previous tournament if not yet done.
+          if (latest) {
+            await assignMedals(tx as unknown as PrismaClient, latest.id);
           }
 
           return tournament;

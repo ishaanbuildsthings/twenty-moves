@@ -35,8 +35,8 @@ export interface DisplaySettings {
 }
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
-  use3dIcons: true,
-  accentColor: "orange",
+  use3dIcons: false,
+  accentColor: "blue",
 };
 
 const STORAGE_KEY = "displaySettings";
