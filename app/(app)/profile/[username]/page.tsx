@@ -6,6 +6,7 @@ import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { publicEnv } from "@/lib/env";
+import { toast } from "sonner";
 
 import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock, Loader2, Unlink } from "lucide-react";
 import Link from "next/link";
@@ -104,22 +105,22 @@ export default function ProfilePage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
-  const [wcaFlash, setWcaFlash] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Read WCA OAuth result from URL params on mount.
+  // Show toast for WCA OAuth result and clean the URL.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const wcaStatus = params.get("wca");
     if (wcaStatus) {
       const reason = params.get("reason") ?? wcaStatus;
       const flash = WCA_FLASH_MESSAGES[reason] ?? WCA_FLASH_MESSAGES[wcaStatus];
-      if (flash) setWcaFlash(flash);
-      // Clean the URL.
+      if (flash) {
+        if (flash.type === "success") toast.success(flash.message);
+        else toast.error(flash.message);
+      }
       const clean = new URL(window.location.href);
       clean.searchParams.delete("wca");
       clean.searchParams.delete("reason");
       window.history.replaceState({}, "", clean.toString());
-      // Refetch profile to get the updated wcaId.
       if (wcaStatus === "linked") {
         queryClient.invalidateQueries({ queryKey: trpc.user.getByUsername.queryKey({ username }) });
       }
@@ -168,23 +169,6 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      {/* WCA OAuth flash message */}
-      {wcaFlash && (
-        <div className={`mx-8 mt-4 px-4 py-2 rounded-lg text-sm font-medium ${
-          wcaFlash.type === "success"
-            ? "bg-green-500/10 text-green-500"
-            : "bg-red-500/10 text-red-500"
-        }`}>
-          {wcaFlash.message}
-          <button
-            className="ml-2 opacity-60 hover:opacity-100"
-            onClick={() => setWcaFlash(null)}
-          >
-            &times;
-          </button>
-        </div>
-      )}
-
       {/* Profile header */}
       <div className="px-8 pt-8 pb-4">
         <div className="flex items-start justify-between max-w-3xl mx-auto">
