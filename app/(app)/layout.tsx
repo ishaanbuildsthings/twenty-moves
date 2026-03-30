@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { caller } from "@/lib/trpc/server";
 import { ViewerProvider } from "@/lib/context/viewer";
 import { SettingsProvider } from "@/lib/context/settings";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/lib/components/app-sidebar";
-import { Toaster } from "sonner";
+import { AccentToaster } from "@/lib/components/accent-toaster";
 
 export default async function AppLayout({
   children,
@@ -28,9 +28,12 @@ export default async function AppLayout({
         <SidebarProvider>
           <AppSidebar />
           <main className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+            <div className="md:hidden flex items-center px-3 py-2 border-b border-border">
+              <SidebarTrigger />
+            </div>
             {children}
           </main>
-          <Toaster theme="dark" richColors position="bottom-center" />
+          <AccentToaster />
         </SidebarProvider>
       </SettingsProvider>
     </ViewerProvider>

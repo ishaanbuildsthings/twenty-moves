@@ -15,6 +15,7 @@ import { UserAvatar } from "@/lib/components/user-avatar";
 import { EventIcon } from "@/lib/components/event-icon";
 import { countryCodeToFlag } from "@/lib/countries";
 import { CubeEvent, EVENT_MAP } from "@/lib/cubing/events";
+import { CubeLoader } from "@/lib/components/cube-loader";
 
 type ProfileTab = "overview" | "collection" | "clubs";
 
@@ -127,10 +128,16 @@ export default function ProfilePage() {
     trpc.user.getByUsername.queryOptions({ username })
   );
 
+  const userId = profileQuery.data?.id;
+  const medalQuery = useQuery({
+    ...trpc.user.getMedalCounts.queryOptions({ userId: userId! }),
+    enabled: !!userId,
+  });
+
   if (profileQuery.status === "pending") {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <CubeLoader message="Loading profile..." />
       </div>
     );
   }
@@ -188,7 +195,7 @@ export default function ProfilePage() {
                 {isOwnProfile && !user.wcaId && (
                   <button
                     onClick={startWcaOAuth}
-                    className={`text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:${accent.bgSubtle} hover:${accent.text} transition-colors font-semibold`}
+                    className="text-xs px-2.5 py-1 rounded bg-neutral-600 hover:bg-neutral-500 text-white font-bold shadow-[0_2px_0_0_#1a1a1a] transition-colors"
                   >
                     Link WCA
                   </button>
@@ -240,6 +247,27 @@ export default function ProfilePage() {
       <div className="px-8 py-6 max-w-3xl mx-auto w-full">
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* Medal Collection */}
+            {medalQuery.data && (medalQuery.data.gold > 0 || medalQuery.data.silver > 0 || medalQuery.data.bronze > 0) && (
+            <section>
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">
+                Medals
+              </h2>
+              <div className="flex items-center gap-5">
+                {[
+                  { label: "Gold", count: medalQuery.data.gold, color: "bg-yellow-400" },
+                  { label: "Silver", count: medalQuery.data.silver, color: "bg-gray-300" },
+                  { label: "Bronze", count: medalQuery.data.bronze, color: "bg-amber-700" },
+                ].map((medal) => (
+                  <div key={medal.label} className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full ${medal.color}`} />
+                    <span className="text-lg font-extrabold tabular-nums">{medal.count}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+            )}
+
             {/* Personal Bests */}
             <section>
               <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">

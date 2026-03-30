@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
@@ -57,9 +58,9 @@ function formatAo5Times(solves: SolveForStats[]): string {
 }
 
 const rankDisplay = (rank: number) => {
-  if (rank === 1) return <span className="text-xl" style={{ filter: "hue-rotate(0deg) saturate(1.5)" }} suppressHydrationWarning>🏆</span>;
-  if (rank === 2) return <span className="text-xl grayscale brightness-150" suppressHydrationWarning>🏆</span>;
-  if (rank === 3) return <span className="text-xl" style={{ filter: "hue-rotate(-20deg) saturate(0.6) brightness(0.8)" }} suppressHydrationWarning>🏆</span>;
+  if (rank === 1) return <span className="text-xl" suppressHydrationWarning>🥇</span>;
+  if (rank === 2) return <span className="text-xl" suppressHydrationWarning>🥈</span>;
+  if (rank === 3) return <span className="text-xl" suppressHydrationWarning>🥉</span>;
   return <span className="text-sm font-bold text-muted-foreground">{rank}</span>;
 };
 
@@ -441,7 +442,7 @@ export default function TourneyPage() {
 
   const setTab = (t: Tab) => {
     if (t === "compete") {
-      updateParams({ tab: null, event: null, contest: null });
+      updateParams({ tab: null, event: null });
     } else {
       updateParams({ tab: "leaderboard" });
     }
@@ -716,7 +717,13 @@ function EventCard({
     : null;
 
   return (
-    <button className="flex items-center w-full px-4 py-3 hover:bg-muted/60 transition-colors text-left border-b border-border">
+    <button
+      onClick={() => {
+        if (!isCurrent || status === "completed") { onView(); }
+        else { onStart(); }
+      }}
+      className="flex items-center w-full px-4 py-3 hover:bg-muted/60 transition-colors text-left border-b border-border cursor-pointer"
+    >
       {/* Left: event info (two lines) */}
       <div className="flex-1 min-w-0">
         {/* Header line: icon + name + format + result */}
@@ -768,7 +775,7 @@ function EventCard({
         {(!isCurrent || status === "completed") && (
           <div
             onClick={(e) => { e.stopPropagation(); onView(); }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-neutral-600 text-white hover:bg-neutral-500 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
           >
             Results
           </div>
@@ -776,7 +783,7 @@ function EventCard({
         {status === "not-started" && isCurrent && (
           <div
             onClick={(e) => { e.stopPropagation(); onStart(); }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-neutral-600 text-white hover:bg-neutral-500 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             Start
@@ -785,7 +792,7 @@ function EventCard({
         {status === "in-progress" && isCurrent && (
           <div
             onClick={(e) => { e.stopPropagation(); onStart(); }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-neutral-600 text-white hover:bg-neutral-500 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             Continue ({completedSolves}/{totalSolves})
@@ -920,12 +927,22 @@ function LeaderboardOverview({
                             {rankDisplay(entry.rank)}
                           </td>
                           <td className="py-2.5">
-                            <div className="flex items-center gap-2">
+                            <Link href={`/profile/${entry.user.username}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                              <UserAvatar
+                                user={{
+                                  username: entry.user.username,
+                                  firstName: entry.user.firstName,
+                                  lastName: entry.user.lastName,
+                                  profilePictureUrl: entry.user.profilePictureUrl,
+                                }}
+                                size="sm"
+                                rounded="full"
+                              />
                               <span className="font-semibold">{entry.user.username}</span>
                               {entry.user.country && (
                                 <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.user.country)}</span>
                               )}
-                            </div>
+                            </Link>
                           </td>
                           <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
                             {singleStr}
@@ -1006,7 +1023,7 @@ function EventLeaderboardDetail({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <span className="text-xs font-bold text-muted-foreground">{getFormatLabel(eventConfig)}</span>
+          <span className="-ml-1 text-lg font-extrabold text-foreground">{getFormatLabel(eventConfig)}</span>
         </div>
         {leaderboardQuery.data && leaderboardQuery.data.total > 0 && (
           <span className="text-sm text-muted-foreground">
@@ -1089,7 +1106,7 @@ function EventLeaderboardDetail({
                         {rankDisplay(entry.rank)}
                       </td>
                       <td className="px-3 py-3">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <Link href={`/profile/${entry.user.username}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
                           <UserAvatar
                             user={{
                               username: entry.user.username,
@@ -1106,7 +1123,7 @@ function EventLeaderboardDetail({
                           {entry.user.country && (
                             <span className="text-sm" suppressHydrationWarning>{countryCodeToFlag(entry.user.country)}</span>
                           )}
-                        </div>
+                        </Link>
                       </td>
                       <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
                         {singleStr}

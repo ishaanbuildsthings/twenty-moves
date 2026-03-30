@@ -27,6 +27,7 @@ model User {
   tournamentEntries TournamentEntry[]
   practicePosts     PracticePost[]
   postLikes         PostLike[]
+  medals            Medal[]
 }
 
 model Event {
@@ -38,6 +39,7 @@ model Event {
   scrambleSets      ScrambleSet[]
   tournamentEntries TournamentEntry[]
   practicePosts     PracticePost[]
+  medals            Medal[]
 }
 
 
@@ -91,8 +93,9 @@ model Tournament {
   datePST   String   @unique  // PST date string, e.g. "2026-03-26". The tournament "day" in Pacific time.
   createdAt DateTime          @default(now())
 
-  entries     TournamentEntry[]
+  entries      TournamentEntry[]
   scrambleSets ScrambleSet[]
+  medals       Medal[]
 }
 
 model ScrambleSet {
@@ -187,4 +190,25 @@ model Follow {
   followee User @relation("followee", fields: [followeeId], references: [id])
 
   @@unique([followerId, followeeId])
+}
+
+enum MedalType {
+  GOLD
+  SILVER
+  BRONZE
+}
+
+model Medal {
+  id           String    @id @default(cuid())
+  userId       String
+  tournamentId String
+  eventId      String
+  type         MedalType
+  createdAt    DateTime  @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  event      Event      @relation(fields: [eventId], references: [id])
+
+  @@unique([tournamentId, eventId, type])
 }
