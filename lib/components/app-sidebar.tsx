@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useViewer } from "@/lib/hooks/useViewer";
+import { useSettings } from "@/lib/context/settings";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const navItems = [
@@ -35,6 +36,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { viewer } = useViewer();
+  const { accent } = useSettings();
   const supabase = createBrowserSupabaseClient();
 
   const handleSignOut = async () => {

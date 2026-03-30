@@ -23,6 +23,7 @@ import {
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/context/settings";
 
 interface DraftPostModalProps {
   open: boolean;
@@ -94,6 +95,7 @@ export function DraftPostModal({
   const [rangeEnd, setRangeEnd] = useState(0);
   const [isCustom, setIsCustom] = useState(false);
   const trpc = useTRPC();
+  const { accent } = useSettings();
 
   // Reset range when modal opens or solves change
   useEffect(() => {
@@ -225,7 +227,7 @@ export function DraftPostModal({
                 const v = Math.max(0, Math.min(rangeEnd, Number(e.target.value) - 1));
                 setRangeStart(v);
               }}
-              className="w-16 rounded-md border border-border bg-muted px-2 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-16 rounded-md border border-border bg-muted px-2 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-white"
             />
             <span className="text-muted-foreground">to</span>
             <input
@@ -237,7 +239,7 @@ export function DraftPostModal({
                 const v = Math.max(rangeStart, Math.min(solves.length - 1, Number(e.target.value) - 1));
                 setRangeEnd(v);
               }}
-              className="w-16 rounded-md border border-border bg-muted px-2 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-16 rounded-md border border-border bg-muted px-2 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-white"
             />
             <span className="text-muted-foreground text-xs">
               (newest first)
@@ -273,7 +275,7 @@ export function DraftPostModal({
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="How did the session go?"
-              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-white"
             />
           </div>
           <div>
@@ -286,7 +288,7 @@ export function DraftPostModal({
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               placeholder="https://youtube.com/watch?v=..."
-              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white"
             />
           </div>
           {createPost.error && (
@@ -296,7 +298,7 @@ export function DraftPostModal({
             <button
               type="submit"
               disabled={createPost.isPending || selectedSolves.length === 0}
-              className="px-4 py-2 text-sm font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className={`px-4 py-2 text-sm font-bold rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow} disabled:opacity-50`}
             >
               {createPost.isPending ? "Posting..." : "Post"}
             </button>

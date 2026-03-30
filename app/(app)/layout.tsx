@@ -27,7 +27,7 @@ export default async function AppLayout({
       <SettingsProvider>
         <SidebarProvider>
           <AppSidebar />
-          <main className="flex flex-col flex-1 min-h-0">
+          <main className="flex flex-col flex-1 min-h-0 overflow-y-auto">
             {children}
           </main>
           <Toaster theme="dark" richColors position="bottom-center" />

@@ -7,6 +7,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { publicEnv } from "@/lib/env";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/context/settings";
 
 import { ExternalLink, MessageSquare, Puzzle } from "lucide-react";
 import Link from "next/link";
@@ -97,6 +98,7 @@ export default function ProfilePage() {
   const { viewer } = useViewer();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { accent } = useSettings();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
 
   // Show toast for WCA OAuth result and clean the URL.
@@ -176,7 +178,7 @@ export default function ProfilePage() {
                     href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-600 text-white hover:bg-amber-500 transition-colors font-bold shadow-[0_2px_0_0_theme(colors.amber.800)]"
+                    className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${accent.bg} text-white ${accent.hover} transition-colors font-bold ${accent.shadow}`}
                   >
                     {user.wcaId}
                     <ExternalLink className="w-3 h-3" />
@@ -185,7 +187,7 @@ export default function ProfilePage() {
                 {isOwnProfile && !user.wcaId && (
                   <button
                     onClick={startWcaOAuth}
-                    className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-amber-500/10 hover:text-amber-500 transition-colors font-semibold"
+                    className={`text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:${accent.bgSubtle} hover:${accent.text} transition-colors font-semibold`}
                   >
                     Link WCA
                   </button>
@@ -220,7 +222,7 @@ export default function ProfilePage() {
               key={tab.key}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
                 activeTab === tab.key
-                  ? "border-amber-500 text-foreground"
+                  ? `${accent.border} text-foreground`
                   : "border-transparent text-muted-foreground hover:text-foreground"
               } ${tab.comingSoon ? "opacity-40 cursor-not-allowed" : ""}`}
               onClick={() => !tab.comingSoon && setActiveTab(tab.key)}
@@ -283,7 +285,7 @@ export default function ProfilePage() {
                 {MOCK_POSTS.map((post) => (
                   <div
                     key={post.id}
-                    className="bg-card rounded-xl border border-border p-4 hover:border-amber-500/30 transition-colors"
+                    className="bg-card rounded-xl border border-border p-4 transition-colors"
                   >
                     <p className="text-sm mb-2">{post.text}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">

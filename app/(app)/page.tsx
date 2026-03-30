@@ -53,7 +53,7 @@ type TimerState = "idle" | "inspecting" | "holding" | "ready" | "running";
 
 
 export default function TimerPage() {
-  const { timerSettings, updateTimerSettings } = useSettings();
+  const { timerSettings, updateTimerSettings, accent } = useSettings();
   const [selectedEvent, setSelectedEvent] = useState<CubeEvent>(CubeEvent.THREE);
   const [state, setState] = useState<TimerState>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -318,7 +318,7 @@ export default function TimerPage() {
       <div className="flex items-center px-4 py-2 border-b border-border">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
-            <EventIcon event={eventConfig} size={32} />
+            <EventIcon event={eventConfig} size={22} />
             <span className="font-bold">{eventConfig.name}</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </DropdownMenuTrigger>
@@ -329,19 +329,30 @@ export default function TimerPage() {
                 onClick={() => setSelectedEvent(meta.id)}
                 className={selectedEvent === meta.id ? "bg-accent" : ""}
               >
-                <EventIcon event={meta} size={28} />
+                <EventIcon event={meta} size={20} />
                 <span>{meta.name}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <button
-          className="ml-auto p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-          title="Timer settings"
-          onClick={() => setSettingsOpen(true)}
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          {stats && (
+            <button
+              className={`flex items-center gap-1.5 text-xs font-bold py-1.5 px-3 rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow}`}
+              onClick={() => setPostOpen(true)}
+            >
+              <FilePen className="w-3.5 h-3.5" />
+              Post
+            </button>
+          )}
+          <button
+            className="flex items-center gap-1.5 text-xs font-bold py-1.5 px-3 rounded bg-neutral-600 text-foreground hover:bg-neutral-500 transition-colors shadow-[0_3px_0_0_#1a1a1a]"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Timer
+          </button>
+        </div>
 
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
           <DialogContent>
@@ -378,7 +389,7 @@ export default function TimerPage() {
                 </div>
                 <button
                   className={`w-10 h-6 rounded-full transition-colors ${
-                    timerSettings.showTimerWhileRunning ? "bg-primary" : "bg-muted"
+                    timerSettings.showTimerWhileRunning ? accent.toggle : "bg-muted"
                   }`}
                   onClick={() => updateTimerSettings({ showTimerWhileRunning: !timerSettings.showTimerWhileRunning })}
                 >
@@ -396,7 +407,7 @@ export default function TimerPage() {
                 </div>
                 <button
                   className={`w-10 h-6 rounded-full transition-colors ${
-                    timerSettings.useInspection ? "bg-primary" : "bg-muted"
+                    timerSettings.useInspection ? accent.toggle : "bg-muted"
                   }`}
                   onClick={() => updateTimerSettings({ useInspection: !timerSettings.useInspection })}
                 >
@@ -628,15 +639,6 @@ export default function TimerPage() {
           />
         )}
         <div className="p-2 border-t border-border flex flex-col items-center gap-1">
-          {stats && (
-            <button
-              className="flex items-center gap-1.5 text-xs font-bold py-1 px-3 rounded bg-amber-600 text-white hover:bg-amber-500 transition-colors shadow-[0_2px_0_0_theme(colors.amber.800)]"
-              onClick={() => setPostOpen(true)}
-            >
-              <FilePen className="w-3.5 h-3.5" />
-              Post
-            </button>
-          )}
           {confirmClear ? (
             <div className="flex items-center gap-2">
               <button
