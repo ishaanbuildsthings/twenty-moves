@@ -4,17 +4,18 @@ import { useState, useEffect, useRef } from "react";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Check, X, Loader2, Camera, ChevronDown } from "lucide-react";
+import { Pencil, Check, X, Loader2, Camera, ChevronDown, ExternalLink } from "lucide-react";
 import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
 import { useSettings } from "@/lib/context/settings";
+import { ACCENT_COLORS } from "@/lib/settings/display";
 
 type EditingField = "firstName" | "lastName" | "username" | "bio" | null;
 
 export default function SettingsPage() {
   const { viewer, setViewer } = useViewer();
-  const { displaySettings, updateDisplaySettings } = useSettings();
+  const { displaySettings, updateDisplaySettings, accent } = useSettings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -67,6 +68,17 @@ export default function SettingsPage() {
     },
     onError: (err) => {
       setError(err.message);
+    },
+  });
+
+  const unlinkWcaMutation = useMutation({
+    ...trpc.user.unlinkWca.mutationOptions(),
+    onSuccess: (updatedUser) => {
+      setViewer(updatedUser);
+      queryClient.setQueryData(
+        trpc.user.getByUsername.queryKey({ username: updatedUser.username }),
+        updatedUser,
+      );
     },
   });
 
@@ -371,6 +383,36 @@ export default function SettingsPage() {
         )}
       </section>
 
+      {/* Linked Accounts section */}
+      {viewer.wcaId && (
+        <section className="space-y-1 mb-8">
+          <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+            Linked Accounts
+          </h2>
+          <div className="flex items-center justify-between py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">WCA Account</p>
+              <a
+                href={`https://www.worldcubeassociation.org/persons/${viewer.wcaId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-muted-foreground transition-colors"
+              >
+                {viewer.wcaId}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            <button
+              className="text-xs text-red-500 hover:text-red-400 transition-colors"
+              onClick={() => unlinkWcaMutation.mutate()}
+              disabled={unlinkWcaMutation.isPending}
+            >
+              {unlinkWcaMutation.isPending ? "Unlinking..." : "Unlink"}
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* Display section */}
       <section>
         <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
@@ -383,7 +425,7 @@ export default function SettingsPage() {
             <button
               className={`flex flex-col items-center gap-2 px-5 py-3 rounded-lg border-2 transition-colors ${
                 !displaySettings.use3dIcons
-                  ? "border-primary bg-primary/10"
+                  ? "border-white"
                   : "border-border hover:border-muted-foreground/40"
               }`}
               onClick={() => updateDisplaySettings({ use3dIcons: false })}
@@ -394,7 +436,7 @@ export default function SettingsPage() {
             <button
               className={`flex flex-col items-center gap-2 px-5 py-3 rounded-lg border-2 transition-colors ${
                 displaySettings.use3dIcons
-                  ? "border-primary bg-primary/10"
+                  ? "border-white"
                   : "border-border hover:border-muted-foreground/40"
               }`}
               onClick={() => updateDisplaySettings({ use3dIcons: true })}
@@ -402,6 +444,33 @@ export default function SettingsPage() {
               <img src="/rubiks_3x3.svg" alt="3D" width={32} height={32} />
               <span className="text-xs font-semibold">3D</span>
             </button>
+          </div>
+        </div>
+        <div className="py-3 border-b border-border">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium mb-1">Accent color</p>
+              <p className="text-xs text-muted-foreground mb-3">Pick a color for buttons and highlights</p>
+              <div className="flex gap-2">
+                {ACCENT_COLORS.map((color) => (
+                  <button
+                    key={color.id}
+                    className={`w-8 h-8 rounded-md ${color.swatch} transition-all ${
+                      displaySettings.accentColor === color.id
+                        ? "scale-110 ring-2 ring-white ring-offset-2 ring-offset-background"
+                        : ""
+                    }`}
+                    title={color.label}
+                    onClick={() => updateDisplaySettings({ accentColor: color.id })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div
+              className={`px-4 py-2 text-sm font-bold rounded ${accent.bg} text-white ${accent.shadow} transition-colors`}
+            >
+              Example
+            </div>
           </div>
         </div>
       </section>

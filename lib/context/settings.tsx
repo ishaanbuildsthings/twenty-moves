@@ -9,6 +9,7 @@ import {
 import {
   loadDisplaySettings,
   saveDisplaySettings,
+  ACCENT_STYLES,
   type DisplaySettings,
 } from "@/lib/settings/display";
 
@@ -17,6 +18,7 @@ interface SettingsContextValue {
   updateTimerSettings: (updates: Partial<TimerSettings>) => void;
   displaySettings: DisplaySettings;
   updateDisplaySettings: (updates: Partial<DisplaySettings>) => void;
+  accent: typeof ACCENT_STYLES[keyof typeof ACCENT_STYLES];
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -48,8 +50,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const accent = ACCENT_STYLES[displaySettings.accentColor];
+
   return (
-    <SettingsContext.Provider value={{ timerSettings, updateTimerSettings, displaySettings, updateDisplaySettings }}>
+    <SettingsContext.Provider value={{ timerSettings, updateTimerSettings, displaySettings, updateDisplaySettings, accent }}>
       {children}
     </SettingsContext.Provider>
   );

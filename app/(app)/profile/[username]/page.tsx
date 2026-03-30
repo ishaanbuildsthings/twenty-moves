@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { publicEnv } from "@/lib/env";
+import { toast } from "sonner";
+import { useSettings } from "@/lib/context/settings";
 
-import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock } from "lucide-react";
+import { ExternalLink, MessageSquare, Puzzle } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { EventIcon } from "@/lib/components/event-icon";
@@ -16,13 +19,6 @@ import { CubeEvent, EVENT_MAP } from "@/lib/cubing/events";
 type ProfileTab = "overview" | "collection" | "clubs";
 
 // Mock data for placeholder UI
-const MOCK_RATINGS = [
-  { event: CubeEvent.THREE, rating: 1420 },
-  { event: CubeEvent.TWO, rating: 1180 },
-  { event: CubeEvent.FOUR, rating: 980 },
-  { event: CubeEvent.OH, rating: 1050 },
-];
-
 const MOCK_PBS = [
   { event: CubeEvent.THREE, single: "8.42", ao5: "10.15" },
   { event: CubeEvent.TWO, single: "2.31", ao5: "3.44" },
@@ -35,6 +31,33 @@ const MOCK_POSTS = [
   { id: 2, text: "Finally sub-10 ao5! Feels amazing", time: "1d ago", likes: 24 },
   { id: 3, text: "Learning F2L... it's a journey 😅", time: "3d ago", likes: 8 },
 ];
+
+const WCA_AUTHORIZE_URL = "https://www.worldcubeassociation.org/oauth/authorize";
+const WCA_STATE_COOKIE = "wca_oauth_state";
+
+function startWcaOAuth() {
+  const state = crypto.randomUUID();
+  // Store state in a cookie for CSRF validation in the callback.
+  document.cookie = `${WCA_STATE_COOKIE}=${state}; path=/; max-age=600; SameSite=Lax`;
+
+  const params = new URLSearchParams({
+    client_id: publicEnv().NEXT_PUBLIC_WCA_CLIENT_ID,
+    redirect_uri: `${window.location.origin}/api/wca/callback`,
+    response_type: "code",
+    scope: "public",
+    state,
+  });
+
+  window.location.href = `${WCA_AUTHORIZE_URL}?${params}`;
+}
+
+const WCA_FLASH_MESSAGES: Record<string, { message: string; type: "success" | "error" }> = {
+  linked: { message: "WCA account linked successfully!", type: "success" },
+  already_linked: { message: "This WCA account is already linked to another user.", type: "error" },
+  no_wca_id: { message: "Your WCA account doesn't have an assigned WCA ID.", type: "error" },
+  invalid_state: { message: "WCA linking failed — please try again.", type: "error" },
+  unknown: { message: "Something went wrong linking your WCA account.", type: "error" },
+};
 
 function FollowButton({ userId }: { userId: string }) {
   const trpc = useTRPC();
@@ -74,7 +97,30 @@ export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { viewer } = useViewer();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { accent } = useSettings();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+
+  // Show toast for WCA OAuth result and clean the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wcaStatus = params.get("wca");
+    if (wcaStatus) {
+      const reason = params.get("reason") ?? wcaStatus;
+      const flash = WCA_FLASH_MESSAGES[reason] ?? WCA_FLASH_MESSAGES[wcaStatus];
+      if (flash) {
+        if (flash.type === "success") toast.success(flash.message);
+        else toast.error(flash.message);
+      }
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("wca");
+      clean.searchParams.delete("reason");
+      window.history.replaceState({}, "", clean.toString());
+      if (wcaStatus === "linked") {
+        queryClient.invalidateQueries({ queryKey: trpc.user.getByUsername.queryKey({ username }) });
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const profileQuery = useQuery(
     trpc.user.getByUsername.queryOptions({ username })
@@ -99,46 +145,53 @@ export default function ProfilePage() {
   const user = profileQuery.data;
   const isOwnProfile = viewer.id === user.id;
 
-  const tabs: { key: ProfileTab; label: string; icon: React.ReactNode; comingSoon?: boolean }[] = [
-    { key: "overview", label: "Overview", icon: <Trophy className="w-4 h-4" /> },
-    { key: "collection", label: "Collection", icon: <Puzzle className="w-4 h-4" /> },
-    { key: "clubs", label: "Clubs", icon: <Users className="w-4 h-4" />, comingSoon: true },
+  const tabs: { key: ProfileTab; label: string; comingSoon?: boolean }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "collection", label: "Collection", comingSoon: true },
+    { key: "clubs", label: "Clubs", comingSoon: true },
   ];
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
       {/* Profile header */}
-      <div className="px-8 pt-8 pb-4">
-        <div className="flex items-start justify-between max-w-3xl mx-auto">
+      <div className="pt-8 pb-4 px-8 max-w-3xl mx-auto w-full">
+        <div className="flex items-start justify-between">
           <div className="flex items-center gap-5">
             <UserAvatar user={user} size="lg" rounded="xl" />
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-extrabold">
-                  {user.username}
-                  {user.country && (
-                    <span className="ml-2" title={user.country}>
-                      {countryCodeToFlag(user.country)}
-                    </span>
-                  )}
-                </h1>
-                {user.wcaId && (
-                  <a
-                    href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+              <h1 className="text-2xl font-extrabold">
+                {user.username}
+                {user.country && (
+                  <span className="ml-2" title={user.country}>
+                    {countryCodeToFlag(user.country)}
+                  </span>
                 )}
-              </div>
+              </h1>
               <p className="text-muted-foreground">
                 {user.firstName} {user.lastName}
               </p>
               <div className="flex items-center gap-4 mt-2 text-sm">
                 <span><strong className="text-foreground font-extrabold">12</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
                 <span><strong className="text-foreground font-extrabold">8</strong> <span className="text-muted-foreground text-xs">Following</span></span>
+                {user.wcaId && (
+                  <a
+                    href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${accent.bg} text-white ${accent.hover} transition-colors font-bold ${accent.shadow}`}
+                  >
+                    {user.wcaId}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                {isOwnProfile && !user.wcaId && (
+                  <button
+                    onClick={startWcaOAuth}
+                    className={`text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:${accent.bgSubtle} hover:${accent.text} transition-colors font-semibold`}
+                  >
+                    Link WCA
+                  </button>
+                )}
               </div>
             </div>
             {user.bio && (
@@ -151,7 +204,7 @@ export default function ProfilePage() {
           {isOwnProfile ? (
             <Link
               href="/settings"
-              className="px-4 py-2 text-sm font-semibold rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+              className="px-4 py-2 text-sm font-bold rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 transition-all shadow-[0_3px_0_0_theme(colors.neutral.800),inset_0_1px_0_0_theme(colors.neutral.500)]"
             >
               Edit Profile
             </Link>
@@ -169,13 +222,12 @@ export default function ProfilePage() {
               key={tab.key}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
                 activeTab === tab.key
-                  ? "border-primary text-foreground"
+                  ? `${accent.border} text-foreground`
                   : "border-transparent text-muted-foreground hover:text-foreground"
               } ${tab.comingSoon ? "opacity-40 cursor-not-allowed" : ""}`}
               onClick={() => !tab.comingSoon && setActiveTab(tab.key)}
               disabled={tab.comingSoon}
             >
-              {tab.icon}
               {tab.label}
               {tab.comingSoon && (
                 <span className="text-[10px] uppercase tracking-wide ml-1">Soon</span>
@@ -189,35 +241,9 @@ export default function ProfilePage() {
       <div className="px-8 py-6 max-w-3xl mx-auto w-full">
         {activeTab === "overview" && (
           <div className="space-y-6">
-            {/* Ratings grid */}
-            <section>
-              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                Ratings
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {MOCK_RATINGS.map((r) => {
-                  const config = EVENT_MAP[r.event];
-                  return (
-                    <div
-                      key={r.event}
-                      className="bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <EventIcon event={config} size={44} />
-                        <div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">{config.name}</span>
-                          <p className="text-2xl font-extrabold text-foreground leading-tight">{r.rating}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
             {/* Personal Bests */}
             <section>
-              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">
                 🏆 Personal Bests
               </h2>
               <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -251,7 +277,7 @@ export default function ProfilePage() {
 
             {/* Recent Posts */}
             <section>
-              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">
                 <MessageSquare className="w-4 h-4 inline mr-1.5" />
                 Recent Posts
               </h2>
@@ -259,7 +285,7 @@ export default function ProfilePage() {
                 {MOCK_POSTS.map((post) => (
                   <div
                     key={post.id}
-                    className="bg-card rounded-xl border border-border p-4 hover:border-primary/30 transition-colors"
+                    className="bg-card rounded-xl border border-border p-4 transition-colors"
                   >
                     <p className="text-sm mb-2">{post.text}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">

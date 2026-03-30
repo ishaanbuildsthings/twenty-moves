@@ -11,6 +11,8 @@ const publicEnvSchema = z.object({
   // in the browser — it identifies the project but doesn't grant any
   // special access. Operations are still gated by Row Level Security.
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  // WCA OAuth application ID. Needed client-side to build the authorize URL.
+  NEXT_PUBLIC_WCA_CLIENT_ID: z.string().min(1),
 });
 
 // Server-only env vars — only available in Node.js runtime (API routes,
@@ -21,6 +23,8 @@ const serverEnvSchema = publicEnvSchema.extend({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+  // WCA OAuth client secret. Server-only — used to exchange auth codes for tokens.
+  WCA_CLIENT_SECRET: z.string().min(1),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -39,6 +43,7 @@ export function publicEnv(): PublicEnv {
     _publicEnv = publicEnvSchema.parse({
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      NEXT_PUBLIC_WCA_CLIENT_ID: process.env.NEXT_PUBLIC_WCA_CLIENT_ID,
     });
   }
   return _publicEnv;

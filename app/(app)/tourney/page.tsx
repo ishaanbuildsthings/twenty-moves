@@ -118,7 +118,7 @@ function TournamentSolveView({
   onComplete: () => void;
   onExit: () => void;
 }) {
-  const { timerSettings, updateTimerSettings } = useSettings();
+  const { timerSettings, updateTimerSettings, accent } = useSettings();
   const submitSolve = useSubmitSolve();
   const [solves, setSolves] = useState<SolveForStats[]>(initialSolves);
   const [pendingTime, setPendingTime] = useState<number | null>(null);
@@ -237,7 +237,7 @@ function TournamentSolveView({
         {/* Penalty selector — shown after timer stops */}
         {awaitingPenalty && (
           <div className="flex flex-col items-center gap-6">
-            <p className="font-mono tabular-nums font-extrabold" style={{ fontSize: "clamp(2rem, 10vw, 5rem)" }}>
+            <p className="font-mono tabular-nums" style={{ fontSize: "clamp(2rem, 10vw, 5rem)" }}>
               {formatTime(pendingTime!)}
             </p>
             <p className="text-muted-foreground text-sm">Confirm your result</p>
@@ -245,21 +245,21 @@ function TournamentSolveView({
               <button
                 onClick={() => handleConfirmPenalty(null)}
                 disabled={submitting}
-                className="px-8 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-lg transition-colors disabled:opacity-50 shadow-sm"
+                className={`px-8 py-3 rounded-xl ${accent.bg} ${accent.hover} text-white font-bold text-lg transition-colors disabled:opacity-50 ${accent.shadow}`}
               >
                 OK
               </button>
               <button
                 onClick={() => handleConfirmPenalty("plus_two")}
                 disabled={submitting}
-                className="px-6 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold text-lg transition-colors disabled:opacity-50"
+                className="px-6 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold text-lg transition-colors disabled:opacity-50 shadow-[0_3px_0_0_#1a1a1a]"
               >
                 +2
               </button>
               <button
                 onClick={() => handleConfirmPenalty("dnf")}
                 disabled={submitting}
-                className="px-6 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold text-lg transition-colors disabled:opacity-50"
+                className="px-6 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold text-lg transition-colors disabled:opacity-50 shadow-[0_3px_0_0_#1a1a1a]"
               >
                 DNF
               </button>
@@ -328,7 +328,7 @@ function TournamentSolveView({
                 <p className="text-xs text-muted-foreground">Display running time while solving</p>
               </div>
               <button
-                className={`w-10 h-6 rounded-full transition-colors ${timerSettings.showTimerWhileRunning ? "bg-primary" : "bg-muted"}`}
+                className={`w-10 h-6 rounded-full transition-colors ${timerSettings.showTimerWhileRunning ? accent.toggle : "bg-muted"}`}
                 onClick={() => updateTimerSettings({ showTimerWhileRunning: !timerSettings.showTimerWhileRunning })}
               >
                 <div className={`w-4 h-4 rounded-full bg-white transition-transform mx-1 ${timerSettings.showTimerWhileRunning ? "translate-x-4" : ""}`} />
@@ -340,7 +340,7 @@ function TournamentSolveView({
                 <p className="text-xs text-muted-foreground">WCA-style 15s countdown before timing</p>
               </div>
               <button
-                className={`w-10 h-6 rounded-full transition-colors ${timerSettings.useInspection ? "bg-primary" : "bg-muted"}`}
+                className={`w-10 h-6 rounded-full transition-colors ${timerSettings.useInspection ? accent.toggle : "bg-muted"}`}
                 onClick={() => updateTimerSettings({ useInspection: !timerSettings.useInspection })}
               >
                 <div className={`w-4 h-4 rounded-full bg-white transition-transform mx-1 ${timerSettings.useInspection ? "translate-x-4" : ""}`} />
@@ -361,6 +361,7 @@ export default function TourneyPage() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const trpc = useTRPC();
+  const { accent } = useSettings();
 
   // Read state from URL params.
   const tab: Tab = searchParams.get("tab") === "leaderboard" ? "leaderboard" : "compete";
@@ -553,7 +554,7 @@ export default function TourneyPage() {
               onClick={() => setTab("compete")}
             >
               Compete
-              {tab === "compete" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+              {tab === "compete" && <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${accent.bg}`} />}
             </button>
             <button
               className={`px-4 py-2 text-sm font-bold transition-colors relative ${
@@ -562,7 +563,7 @@ export default function TourneyPage() {
               onClick={() => setTab("leaderboard")}
             >
               Leaderboard
-              {tab === "leaderboard" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+              {tab === "leaderboard" && <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${accent.bg}`} />}
             </button>
           </div>
         </div>
@@ -686,6 +687,7 @@ function EventCard({
   onView: () => void;
   onStart: () => void;
 }) {
+  const { accent } = useSettings();
   const totalSolves = config.tournamentSolveCount;
   const formatLabel = getFormatLabel(config);
 
@@ -727,6 +729,12 @@ function EventCard({
               )}
             </>
           )}
+          {status !== "completed" && totalCompetitors > 0 && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              {totalCompetitors} competing
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
+            </span>
+          )}
         </div>
         {/* Detail line: solve times + placeholders */}
         <div className="mt-1 ml-9 font-mono tabular-nums text-sm text-muted-foreground">
@@ -749,7 +757,7 @@ function EventCard({
         {status === "completed" && (
           <div
             onClick={(e) => { e.stopPropagation(); onView(); }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold text-sm transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
           >
             View
           </div>
@@ -757,7 +765,7 @@ function EventCard({
         {status === "not-started" && (
           <div
             onClick={(e) => { e.stopPropagation(); onStart(); }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold text-sm transition-colors shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             Start
@@ -766,7 +774,7 @@ function EventCard({
         {status === "in-progress" && (
           <div
             onClick={(e) => { e.stopPropagation(); onStart(); }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-sm transition-colors shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             Continue ({completedSolves}/{totalSolves})
