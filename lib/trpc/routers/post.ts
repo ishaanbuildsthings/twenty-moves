@@ -17,6 +17,40 @@ const solveSchema = z.object({
 const FEED_PAGE_SIZE = 20;
 
 export const postRouter = createTRPCRouter({
+  getUserPosts: authedProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        cursor: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const posts = await ctx.prisma.practicePost.findMany({
+        where: { userId: input.userId },
+        include: {
+          user: true,
+          event: true,
+          likes: { where: { userId: ctx.viewer.userId }, select: { id: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: FEED_PAGE_SIZE + 1,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+      });
+
+      let nextCursor: string | undefined;
+      if (posts.length > FEED_PAGE_SIZE) {
+        nextCursor = posts.pop()!.id;
+      }
+
+      return {
+        posts: posts.map((p) => ({
+          ...practicePostToIPracticePost(p),
+          liked: p.likes.length > 0,
+        })),
+        nextCursor,
+      };
+    }),
+
   getFeed: authedProcedure
     .input(
       z.object({

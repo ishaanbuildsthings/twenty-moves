@@ -74,27 +74,30 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
   );
 }
 
-type FeedData = { pages: { posts: (IPracticePost & { liked: boolean })[]; nextCursor?: string }[]; pageParams: unknown[] };
-const FEED_KEY = [["post", "getFeed"]];
+type PostPageData = { pages: { posts: (IPracticePost & { liked: boolean })[]; nextCursor?: string }[]; pageParams: unknown[] };
 
+// Update a post in all infinite query caches (feed + profile posts)
 function updatePostInCache(
   queryClient: ReturnType<typeof useQueryClient>,
   postId: string,
   updater: (post: IPracticePost & { liked: boolean }) => IPracticePost & { liked: boolean }
 ) {
-  queryClient.setQueriesData<FeedData>(
-    { queryKey: FEED_KEY },
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page) => ({
-          ...page,
-          posts: page.posts.map((p) => (p.id === postId ? updater(p) : p)),
-        })),
-      };
-    }
-  );
+  // Match both getFeed and getUserPosts infinite queries
+  for (const key of [[["post", "getFeed"]], [["post", "getUserPosts"]]]) {
+    queryClient.setQueriesData<PostPageData>(
+      { queryKey: key },
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            posts: page.posts.map((p) => (p.id === postId ? updater(p) : p)),
+          })),
+        };
+      }
+    );
+  }
 }
 
 function LikeButton({ postId, liked, numLikes }: { postId: string; liked: boolean; numLikes: number }) {
@@ -103,7 +106,7 @@ function LikeButton({ postId, liked, numLikes }: { postId: string; liked: boolea
 
   const like = useMutation(trpc.post.likePost.mutationOptions({
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: FEED_KEY });
+      await queryClient.cancelQueries({ queryKey: [["post"]] });
       updatePostInCache(queryClient, postId, (p) => ({ ...p, liked: true, numLikes: p.numLikes + 1 }));
     },
     onError: () => {
@@ -112,7 +115,7 @@ function LikeButton({ postId, liked, numLikes }: { postId: string; liked: boolea
   }));
   const unlike = useMutation(trpc.post.unlikePost.mutationOptions({
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: FEED_KEY });
+      await queryClient.cancelQueries({ queryKey: [["post"]] });
       updatePostInCache(queryClient, postId, (p) => ({ ...p, liked: false, numLikes: p.numLikes - 1 }));
     },
     onError: () => {
