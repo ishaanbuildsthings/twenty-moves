@@ -62,6 +62,7 @@ const WCA_FLASH_MESSAGES: Record<string, { message: string; type: "success" | "e
 function FollowButton({ userId }: { userId: string }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { accent } = useSettings();
 
   const isFollowingQuery = useQuery(
     trpc.user.isFollowing.queryOptions({ userId })
@@ -80,10 +81,10 @@ function FollowButton({ userId }: { userId: string }) {
 
   return (
     <button
-      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+      className={`px-4 py-2 text-sm font-bold rounded transition-all ${
         isFollowing
-          ? "bg-muted hover:bg-red-500/10 hover:text-red-500"
-          : "bg-primary text-primary-foreground hover:bg-primary/90"
+          ? "bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-red-600 hover:to-red-700 hover:text-white shadow-[0_2px_0_0_#1a1a1a]"
+          : `${accent.bg} text-white ${accent.hover} ${accent.shadow}`
       }`}
       disabled={isPending || isFollowingQuery.isLoading}
       onClick={() => isFollowing ? unfollow.mutate({ userId }) : follow.mutate({ userId })}

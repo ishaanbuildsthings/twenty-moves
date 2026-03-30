@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
 
     const { error } = isSignUp
-      ? await supabase.auth.signUp({ email, password })
+      ? await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/login` } })
       : await supabase.auth.signInWithPassword({ email, password });
 
     setLoading(false);
