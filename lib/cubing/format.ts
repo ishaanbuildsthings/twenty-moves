@@ -42,6 +42,14 @@ export function timeAgo(date: Date): string {
   return new Date(date).toLocaleDateString();
 }
 
+export const ONE_DAY = 1;
+export const ONE_WEEK_IN_DAYS = 7;
+
+// Returns the epoch timestamp for N days ago.
+export function daysAgo(n: number): number {
+  return Date.now() - n * 24 * 60 * 60 * 1000;
+}
+
 // Find the indices of the best and worst solves in an ao5.
 // Used to determine which times get parenthesized in display.
 export function getBestAndWorst(solves: SolveForStats[]): { bestIdx: number; worstIdx: number } {
