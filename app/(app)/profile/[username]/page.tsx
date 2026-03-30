@@ -8,7 +8,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { publicEnv } from "@/lib/env";
 import { toast } from "sonner";
 
-import { ExternalLink, Trophy, Users, Puzzle, MessageSquare, Lock, Loader2, Unlink } from "lucide-react";
+import { ExternalLink, MessageSquare, Puzzle } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { EventIcon } from "@/lib/components/event-icon";
@@ -18,13 +18,6 @@ import { CubeEvent, EVENT_MAP } from "@/lib/cubing/events";
 type ProfileTab = "overview" | "collection" | "clubs";
 
 // Mock data for placeholder UI
-const MOCK_RATINGS = [
-  { event: CubeEvent.THREE, rating: 1420 },
-  { event: CubeEvent.TWO, rating: 1180 },
-  { event: CubeEvent.FOUR, rating: 980 },
-  { event: CubeEvent.OH, rating: 1050 },
-];
-
 const MOCK_PBS = [
   { event: CubeEvent.THREE, single: "8.42", ao5: "10.15" },
   { event: CubeEvent.TWO, single: "2.31", ao5: "3.44" },
@@ -101,7 +94,7 @@ function FollowButton({ userId }: { userId: string }) {
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const { viewer, setViewer } = useViewer();
+  const { viewer } = useViewer();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
@@ -127,17 +120,6 @@ export default function ProfilePage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const unlinkWca = useMutation({
-    ...trpc.user.unlinkWca.mutationOptions(),
-    onSuccess: (updatedUser) => {
-      setViewer(updatedUser);
-      queryClient.setQueryData(
-        trpc.user.getByUsername.queryKey({ username }),
-        updatedUser,
-      );
-    },
-  });
-
   const profileQuery = useQuery(
     trpc.user.getByUsername.queryOptions({ username })
   );
@@ -161,10 +143,10 @@ export default function ProfilePage() {
   const user = profileQuery.data;
   const isOwnProfile = viewer.id === user.id;
 
-  const tabs: { key: ProfileTab; label: string; icon: React.ReactNode; comingSoon?: boolean }[] = [
-    { key: "overview", label: "Overview", icon: <Trophy className="w-4 h-4" /> },
-    { key: "collection", label: "Collection", icon: <Puzzle className="w-4 h-4" /> },
-    { key: "clubs", label: "Clubs", icon: <Users className="w-4 h-4" />, comingSoon: true },
+  const tabs: { key: ProfileTab; label: string; comingSoon?: boolean }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "collection", label: "Collection", comingSoon: true },
+    { key: "clubs", label: "Clubs", comingSoon: true },
   ];
 
   return (
@@ -175,21 +157,26 @@ export default function ProfilePage() {
           <div className="flex items-center gap-5">
             <UserAvatar user={user} size="lg" rounded="xl" />
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-extrabold">
-                  {user.username}
-                  {user.country && (
-                    <span className="ml-2" title={user.country}>
-                      {countryCodeToFlag(user.country)}
-                    </span>
-                  )}
-                </h1>
+              <h1 className="text-2xl font-extrabold">
+                {user.username}
+                {user.country && (
+                  <span className="ml-2" title={user.country}>
+                    {countryCodeToFlag(user.country)}
+                  </span>
+                )}
+              </h1>
+              <p className="text-muted-foreground">
+                {user.firstName} {user.lastName}
+              </p>
+              <div className="flex items-center gap-4 mt-2 text-sm">
+                <span><strong className="text-foreground font-extrabold">12</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
+                <span><strong className="text-foreground font-extrabold">8</strong> <span className="text-muted-foreground text-xs">Following</span></span>
                 {user.wcaId && (
                   <a
                     href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-semibold"
+                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-600 text-white hover:bg-amber-500 transition-colors font-bold shadow-[0_2px_0_0_theme(colors.amber.800)]"
                   >
                     {user.wcaId}
                     <ExternalLink className="w-3 h-3" />
@@ -198,32 +185,11 @@ export default function ProfilePage() {
                 {isOwnProfile && !user.wcaId && (
                   <button
                     onClick={startWcaOAuth}
-                    className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors font-semibold"
+                    className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-amber-500/10 hover:text-amber-500 transition-colors font-semibold"
                   >
                     Link WCA
                   </button>
                 )}
-                {isOwnProfile && user.wcaId && (
-                  <button
-                    onClick={() => unlinkWca.mutate()}
-                    disabled={unlinkWca.isPending}
-                    className="text-xs px-1.5 py-0.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                    title="Unlink WCA account"
-                  >
-                    {unlinkWca.isPending ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Unlink className="w-3 h-3" />
-                    )}
-                  </button>
-                )}
-              </div>
-              <p className="text-muted-foreground">
-                {user.firstName} {user.lastName}
-              </p>
-              <div className="flex items-center gap-4 mt-2 text-sm">
-                <span><strong className="text-foreground font-extrabold">12</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
-                <span><strong className="text-foreground font-extrabold">8</strong> <span className="text-muted-foreground text-xs">Following</span></span>
               </div>
             </div>
             {user.bio && (
@@ -236,7 +202,7 @@ export default function ProfilePage() {
           {isOwnProfile ? (
             <Link
               href="/settings"
-              className="px-4 py-2 text-sm font-semibold rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+              className="px-4 py-2 text-sm font-bold rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 transition-all shadow-[0_3px_0_0_theme(colors.neutral.800),inset_0_1px_0_0_theme(colors.neutral.500)]"
             >
               Edit Profile
             </Link>
@@ -254,13 +220,12 @@ export default function ProfilePage() {
               key={tab.key}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
                 activeTab === tab.key
-                  ? "border-primary text-foreground"
+                  ? "border-amber-500 text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               } ${tab.comingSoon ? "opacity-40 cursor-not-allowed" : ""}`}
               onClick={() => !tab.comingSoon && setActiveTab(tab.key)}
               disabled={tab.comingSoon}
             >
-              {tab.icon}
               {tab.label}
               {tab.comingSoon && (
                 <span className="text-[10px] uppercase tracking-wide ml-1">Soon</span>
@@ -274,32 +239,6 @@ export default function ProfilePage() {
       <div className="px-8 py-6 max-w-3xl mx-auto w-full">
         {activeTab === "overview" && (
           <div className="space-y-6">
-            {/* Ratings grid */}
-            <section>
-              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                Ratings
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {MOCK_RATINGS.map((r) => {
-                  const config = EVENT_MAP[r.event];
-                  return (
-                    <div
-                      key={r.event}
-                      className="bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <EventIcon event={config} size={44} />
-                        <div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">{config.name}</span>
-                          <p className="text-2xl font-extrabold text-foreground leading-tight">{r.rating}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
             {/* Personal Bests */}
             <section>
               <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
@@ -344,7 +283,7 @@ export default function ProfilePage() {
                 {MOCK_POSTS.map((post) => (
                   <div
                     key={post.id}
-                    className="bg-card rounded-xl border border-border p-4 hover:border-primary/30 transition-colors"
+                    className="bg-card rounded-xl border border-border p-4 hover:border-amber-500/30 transition-colors"
                   >
                     <p className="text-sm mb-2">{post.text}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
