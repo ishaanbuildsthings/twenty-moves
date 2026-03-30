@@ -15,6 +15,7 @@ export interface IUser {
   profilePictureUrl: string | null;
   country: string | null;
   bio: string;
+  youtubeChannelUrl: string | null;
   medals: MedalCounts;
   followerCount: number;
   followingCount: number;
@@ -42,6 +43,7 @@ export function userToIUser(
     profilePictureUrl: user.profilePictureUrl,
     country: user.country,
     bio: user.bio,
+    youtubeChannelUrl: user.youtubeChannelUrl,
     medals,
     followerCount: counts?.followers ?? 0,
     followingCount: counts?.following ?? 0,

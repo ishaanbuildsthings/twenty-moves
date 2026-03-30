@@ -14,7 +14,7 @@ import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } 
 import { useSettings } from "@/lib/context/settings";
 import { ACCENT_COLORS } from "@/lib/settings/display";
 
-type EditingField = "firstName" | "lastName" | "username" | "bio" | null;
+type EditingField = "firstName" | "lastName" | "username" | "bio" | "youtubeChannelUrl" | null;
 
 export default function SettingsPage() {
   const { viewer, setViewer } = useViewer();
@@ -89,7 +89,7 @@ export default function SettingsPage() {
   const startEditing = (field: EditingField) => {
     if (!field) return;
     setEditingField(field);
-    setEditValue(viewer[field]);
+    setEditValue(viewer[field] ?? "");
     setError(null);
     setDebouncedUsername("");
   };
@@ -384,6 +384,60 @@ export default function SettingsPage() {
             <button
               className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors ml-2"
               onClick={() => startEditing("bio")}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* YouTube Channel */}
+        <div className="flex items-start justify-between py-3 border-b border-border">
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground mb-0.5">YouTube Channel</p>
+            {editingField === "youtubeChannelUrl" ? (
+              <div className="space-y-1">
+                <input
+                  className="bg-muted rounded-md px-2 py-1 text-sm w-full border-2 border-transparent focus:outline-none"
+                  placeholder="https://youtube.com/@yourchannel"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                />
+                <div className="flex gap-1">
+                  <button
+                    className="p-1 rounded-md hover:bg-primary/20 text-primary transition-colors disabled:opacity-40"
+                    onClick={() => updateMutation.mutate({ youtubeChannelUrl: editValue || null })}
+                    disabled={updateMutation.isPending}
+                  >
+                    {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  </button>
+                  <button
+                    className="p-1 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+                    onClick={cancelEditing}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-muted-foreground italic">
+                {viewer.youtubeChannelUrl ? (
+                  <a href={viewer.youtubeChannelUrl} target="_blank" rel="noopener noreferrer" className="text-foreground not-italic hover:underline">
+                    {viewer.youtubeChannelUrl.replace(/^https?:\/\/(www\.)?/, "")}
+                  </a>
+                ) : "Not set"}
+              </p>
+            )}
+          </div>
+          {editingField !== "youtubeChannelUrl" && (
+            <button
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors ml-2"
+              onClick={() => {
+                setEditingField("youtubeChannelUrl");
+                setEditValue(viewer.youtubeChannelUrl ?? "");
+                setError(null);
+              }}
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>

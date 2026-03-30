@@ -7,6 +7,29 @@ import { userToIUser } from "@/lib/transforms/user";
 import { publicEnv } from "@/lib/env";
 
 export const userRouter = createTRPCRouter({
+  search: authedProcedure
+    .input(z.object({ query: z.string().min(1).max(50) }))
+    .query(async ({ ctx, input }) => {
+      const users = await ctx.prisma.user.findMany({
+        where: {
+          OR: [
+            { username: { contains: input.query, mode: "insensitive" } },
+            { firstName: { contains: input.query, mode: "insensitive" } },
+            { lastName: { contains: input.query, mode: "insensitive" } },
+          ],
+        },
+        take: 10,
+      });
+      return users.map((u) => ({
+        id: u.id,
+        username: u.username,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        profilePictureUrl: u.profilePictureUrl,
+        country: u.country,
+      }));
+    }),
+
   // Fetch a user by username. Always returns the same public shape.
   // The client determines if it's the viewer's own profile by
   // comparing IDs, and conditionally shows edit controls.
@@ -103,6 +126,7 @@ export const userRouter = createTRPCRouter({
       ).nullable().optional(),
       country: z.string().length(2).nullable().optional(),
       bio: z.string().max(100).optional(),
+      youtubeChannelUrl: z.string().url().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {

@@ -215,6 +215,17 @@ export default function ProfilePage() {
                     Link WCA
                   </button>
                 )}
+                {user.youtubeChannelUrl && (
+                  <a
+                    href={user.youtubeChannelUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-red-500 hover:underline"
+                  >
+                    YouTube
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
               </div>
               {user.bio && (
                 <p className="text-sm text-muted-foreground mt-2">{user.bio}</p>

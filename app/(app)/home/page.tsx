@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useTRPC } from "@/lib/trpc/client";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { PracticePostCard } from "@/lib/components/practice-post-card";
+import { UserSearch } from "@/lib/components/user-search";
 import { CubeLoader } from "@/lib/components/cube-loader";
 
 export default function HomePage() {
@@ -58,6 +59,7 @@ export default function HomePage() {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-2xl space-y-4 p-4">
+        <UserSearch />
         {posts.map((post) => (
           <PracticePostCard key={post.id} post={post} />
         ))}
