@@ -65,11 +65,17 @@ function FollowButton({ userId }: { userId: string }) {
   );
 
   const follow = useMutation(trpc.user.follow.mutationOptions({
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) });
+      queryClient.invalidateQueries({ queryKey: [["user", "getByUsername"]] });
+    },
   }));
 
   const unfollow = useMutation(trpc.user.unfollow.mutationOptions({
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) });
+      queryClient.invalidateQueries({ queryKey: [["user", "getByUsername"]] });
+    },
   }));
 
   const isFollowing = isFollowingQuery.data?.following ?? false;
@@ -168,8 +174,8 @@ export default function ProfilePage() {
                 {user.firstName} {user.lastName}
               </p>
               <div className="flex items-center gap-4 mt-2 text-sm flex-wrap">
-                <span><strong className="text-foreground font-extrabold">12</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
-                <span><strong className="text-foreground font-extrabold">8</strong> <span className="text-muted-foreground text-xs">Following</span></span>
+                <span><strong className="text-foreground font-extrabold">{user.followerCount}</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
+                <span><strong className="text-foreground font-extrabold">{user.followingCount}</strong> <span className="text-muted-foreground text-xs">Following</span></span>
                 {user.wcaId && (
                   <a
                     href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}

@@ -14,12 +14,16 @@ export const userRouter = createTRPCRouter({
     .input(z.object({ username: z.string() }))
     .query(async ({ ctx, input }) => {
       const user = await userService(ctx).getByUsername(input.username);
-      const medalRows = await ctx.prisma.medal.groupBy({
-        by: ["type"],
-        where: { userId: user.id },
-        _count: true,
-      });
-      return userToIUser(user, medalRows);
+      const [medalRows, followerCount, followingCount] = await Promise.all([
+        ctx.prisma.medal.groupBy({
+          by: ["type"],
+          where: { userId: user.id },
+          _count: true,
+        }),
+        ctx.prisma.follow.count({ where: { followeeId: user.id } }),
+        ctx.prisma.follow.count({ where: { followerId: user.id } }),
+      ]);
+      return userToIUser(user, medalRows, { followers: followerCount, following: followingCount });
     }),
 
   // Check if a username is available. Returns { available: boolean }.

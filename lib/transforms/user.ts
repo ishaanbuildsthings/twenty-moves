@@ -16,11 +16,14 @@ export interface IUser {
   country: string | null;
   bio: string;
   medals: MedalCounts;
+  followerCount: number;
+  followingCount: number;
 }
 
 export function userToIUser(
   user: User,
   medalRows?: { type: MedalType; _count: number }[],
+  counts?: { followers: number; following: number },
 ): IUser {
   const medals: MedalCounts = { gold: 0, silver: 0, bronze: 0 };
   if (medalRows) {
@@ -40,5 +43,7 @@ export function userToIUser(
     country: user.country,
     bio: user.bio,
     medals,
+    followerCount: counts?.followers ?? 0,
+    followingCount: counts?.following ?? 0,
   };
 }
