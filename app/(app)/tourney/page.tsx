@@ -760,12 +760,12 @@ function EventCard({
 
       {/* Right: action button (vertically centered across both lines) */}
       <div className="shrink-0 ml-4">
-        {status === "completed" && (
+        {(!isCurrent || status === "completed") && (
           <div
             onClick={(e) => { e.stopPropagation(); onView(); }}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-neutral-500 hover:to-neutral-600 font-bold text-sm transition-all shadow-[0_2px_0_0_#1a1a1a] cursor-pointer"
           >
-            View
+            Results
           </div>
         )}
         {status === "not-started" && isCurrent && (

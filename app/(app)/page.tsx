@@ -613,7 +613,7 @@ export default function TimerPage() {
                             key={p ?? "ok"}
                             className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition-colors ${
                               solve.penalty === p
-                                ? "bg-primary text-primary-foreground shadow-sm"
+                                ? `${accent.bg} text-white shadow-sm`
                                 : "text-muted-foreground hover:text-foreground"
                             }`}
                             onClick={() => handlePenalty(solve.id, p)}
