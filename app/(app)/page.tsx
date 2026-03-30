@@ -630,7 +630,7 @@ export default function TimerPage() {
         <div className="p-2 border-t border-border flex flex-col items-center gap-1">
           {stats && (
             <button
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-green-500 py-1 px-3 rounded-md hover:bg-green-500/10 transition-colors"
+              className="flex items-center gap-1.5 text-xs font-bold py-1 px-3 rounded bg-amber-600 text-white hover:bg-amber-500 transition-colors shadow-[0_2px_0_0_theme(colors.amber.800)]"
               onClick={() => setPostOpen(true)}
             >
               <FilePen className="w-3.5 h-3.5" />
