@@ -735,10 +735,15 @@ function EventCard({
               )}
             </>
           )}
-          {status !== "completed" && totalCompetitors > 0 && (
+          {status !== "completed" && isCurrent && totalCompetitors > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
               {totalCompetitors} competing
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
+            </span>
+          )}
+          {status !== "completed" && !isCurrent && (
+            <span className="text-xs font-semibold text-muted-foreground">
+              {totalCompetitors} competed
             </span>
           )}
         </div>
