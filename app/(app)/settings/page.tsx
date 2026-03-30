@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Check, X, Loader2, Camera, ChevronDown, ExternalLink, ArrowLeft } from "lucide-react";
+import { Pencil, Check, X, Loader2, Camera, ChevronDown, ExternalLink, ArrowLeft, LogOut } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { COUNTRIES, countryCodeToFlag } from "@/lib/countries";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
@@ -18,6 +20,7 @@ export default function SettingsPage() {
   const { viewer, setViewer } = useViewer();
   const { displaySettings, updateDisplaySettings, accent } = useSettings();
   const trpc = useTRPC();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const [editingField, setEditingField] = useState<EditingField>(null);
@@ -483,6 +486,19 @@ export default function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {/* Sign out */}
+      <button
+        className="flex items-center gap-2 text-sm text-red-500 hover:text-red-400 transition-colors mt-4"
+        onClick={async () => {
+          const supabase = createBrowserSupabaseClient();
+          await supabase.auth.signOut();
+          router.refresh();
+        }}
+      >
+        <LogOut className="w-4 h-4" />
+        Sign out
+      </button>
     </div>
   );
 }

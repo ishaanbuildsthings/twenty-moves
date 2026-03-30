@@ -35,6 +35,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useSettings } from "@/lib/context/settings";
+import { SCRAMBLE_SIZE_CLASSES } from "@/lib/settings/timer";
 import { DraftPostModal } from "@/lib/components/draft-post-modal";
 import {
   DropdownMenu,
@@ -416,6 +417,29 @@ export default function TimerPage() {
                   }`} />
                 </button>
               </div>
+
+              {/* Scramble size */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Scramble size</p>
+                  <p className="text-xs text-muted-foreground">Font size for scramble text</p>
+                </div>
+                <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
+                  {(["small", "medium", "large"] as const).map((size) => (
+                    <button
+                      key={size}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors capitalize ${
+                        timerSettings.scrambleSize === size
+                          ? `${accent.bg} text-white`
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => updateTimerSettings({ scrambleSize: size })}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -424,7 +448,7 @@ export default function TimerPage() {
       {/* Timer area */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col flex-1 items-center justify-center gap-6">
-        <p className="font-mono text-center text-lg max-w-xl px-4 min-h-[1.75rem] whitespace-pre-line">
+        <p className={`font-mono text-center ${SCRAMBLE_SIZE_CLASSES[timerSettings.scrambleSize]} max-w-xl px-4 min-h-[1.75rem] whitespace-pre-line`}>
           {scramble ?? ""}
         </p>
         <p

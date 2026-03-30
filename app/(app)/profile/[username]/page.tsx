@@ -203,7 +203,7 @@ export default function ProfilePage() {
           {isOwnProfile ? (
             <Link
               href="/settings"
-              className="px-4 py-2 text-sm font-bold rounded bg-neutral-600 text-foreground hover:bg-neutral-500 transition-colors shadow-[0_3px_0_0_#1a1a1a]"
+              className="shrink-0 self-start whitespace-nowrap px-4 py-2 text-sm font-bold rounded bg-neutral-600 text-foreground hover:bg-neutral-500 transition-colors shadow-[0_3px_0_0_#1a1a1a]"
             >
               Edit Profile
             </Link>

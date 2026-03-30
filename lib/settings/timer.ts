@@ -3,6 +3,8 @@
 // Existing users won't have them in their stored JSON, so they
 // get the default via the spread in loadTimerSettings().
 
+export type ScrambleSize = "small" | "medium" | "large";
+
 export interface TimerSettings {
   /** How long (ms) the spacebar must be held before the timer is ready. */
   holdDelayMs: number;
@@ -12,13 +14,22 @@ export interface TimerSettings {
   inspectionDurationMs: number;
   /** Whether to show the running time while timing (false = hide until stop). */
   showTimerWhileRunning: boolean;
+  /** Font size for scramble text. */
+  scrambleSize: ScrambleSize;
 }
+
+export const SCRAMBLE_SIZE_CLASSES: Record<ScrambleSize, string> = {
+  small: "text-2xl",
+  medium: "text-3xl",
+  large: "text-4xl",
+};
 
 export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   holdDelayMs: 550,
   useInspection: false,
   inspectionDurationMs: 15000,
   showTimerWhileRunning: true,
+  scrambleSize: "medium",
 };
 
 const STORAGE_KEY = "timerSettings";
