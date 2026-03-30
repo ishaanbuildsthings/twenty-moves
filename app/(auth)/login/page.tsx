@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -16,14 +16,19 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recoveryReady, setRecoveryReady] = useState(false);
 
-  // Detect if we landed here from a password reset link (Supabase adds hash params)
-  // The Supabase client auto-exchanges the token, so we just need to show the reset form
-  useState(() => {
-    if (typeof window !== "undefined" && window.location.hash.includes("type=recovery")) {
-      setMode("reset");
-    }
-  });
+  // Listen for Supabase PASSWORD_RECOVERY auth event.
+  // When user clicks the reset link, Supabase exchanges the token and fires this event.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("reset");
+        setRecoveryReady(true);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +50,11 @@ export default function LoginPage() {
     }
 
     if (mode === "reset") {
+      if (!recoveryReady) {
+        setError("Recovery session not ready. Please click the reset link in your email again.");
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       setLoading(false);
       if (error) {
