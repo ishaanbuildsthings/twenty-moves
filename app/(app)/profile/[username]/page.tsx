@@ -115,7 +115,7 @@ function FollowButton({ userId, username }: { userId: string; username: string }
     <button
       className={`px-4 py-2 text-sm font-bold rounded transition-all ${
         isFollowing
-          ? "bg-gradient-to-b from-neutral-600 to-neutral-700 text-foreground hover:from-red-600 hover:to-red-700 hover:text-white shadow-[0_2px_0_0_#1a1a1a]"
+          ? "bg-neutral-600 text-foreground hover:bg-neutral-500 shadow-[0_2px_0_0_#1a1a1a]"
           : `${accent.bg} text-white ${accent.hover} ${accent.shadow}`
       }`}
       disabled={isPending || isFollowingQuery.isLoading}
