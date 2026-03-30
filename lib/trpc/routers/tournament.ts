@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, authedProcedure } from "../init";
 import { tournamentService } from "@/lib/services/tournament";
+import { getCurrentTournamentDatePST } from "@/lib/tournament/date";
 
 export const tournamentRouter = createTRPCRouter({
   // Get the viewer's status across all events for a given contest.
@@ -107,6 +108,9 @@ export const tournamentRouter = createTRPCRouter({
       if (!tournament) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
       }
+      if (tournament.datePST !== getCurrentTournamentDatePST()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This contest has ended" });
+      }
       return service.startEvent(tournament.id, input.eventId);
     }),
 
@@ -121,6 +125,13 @@ export const tournamentRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const entry = await ctx.prisma.tournamentEntry.findUniqueOrThrow({
+        where: { id: input.entryId },
+        include: { tournament: true },
+      });
+      if (entry.tournament.datePST !== getCurrentTournamentDatePST()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This contest has ended" });
+      }
       const service = tournamentService(ctx);
       return service.submitSolve(input);
     }),
