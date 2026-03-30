@@ -161,6 +161,8 @@ model PracticePost {
   event       Event       @relation(fields: [eventId], references: [id])
   scrambleSet ScrambleSet @relation(fields: [scrambleSetId], references: [id])
   likes       PostLike[]
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model PostLike {
