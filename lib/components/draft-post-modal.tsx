@@ -11,6 +11,7 @@ import {
 import { type EventStats, DNF_SENTINEL, recomputeStats, findBestAverageIndex, computeAo5, computeAo12, computeAo100 } from "@/lib/cubing/stats";
 import { formatTime } from "@/lib/cubing/format";
 import { type EventConfig, getEnabledStats } from "@/lib/cubing/events";
+import { EventIcon } from "@/lib/components/event-icon";
 import { type Solve } from "@/app/(app)/idb";
 import {
   Select,
@@ -168,9 +169,12 @@ export function DraftPostModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Share practice session</DialogTitle>
+          <DialogTitle>Share practice session ⏱</DialogTitle>
           <DialogDescription>
-            {eventConfig.name} · {selectedSolves.length} of {solves.length} solve{solves.length !== 1 ? "s" : ""} selected
+            <span className="inline-flex items-center gap-1.5">
+              <EventIcon event={eventConfig} size={16} />
+              {selectedSolves.length} of {solves.length} solve{solves.length !== 1 ? "s" : ""} selected
+            </span>
           </DialogDescription>
         </DialogHeader>
 
