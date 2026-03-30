@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Check, X, Loader2, Camera, ChevronDown, ExternalLink, ArrowLeft, LogOut } from "lucide-react";
+import { Pencil, Check, X, Loader2, Camera, ChevronDown, ExternalLink, ArrowLeft, LogOut, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -33,6 +33,13 @@ export default function SettingsPage() {
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [pictureError, setPictureError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Password change state.
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   // Debounce username input — only check after 400ms of no typing.
   useEffect(() => {
@@ -450,6 +457,75 @@ export default function SettingsPage() {
         {error && (
           <p className="text-sm text-red-500 pt-2">{error}</p>
         )}
+      </section>
+
+      {/* Account section */}
+      <section className="space-y-1 mb-8">
+        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Account
+        </h2>
+        <div className="py-3 border-b border-border">
+          {showPasswordChange ? (
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Change password</p>
+              <input
+                type="password"
+                placeholder="New password"
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="block w-full bg-muted rounded-md px-3 py-2 text-sm border border-border focus:outline-none"
+              />
+              {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
+              {passwordSuccess && <p className="text-xs text-green-500">Password updated!</p>}
+              <div className="flex gap-2">
+                <button
+                  className={`px-3 py-1.5 text-sm font-bold rounded ${accent.bg} text-white ${accent.shadow} transition-colors disabled:opacity-50`}
+                  disabled={passwordLoading || newPassword.length < 6}
+                  onClick={async () => {
+                    setPasswordLoading(true);
+                    setPasswordError(null);
+                    setPasswordSuccess(false);
+                    const supabase = createBrowserSupabaseClient();
+                    const { error } = await supabase.auth.updateUser({ password: newPassword });
+                    setPasswordLoading(false);
+                    if (error) {
+                      setPasswordError(error.message);
+                      return;
+                    }
+                    setPasswordSuccess(true);
+                    setNewPassword("");
+                    setTimeout(() => {
+                      setShowPasswordChange(false);
+                      setPasswordSuccess(false);
+                    }, 2000);
+                  }}
+                >
+                  {passwordLoading ? "Updating..." : "Update password"}
+                </button>
+                <button
+                  className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => {
+                    setShowPasswordChange(false);
+                    setNewPassword("");
+                    setPasswordError(null);
+                    setPasswordSuccess(false);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="flex items-center gap-2 text-sm font-medium hover:text-muted-foreground transition-colors"
+              onClick={() => setShowPasswordChange(true)}
+            >
+              <Lock className="w-4 h-4" />
+              Change password
+            </button>
+          )}
+        </div>
       </section>
 
       {/* Linked Accounts section */}

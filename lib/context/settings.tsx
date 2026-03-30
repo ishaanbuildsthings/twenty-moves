@@ -1,14 +1,16 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import {
   loadTimerSettings,
   saveTimerSettings,
+  DEFAULT_TIMER_SETTINGS,
   type TimerSettings,
 } from "@/lib/settings/timer";
 import {
   loadDisplaySettings,
   saveDisplaySettings,
+  DEFAULT_DISPLAY_SETTINGS,
   ACCENT_STYLES,
   type DisplaySettings,
 } from "@/lib/settings/display";
@@ -24,9 +26,14 @@ interface SettingsContextValue {
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  // Load from localStorage on first render. Synchronous, no loading state.
-  const [timerSettings, setTimerSettings] = useState(loadTimerSettings);
-  const [displaySettings, setDisplaySettings] = useState(loadDisplaySettings);
+  // Start with defaults to match SSR, then hydrate from localStorage.
+  const [timerSettings, setTimerSettings] = useState<TimerSettings>(DEFAULT_TIMER_SETTINGS);
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
+
+  useEffect(() => {
+    setTimerSettings(loadTimerSettings());
+    setDisplaySettings(loadDisplaySettings());
+  }, []);
 
   const updateTimerSettings = useCallback(
     (updates: Partial<TimerSettings>) => {

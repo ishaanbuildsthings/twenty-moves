@@ -16,8 +16,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cubing Strava",
-  description: "A social app for cubers",
+  title: "twenty moves",
+  description: "The social platform for speedcubers",
+  icons: {
+    icon: "/twenty-moves-favicon.svg",
+  },
 };
 
 // Root layout — wraps ALL pages (both (auth) and (app) route groups).
