@@ -196,7 +196,7 @@ function CommentsModal({ post, open, onOpenChange }: { post: PostWithInteraction
       updatePostInCache(queryClient, post.id, (p) => ({
         ...p,
         numComments: p.numComments + 1,
-        comments: [...p.comments, newComment],
+        comments: [newComment, ...p.comments],
       }));
       setCommentText("");
     },

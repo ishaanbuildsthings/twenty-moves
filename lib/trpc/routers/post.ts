@@ -34,7 +34,7 @@ export const postRouter = createTRPCRouter({
           likes: { where: { userId: ctx.viewer.userId }, select: { id: true } },
           comments: {
             include: { user: true },
-            orderBy: { createdAt: "asc" },
+            orderBy: { createdAt: "desc" },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -87,7 +87,7 @@ export const postRouter = createTRPCRouter({
           likes: { where: { userId: ctx.viewer.userId }, select: { id: true } },
           comments: {
             include: { user: true },
-            orderBy: { createdAt: "asc" },
+            orderBy: { createdAt: "desc" },
           },
         },
         orderBy: { createdAt: "desc" },
