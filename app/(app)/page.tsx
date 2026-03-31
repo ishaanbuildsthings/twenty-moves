@@ -331,7 +331,7 @@ export default function TimerPage() {
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="ml-auto flex items-center gap-2">
-          {stats && (
+          {stats && solves.length > 0 && (
             <button
               className={`flex items-center gap-1.5 text-xs font-bold py-1.5 px-3 rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow}`}
               onClick={() => setPostOpen(true)}
