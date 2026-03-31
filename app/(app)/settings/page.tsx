@@ -580,7 +580,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">Link to appear on tournament leaderboards</p>
               </div>
               <button
-                className={`text-xs font-semibold px-3 py-1.5 rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow}`}
+                className="text-xs font-semibold px-3 py-1.5 rounded bg-neutral-600 text-foreground hover:bg-neutral-500 transition-colors shadow-[0_2px_0_0_#1a1a1a]"
                 onClick={startWcaOAuth}
               >
                 Link WCA
