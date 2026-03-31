@@ -828,8 +828,8 @@ function LeaderboardOverview({
                 </button>
               </div>
 
-              <div className="rounded-lg bg-card border border-border overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="rounded-lg bg-card border border-border overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead>
                     <tr className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
                       <th className="px-4 py-2 text-left w-10">#</th>
@@ -1022,8 +1022,8 @@ function EventLeaderboardDetail({
             </div>
           )}
           {/* Full results table */}
-          <div className="rounded-lg bg-card border border-border">
-            <table className="w-full text-sm">
+          <div className="rounded-lg bg-card border border-border overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   <th className="px-4 py-2 text-left w-10">#</th>
