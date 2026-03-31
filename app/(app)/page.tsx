@@ -18,7 +18,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
-import { effectiveTime, DNF_SENTINEL, type EventStats } from "@/lib/cubing/stats";
+import { effectiveTime, DNF_SENTINEL, type EventStats, type StatType, computeAo5, computeAo12, computeAo100, computeMo3, findBestAverageIndex } from "@/lib/cubing/stats";
 import { formatTime, formatSolveTime } from "@/lib/cubing/format";
 import { getPracticeStats } from "./idb";
 import {
@@ -45,6 +45,168 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Window sizes for each average type.
+const WINDOW_SIZES: Record<string, number> = { ao5: 5, ao12: 12, ao100: 100, mo3: 3 };
+
+// Compute functions by stat type (for finding best window index).
+const COMPUTE_FNS: Record<string, (s: import("@/lib/cubing/stats").SolveForStats[]) => number | null> = {
+  ao5: computeAo5,
+  ao12: computeAo12,
+  ao100: computeAo100,
+  mo3: computeMo3,
+};
+
+// Get the solves that make up a given stat.
+function getSolvesForStat(
+  solves: import("./idb").Solve[],
+  stat: StatType,
+  variant: "current" | "best"
+): import("./idb").Solve[] {
+  if (stat === "single") {
+    if (variant === "current") return solves.length > 0 ? [solves[0]] : [];
+    // Best single — find the solve with the minimum effective time
+    if (solves.length === 0) return [];
+    let bestIdx = 0;
+    let bestTime = effectiveTime(solves[0]);
+    for (let i = 1; i < solves.length; i++) {
+      const t = effectiveTime(solves[i]);
+      if (t < bestTime) { bestTime = t; bestIdx = i; }
+    }
+    return [solves[bestIdx]];
+  }
+
+  const windowSize = WINDOW_SIZES[stat];
+  if (!windowSize) return [];
+
+  if (variant === "current") {
+    return solves.slice(0, windowSize);
+  }
+
+  // Best — use findBestAverageIndex to locate the window
+  const computeFn = COMPUTE_FNS[stat];
+  if (!computeFn) return [];
+  const startIdx = findBestAverageIndex(solves, computeFn);
+  if (startIdx < 0) return [];
+  return solves.slice(startIdx, startIdx + windowSize);
+}
+
+function StatDetailModal({
+  detail,
+  onClose,
+  solves,
+  accent,
+}: {
+  detail: { stat: StatType; variant: "current" | "best" };
+  onClose: () => void;
+  solves: import("./idb").Solve[];
+  accent: ReturnType<typeof import("@/lib/context/settings").useSettings>["accent"];
+}) {
+  const windowSolves = getSolvesForStat(solves, detail.stat, detail.variant);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  const statLabels: Record<StatType, string> = {
+    single: "Single",
+    mo3: "Mo3",
+    ao5: "Ao5",
+    ao12: "Ao12",
+    ao100: "Ao100",
+  };
+
+  const title = `${detail.variant === "best" ? "Best" : "Current"} ${statLabels[detail.stat]}`;
+
+  // Determine which solves are trimmed (excluded from the average).
+  // ao5/ao12: 1 best + 1 worst; ao100: 5 best + 5 worst; mo3: none (straight mean).
+  const trimmedIndices = new Set<number>();
+  const windowSize = WINDOW_SIZES[detail.stat];
+  if (windowSize && detail.stat !== "mo3" && windowSolves.length >= windowSize) {
+    const trimCount = detail.stat === "ao100" ? 5 : 1;
+    const indexed = windowSolves.map((s, i) => ({ i, t: effectiveTime(s) }));
+    const sorted = [...indexed].sort((a, b) => a.t - b.t);
+    for (let j = 0; j < trimCount; j++) trimmedIndices.add(sorted[j].i);
+    for (let j = sorted.length - trimCount; j < sorted.length; j++) trimmedIndices.add(sorted[j].i);
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {windowSolves.length} solve{windowSolves.length !== 1 ? "s" : ""}
+          </DialogDescription>
+          {windowSolves.length > 0 && (
+            <button
+              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded transition-colors w-fit ${
+                copiedAll
+                  ? `${accent.bgSubtle} ${accent.text}`
+                  : `bg-muted hover:bg-muted/80 text-muted-foreground`
+              }`}
+              onClick={() => {
+                const text = windowSolves
+                  .map((s, i) => `${i + 1}. ${formatSolveTime(s)}   ${s.scramble}`)
+                  .join("\n");
+                navigator.clipboard.writeText(`${title}\n\n${text}`);
+                setCopiedAll(true);
+                setTimeout(() => setCopiedAll(false), 1500);
+              }}
+            >
+              {copiedAll ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {copiedAll ? "Copied" : "Copy all"}
+            </button>
+          )}
+        </DialogHeader>
+        {windowSolves.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Not enough solves.</p>
+        ) : (
+          <div className="space-y-1">
+            {windowSolves.map((solve, i) => {
+              const trimmed = trimmedIndices.has(i);
+              return (
+                <div
+                  key={solve.id}
+                  className="flex items-start gap-3 px-3 py-2 rounded-md"
+                >
+                  <span className="text-xs text-muted-foreground tabular-nums w-5 shrink-0 pt-0.5">
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono tabular-nums text-sm font-bold">
+                        {trimmed ? `(${formatSolveTime(solve)})` : formatSolveTime(solve)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed truncate">
+                        {solve.scramble}
+                      </p>
+                      <button
+                        className={`p-0.5 rounded transition-colors shrink-0 ${
+                          copiedId === solve.id
+                            ? accent.text
+                            : "text-muted-foreground/50 hover:text-foreground"
+                        }`}
+                        onClick={() => {
+                          navigator.clipboard.writeText(solve.scramble);
+                          setCopiedId(solve.id);
+                          setTimeout(() => setCopiedId(null), 1500);
+                        }}
+                        title="Copy scramble"
+                      >
+                        {copiedId === solve.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Timer states:
 // idle       — waiting for spacebar press, shows last time or 0.00
 // inspecting — inspection countdown (if enabled)
@@ -70,6 +232,7 @@ export default function TimerPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
+  const [statDetail, setStatDetail] = useState<{ stat: StatType; variant: "current" | "best" } | null>(null);
   // Whether there are more solves in IDB beyond what's currently loaded.
   // False once a batch returns fewer results than requested.
   const [hasMore, setHasMore] = useState(true);
@@ -435,56 +598,56 @@ export default function TimerPage() {
                 {getPracticeStats(selectedEvent).includes("single") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Single</span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => solves.length > 0 && setStatDetail({ stat: "single", variant: "current" })}>
                       {solves.length > 0 ? formatSolveTime(solves[0]) : "-"}
-                    </span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    </button>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestSingle !== null && setStatDetail({ stat: "single", variant: "best" })}>
                       {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}
-                    </span>
+                    </button>
                   </div>
                 )}
                 {getPracticeStats(selectedEvent).includes("mo3") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Mo3</span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentMo3 !== null && setStatDetail({ stat: "mo3", variant: "current" })}>
                       {stats.currentMo3 !== null ? formatTime(stats.currentMo3) : "-"}
-                    </span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    </button>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestMo3 !== null && setStatDetail({ stat: "mo3", variant: "best" })}>
                       {stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}
-                    </span>
+                    </button>
                   </div>
                 )}
                 {getPracticeStats(selectedEvent).includes("ao5") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Ao5</span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo5 !== null && setStatDetail({ stat: "ao5", variant: "current" })}>
                       {stats.currentAo5 !== null ? formatTime(stats.currentAo5) : "-"}
-                    </span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    </button>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo5 !== null && setStatDetail({ stat: "ao5", variant: "best" })}>
                       {stats.bestAo5 !== null ? formatTime(stats.bestAo5) : "-"}
-                    </span>
+                    </button>
                   </div>
                 )}
                 {getPracticeStats(selectedEvent).includes("ao12") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Ao12</span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo12 !== null && setStatDetail({ stat: "ao12", variant: "current" })}>
                       {stats.currentAo12 !== null ? formatTime(stats.currentAo12) : "-"}
-                    </span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    </button>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo12 !== null && setStatDetail({ stat: "ao12", variant: "best" })}>
                       {stats.bestAo12 !== null ? formatTime(stats.bestAo12) : "-"}
-                    </span>
+                    </button>
                   </div>
                 )}
                 {getPracticeStats(selectedEvent).includes("ao100") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Ao100</span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo100 !== null && setStatDetail({ stat: "ao100", variant: "current" })}>
                       {stats.currentAo100 !== null ? formatTime(stats.currentAo100) : "-"}
-                    </span>
-                    <span className="font-mono tabular-nums text-sm font-bold text-right">
+                    </button>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo100 !== null && setStatDetail({ stat: "ao100", variant: "best" })}>
                       {stats.bestAo100 !== null ? formatTime(stats.bestAo100) : "-"}
-                    </span>
+                    </button>
                   </div>
                 )}
                 <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
@@ -564,56 +727,56 @@ export default function TimerPage() {
               {getPracticeStats(selectedEvent).includes("single") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Single</span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => solves.length > 0 && setStatDetail({ stat: "single", variant: "current" })}>
                     {solves.length > 0 ? formatSolveTime(solves[0]) : "-"}
-                  </span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  </button>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestSingle !== null && setStatDetail({ stat: "single", variant: "best" })}>
                     {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}
-                  </span>
+                  </button>
                 </div>
               )}
               {getPracticeStats(selectedEvent).includes("mo3") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Mo3</span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentMo3 !== null && setStatDetail({ stat: "mo3", variant: "current" })}>
                     {stats.currentMo3 !== null ? formatTime(stats.currentMo3) : "-"}
-                  </span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  </button>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestMo3 !== null && setStatDetail({ stat: "mo3", variant: "best" })}>
                     {stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}
-                  </span>
+                  </button>
                 </div>
               )}
               {getPracticeStats(selectedEvent).includes("ao5") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao5</span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo5 !== null && setStatDetail({ stat: "ao5", variant: "current" })}>
                     {stats.currentAo5 !== null ? formatTime(stats.currentAo5) : "-"}
-                  </span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  </button>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo5 !== null && setStatDetail({ stat: "ao5", variant: "best" })}>
                     {stats.bestAo5 !== null ? formatTime(stats.bestAo5) : "-"}
-                  </span>
+                  </button>
                 </div>
               )}
               {getPracticeStats(selectedEvent).includes("ao12") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao12</span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo12 !== null && setStatDetail({ stat: "ao12", variant: "current" })}>
                     {stats.currentAo12 !== null ? formatTime(stats.currentAo12) : "-"}
-                  </span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  </button>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo12 !== null && setStatDetail({ stat: "ao12", variant: "best" })}>
                     {stats.bestAo12 !== null ? formatTime(stats.bestAo12) : "-"}
-                  </span>
+                  </button>
                 </div>
               )}
               {getPracticeStats(selectedEvent).includes("ao100") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao100</span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo100 !== null && setStatDetail({ stat: "ao100", variant: "current" })}>
                     {stats.currentAo100 !== null ? formatTime(stats.currentAo100) : "-"}
-                  </span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  </button>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo100 !== null && setStatDetail({ stat: "ao100", variant: "best" })}>
                     {stats.bestAo100 !== null ? formatTime(stats.bestAo100) : "-"}
-                  </span>
+                  </button>
                 </div>
               )}
               <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
@@ -728,6 +891,14 @@ export default function TimerPage() {
             eventConfig={eventConfig}
             stats={stats}
             solves={solves}
+          />
+        )}
+        {statDetail && (
+          <StatDetailModal
+            detail={statDetail}
+            onClose={() => setStatDetail(null)}
+            solves={solves}
+            accent={accent}
           />
         )}
         <div className="p-2 border-t border-border flex flex-col items-center gap-1">
