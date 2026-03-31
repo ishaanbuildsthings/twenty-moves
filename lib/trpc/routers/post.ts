@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, authedProcedure } from "../init";
 import { recomputeStats } from "@/lib/cubing/stats";
-import { EVENT_MAP, getEnabledStats } from "@/lib/cubing/events";
+import { CubeEvent, EVENT_MAP, getEnabledStats } from "@/lib/cubing/events";
 import { eventService } from "@/lib/services/event";
 import { postService } from "@/lib/services/post";
 import { practicePostToIPracticePost } from "@/lib/transforms/post";
@@ -11,7 +11,7 @@ import { practicePostToIPracticePost } from "@/lib/transforms/post";
 const solveSchema = z.object({
   timeMs: z.number().int().positive(),
   penalty: z.enum(["plus_two", "dnf"]).optional(),
-  scramble: z.string().min(1),
+  scramble: z.string().min(1).max(500),
 });
 
 const FEED_PAGE_SIZE = 20;
@@ -21,7 +21,7 @@ export const postRouter = createTRPCRouter({
     .input(
       z.object({
         userId: z.string().min(1).max(50),
-        cursor: z.string().optional(),
+        cursor: z.string().max(50).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -54,7 +54,7 @@ export const postRouter = createTRPCRouter({
   getFeed: authedProcedure
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().max(50).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -135,7 +135,7 @@ export const postRouter = createTRPCRouter({
   createPracticeSessionPost: authedProcedure
     .input(
       z.object({
-        event: z.string(),
+        event: z.nativeEnum(CubeEvent),
         solves: z.array(solveSchema).min(1).max(1000),
         caption: z.string().max(500).default(""),
         youtubeUrl: z.string().url().optional(),

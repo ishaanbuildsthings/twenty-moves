@@ -1,8 +1,14 @@
 import { z } from "zod/v4";
 import { TRPCError } from "@trpc/server";
+import { PrismaClientKnownRequestError } from "@prisma/client-runtime-utils";
 import { createTRPCRouter, baseProcedure, authedProcedure } from "../init";
 import { userToIUser } from "@/lib/transforms/user";
 import { publicEnv } from "@/lib/env";
+
+const usernameSchema = z.string().min(3).max(30).regex(
+  /^[a-zA-Z0-9_]+$/,
+  "Username can only contain letters, numbers, and underscores"
+);
 
 export const authRouter = createTRPCRouter({
   // Creates a profile for a user who has signed in with Supabase but
@@ -11,7 +17,7 @@ export const authRouter = createTRPCRouter({
   createProfile: baseProcedure
     .input(
       z.object({
-        username: z.string().min(3).max(30),
+        username: usernameSchema,
         firstName: z.string().min(1).max(50),
         lastName: z.string().min(1).max(50),
         country: z.string().length(2).optional(),
@@ -40,18 +46,24 @@ export const authRouter = createTRPCRouter({
         });
       }
 
-      const user = await ctx.prisma.user.create({
-        data: {
-          supabaseId: supabaseUser.id,
-          username: input.username,
-          firstName: input.firstName,
-          lastName: input.lastName,
-          profilePictureUrl: input.profilePictureUrl,
-          country: input.country,
-        },
-      });
-
-      return userToIUser(user);
+      try {
+        const user = await ctx.prisma.user.create({
+          data: {
+            supabaseId: supabaseUser.id,
+            username: input.username,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            profilePictureUrl: input.profilePictureUrl,
+            country: input.country,
+          },
+        });
+        return userToIUser(user);
+      } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
+          throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
+        }
+        throw e;
+      }
     }),
 
   // Returns the current viewer's auth state without throwing. Used by
