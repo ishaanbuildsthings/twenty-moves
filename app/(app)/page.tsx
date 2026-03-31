@@ -62,6 +62,10 @@ function getSolvesForStat(
   stat: StatType,
   variant: "current" | "best"
 ): import("./idb").Solve[] {
+  if (stat === "mean") {
+    return [...solves];
+  }
+
   if (stat === "single") {
     if (variant === "current") return solves.length > 0 ? [solves[0]] : [];
     // Best single — find the solve with the minimum effective time
@@ -111,6 +115,7 @@ function StatDetailModal({
     ao5: "Ao5",
     ao12: "Ao12",
     ao100: "Ao100",
+    mean: "Mean",
   };
 
   const title = `${detail.variant === "best" ? "Best" : "Current"} ${statLabels[detail.stat]}`;
@@ -652,9 +657,9 @@ export default function TimerPage() {
                 )}
                 <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                   <span className="text-sm font-semibold text-muted-foreground">Mean</span>
-                  <span className="font-mono tabular-nums text-sm font-bold text-right">
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.sessionMean !== null && setStatDetail({ stat: "mean", variant: "current" })}>
                     {stats.sessionMean !== null ? formatTime(stats.sessionMean) : "-"}
-                  </span>
+                  </button>
                   <span />
                 </div>
               </div>
@@ -781,9 +786,9 @@ export default function TimerPage() {
               )}
               <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                 <span className="text-xs font-semibold text-muted-foreground">Mean</span>
-                <span className="font-mono tabular-nums text-sm font-bold text-right">
+                <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.sessionMean !== null && setStatDetail({ stat: "mean", variant: "current" })}>
                   {stats.sessionMean !== null ? formatTime(stats.sessionMean) : "-"}
-                </span>
+                </button>
                 <span />
               </div>
             </div>

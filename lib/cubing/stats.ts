@@ -6,7 +6,7 @@
 export const DNF_SENTINEL = 999_999_999;
 const DNF = DNF_SENTINEL;
 
-export type StatType = "single" | "ao5" | "ao12" | "ao100" | "mo3";
+export type StatType = "single" | "ao5" | "ao12" | "ao100" | "mo3" | "mean";
 
 export interface SolveForStats {
   timeMs: number;
