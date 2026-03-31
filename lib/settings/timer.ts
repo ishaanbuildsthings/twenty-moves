@@ -3,6 +3,8 @@
 // Existing users won't have them in their stored JSON, so they
 // get the default via the spread in loadTimerSettings().
 
+import { CubeEvent } from "@/lib/cubing/events";
+
 export type ScrambleSize = "small" | "medium" | "large";
 
 export interface TimerSettings {
@@ -16,6 +18,8 @@ export interface TimerSettings {
   showTimerWhileRunning: boolean;
   /** Font size for scramble text. */
   scrambleSize: ScrambleSize;
+  /** Last selected cube event — persisted across navigations and refreshes. */
+  selectedEvent: CubeEvent;
 }
 
 export const SCRAMBLE_SIZE_CLASSES: Record<ScrambleSize, string> = {
@@ -30,6 +34,7 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   inspectionDurationMs: 15000,
   showTimerWhileRunning: true,
   scrambleSize: "medium",
+  selectedEvent: CubeEvent.THREE,
 };
 
 const STORAGE_KEY = "timerSettings";

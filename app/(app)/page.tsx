@@ -223,7 +223,11 @@ type TimerState = "idle" | "inspecting" | "holding" | "ready" | "running";
 
 export default function TimerPage() {
   const { timerSettings, updateTimerSettings, accent } = useSettings();
-  const [selectedEvent, setSelectedEvent] = useState<CubeEvent>(CubeEvent.THREE);
+  const selectedEvent = timerSettings.selectedEvent;
+  const setSelectedEvent = useCallback(
+    (event: CubeEvent) => updateTimerSettings({ selectedEvent: event }),
+    [updateTimerSettings]
+  );
   const [state, setState] = useState<TimerState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [inspectionTime, setInspectionTime] = useState(0);
