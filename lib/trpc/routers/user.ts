@@ -127,6 +127,38 @@ export const userRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  // List a user's followers (people who follow them).
+  getFollowers: authedProcedure
+    .input(z.object({ userId: cuidSchema }))
+    .query(async ({ ctx, input }) => {
+      const follows = await ctx.prisma.follow.findMany({
+        where: { followeeId: input.userId },
+        select: {
+          follower: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePictureUrl: true, country: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return follows.map((f) => f.follower);
+    }),
+
+  // List users that a user is following.
+  getFollowing: authedProcedure
+    .input(z.object({ userId: cuidSchema }))
+    .query(async ({ ctx, input }) => {
+      const follows = await ctx.prisma.follow.findMany({
+        where: { followerId: input.userId },
+        select: {
+          followee: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePictureUrl: true, country: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return follows.map((f) => f.followee);
+    }),
+
   // Unlink the viewer's WCA account by clearing their wcaId.
   unlinkWca: authedProcedure
     .mutation(async ({ ctx }) => {

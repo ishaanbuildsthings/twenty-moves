@@ -17,6 +17,13 @@ import { EventIcon } from "@/lib/components/event-icon";
 import { type IUser, type IPersonalBest } from "@/lib/transforms/user";
 import { countryCodeToFlag } from "@/lib/countries";
 import { CubeLoader } from "@/lib/components/cube-loader";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { EVENT_MAP, EVENT_CONFIGS, type CubeEvent } from "@/lib/cubing/events";
 import { formatTime } from "@/lib/cubing/format";
 import type { PbType } from "@/app/generated/prisma/client";
@@ -120,6 +127,72 @@ function FollowButton({ userId, username }: { userId: string; username: string }
   );
 }
 
+type FollowListType = "followers" | "following";
+
+function FollowListModal({
+  userId,
+  type,
+  open,
+  onOpenChange,
+}: {
+  userId: string;
+  type: FollowListType;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const trpc = useTRPC();
+  const query = useQuery(
+    type === "followers"
+      ? trpc.user.getFollowers.queryOptions({ userId }, { enabled: open })
+      : trpc.user.getFollowing.queryOptions({ userId }, { enabled: open })
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm h-[50vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{type === "followers" ? "Followers" : "Following"}</DialogTitle>
+          <DialogDescription>
+            {query.data ? `${query.data.length} user${query.data.length !== 1 ? "s" : ""}` : "Loading..."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto min-h-0 -mx-4 px-4">
+          {query.isLoading && (
+            <div className="flex justify-center py-8">
+              <CubeLoader message="" />
+            </div>
+          )}
+          {query.data?.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              {type === "followers" ? "No followers yet." : "Not following anyone yet."}
+            </p>
+          )}
+          {query.data && query.data.length > 0 && (
+            <div className="space-y-1">
+              {query.data.map((user) => (
+                <Link
+                  key={user.id}
+                  href={`/profile/${user.username}`}
+                  onClick={() => onOpenChange(false)}
+                  className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <UserAvatar user={user} size="sm" rounded="full" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{user.username}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user.firstName} {user.lastName}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { viewer } = useViewer();
@@ -127,6 +200,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { accent } = useSettings();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+  const [followListOpen, setFollowListOpen] = useState<FollowListType | null>(null);
 
   // Show toast for WCA OAuth result and clean the URL.
   // Delay slightly to ensure the Toaster component is hydrated after navigation.
@@ -208,8 +282,8 @@ export default function ProfilePage() {
                 {user.firstName} {user.lastName}
               </p>
               <div className="flex items-center gap-4 mt-2 text-sm flex-wrap">
-                <span><strong className="text-foreground font-extrabold">{user.followerCount}</strong> <span className="text-muted-foreground text-xs">Followers</span></span>
-                <span><strong className="text-foreground font-extrabold">{user.followingCount}</strong> <span className="text-muted-foreground text-xs">Following</span></span>
+                <button onClick={() => setFollowListOpen("followers")} className="hover:underline decoration-muted-foreground/40"><strong className="text-foreground font-extrabold">{user.followerCount}</strong> <span className="text-muted-foreground text-xs">Followers</span></button>
+                <button onClick={() => setFollowListOpen("following")} className="hover:underline decoration-muted-foreground/40"><strong className="text-foreground font-extrabold">{user.followingCount}</strong> <span className="text-muted-foreground text-xs">Following</span></button>
                 {user.wcaId && (
                   <a
                     href={`https://www.worldcubeassociation.org/persons/${user.wcaId}`}
@@ -304,6 +378,14 @@ export default function ProfilePage() {
         )}
 
       </div>
+
+      {/* Follow list modal */}
+      <FollowListModal
+        userId={user.id}
+        type={followListOpen ?? "followers"}
+        open={followListOpen !== null}
+        onOpenChange={(open) => { if (!open) setFollowListOpen(null); }}
+      />
     </div>
   );
 }
