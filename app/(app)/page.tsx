@@ -333,8 +333,9 @@ export default function TimerPage() {
         <div className="ml-auto flex items-center gap-2">
           {stats && (
             <button
-              className={`flex items-center gap-1.5 text-xs font-bold py-1.5 px-3 rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow}`}
-              onClick={() => setPostOpen(true)}
+              className={`flex items-center gap-1.5 text-xs font-bold py-1.5 px-3 rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow} ${solves.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              onClick={() => solves.length > 0 && setPostOpen(true)}
+              disabled={solves.length === 0}
             >
               <FilePen className="w-3.5 h-3.5" />
               Post

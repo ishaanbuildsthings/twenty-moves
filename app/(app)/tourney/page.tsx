@@ -529,6 +529,7 @@ export default function TourneyPage() {
               contestData={activeContestData}
               isLoading={activeContestLoading}
               isCurrent={isCurrent}
+              viewerHasWca={activeContestData?.viewerHasWca ?? false}
               onViewEvent={(eventId) => {
                 updateParams({ tab: "leaderboard" });
                 setTimeout(() => {
@@ -589,12 +590,14 @@ function CompeteTab({
   isCurrent,
   onViewEvent,
   onStartEvent,
+  viewerHasWca,
 }: {
   contestData: ContestStatusData | undefined;
   isLoading: boolean;
   isCurrent: boolean;
   onViewEvent: (eventId: string) => void;
   onStartEvent: (eventId: CubeEvent) => void;
+  viewerHasWca: boolean;
 }) {
   if (isLoading) {
     return <CubeLoader message="Loading events..." />;
@@ -779,12 +782,26 @@ function LeaderboardOverview({
     );
   }
 
+  const viewerHasWca = overviewQuery.data.viewerHasWca;
   const eventDataMap = new Map(
     overviewQuery.data.events.map((e) => [e.eventName, e])
   );
 
   return (
     <div className="space-y-6">
+      {!viewerHasWca && !overviewQuery.isFetching && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
+          <p className="text-sm text-yellow-200/80">
+            Your results are hidden from other competitors. Link your WCA account to appear on the leaderboard and earn medals.
+          </p>
+          <a
+            href="/settings"
+            className="shrink-0 text-sm font-semibold text-yellow-400 hover:text-yellow-300 transition-colors"
+          >
+            Link WCA →
+          </a>
+        </div>
+      )}
       <div className="space-y-6">
         {EVENT_CONFIGS.map((config) => {
           const eventData = eventDataMap.get(config.id);
@@ -991,6 +1008,19 @@ function EventLeaderboardDetail({
         </div>
       ) : (
         <>
+          {!leaderboardQuery.data.viewerHasWca && !leaderboardQuery.isFetching && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 mb-4">
+              <p className="text-sm text-yellow-200/80">
+                Your results are hidden from other competitors. Link your WCA account to appear on the leaderboard and earn medals.
+              </p>
+              <a
+                href="/settings"
+                className="shrink-0 text-sm font-semibold text-yellow-400 hover:text-yellow-300 transition-colors"
+              >
+                Link WCA →
+              </a>
+            </div>
+          )}
           {/* Full results table */}
           <div className="rounded-lg bg-card border border-border">
             <table className="w-full text-sm">

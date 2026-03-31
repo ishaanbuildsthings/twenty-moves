@@ -14,6 +14,9 @@ import { DNF_SENTINEL } from "@/lib/cubing/stats";
 
 const MEDAL_TYPES = ["GOLD", "SILVER", "BRONZE"] as const;
 
+// Only users with linked WCA accounts appear on leaderboards and earn medals.
+const WCA_LINKED_FILTER = { user: { wcaId: { not: null } } } as const;
+
 /**
  * Assign medals for a completed tournament. Idempotent — skips if medals already exist.
  * Should be called inside a transaction when creating the next day's tournament.
@@ -31,11 +34,13 @@ async function assignMedals(prisma: PrismaClient, tournamentId: string) {
 
   for (const { eventId } of scrambleSets) {
     // Top 3 finished entries for this event, excluding DNFs.
+    // Only WCA-linked users are eligible for medals.
     const top3 = await prisma.tournamentEntry.findMany({
       where: {
         tournamentId,
         eventId,
         result: { not: null, lt: DNF_SENTINEL },
+        ...WCA_LINKED_FILTER,
       },
       orderBy: { result: "asc" },
       take: 3,
@@ -158,18 +163,18 @@ export function tournamentService(ctx: ServiceContext) {
         solvesByScrambleSet.set(solve.scrambleSetId, existing);
       }
 
-      // Count competitors per event.
+      // Count competitors per event (only WCA-linked users).
       const totalCounts = await prisma.tournamentEntry.groupBy({
         by: ["eventId"],
-        where: { tournamentId },
+        where: { tournamentId, ...WCA_LINKED_FILTER },
         _count: true,
       });
       const totalCountMap = new Map(
         totalCounts.map((c) => [c.eventId, c._count])
       );
 
-      // Compute rank per event. If we have a result, count how many are
-      // better. If no result yet (in-progress), rank after all finishers.
+      // Compute rank per event among WCA-linked users only.
+      // If viewer has no WCA, this is their "ghost rank" (where they'd be).
       const rankMap = new Map<string, number>();
       for (const entry of myEntries) {
         if (entry.result !== null) {
@@ -178,6 +183,7 @@ export function tournamentService(ctx: ServiceContext) {
               tournamentId,
               eventId: entry.eventId,
               result: { not: null, lt: entry.result },
+              ...WCA_LINKED_FILTER,
             },
           });
           rankMap.set(entry.eventId, betterCount + 1);
@@ -187,6 +193,7 @@ export function tournamentService(ctx: ServiceContext) {
               tournamentId,
               eventId: entry.eventId,
               result: { not: null },
+              ...WCA_LINKED_FILTER,
             },
           });
           rankMap.set(entry.eventId, finisherCount + 1);
@@ -239,11 +246,11 @@ export function tournamentService(ctx: ServiceContext) {
     // Leaderboard overview — top 3 + viewer's entry for ALL events.
     // Used on the leaderboard landing page (stubbed cards).
     getLeaderboardOverview: async (tournamentId: string) => {
-      // Get all distinct events with ANY entries (including in-progress)
-      // so the competitor count includes everyone.
+      // Get all distinct events with WCA-linked entries.
+      // Competitor count only includes WCA-linked users.
       const allEventGroups = await prisma.tournamentEntry.groupBy({
         by: ["eventId"],
-        where: { tournamentId },
+        where: { tournamentId, ...WCA_LINKED_FILTER },
         _count: true,
       });
 
@@ -254,9 +261,9 @@ export function tournamentService(ctx: ServiceContext) {
 
       const overviewByEvent = await Promise.all(
         allEventGroups.map(async (group) => {
-          // Top 3 for this event — only entries with finished results.
+          // Top 3 for this event — only WCA-linked entries with finished results.
           const top3 = await prisma.tournamentEntry.findMany({
-            where: { tournamentId, eventId: group.eventId, result: { not: null } },
+            where: { tournamentId, eventId: group.eventId, result: { not: null }, ...WCA_LINKED_FILTER },
             orderBy: { result: "asc" },
             take: 3,
             include: {
@@ -309,20 +316,22 @@ export function tournamentService(ctx: ServiceContext) {
             });
 
             if (viewerEntry.result !== null) {
-              // Has a result — rank among finishers with better results.
+              // Has a result — rank among WCA-linked finishers with better results.
               const betterCount = await prisma.tournamentEntry.count({
                 where: {
                   tournamentId, eventId: group.eventId,
                   result: { not: null, lt: viewerEntry.result },
+                  ...WCA_LINKED_FILTER,
                 },
               });
               viewerRank = betterCount + 1;
             } else {
-              // No result yet — rank after all finishers.
+              // No result yet — rank after all WCA-linked finishers.
               const finisherCount = await prisma.tournamentEntry.count({
                 where: {
                   tournamentId, eventId: group.eventId,
                   result: { not: null },
+                  ...WCA_LINKED_FILTER,
                 },
               });
               viewerRank = finisherCount + 1;
@@ -380,15 +389,15 @@ export function tournamentService(ctx: ServiceContext) {
 
       const offset = (page - 1) * pageSize;
 
-      // Total entries (all competitors, including in-progress).
+      // Total entries (only WCA-linked competitors).
       const total = await prisma.tournamentEntry.count({
-        where: { tournamentId, eventId },
+        where: { tournamentId, eventId, ...WCA_LINKED_FILTER },
       });
 
-      // Paginated entries — finished results first (ascending), then
-      // in-progress (null) at the end.
+      // Paginated entries — only WCA-linked users. Finished results first
+      // (ascending), then in-progress (null) at the end.
       const entries = await prisma.tournamentEntry.findMany({
-        where: { tournamentId, eventId },
+        where: { tournamentId, eventId, ...WCA_LINKED_FILTER },
         orderBy: { result: { sort: "asc", nulls: "last" } },
         skip: offset,
         take: pageSize,
@@ -447,15 +456,17 @@ export function tournamentService(ctx: ServiceContext) {
             where: {
               tournamentId, eventId,
               result: { not: null, lt: viewerEntry.result },
+              ...WCA_LINKED_FILTER,
             },
           });
           viewerRank = betterCount + 1;
         } else {
-          // No result yet — rank after all finishers.
+          // No result yet — rank after all WCA-linked finishers.
           const finisherCount = await prisma.tournamentEntry.count({
             where: {
               tournamentId, eventId,
               result: { not: null },
+              ...WCA_LINKED_FILTER,
             },
           });
           viewerRank = finisherCount + 1;

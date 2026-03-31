@@ -23,7 +23,13 @@ export const tournamentRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
       }
 
-      const events = await service.getContestStatus(tournament.id);
+      const [events, viewerUser] = await Promise.all([
+        service.getContestStatus(tournament.id),
+        ctx.prisma.user.findUnique({
+          where: { id: ctx.viewer.userId },
+          select: { wcaId: true },
+        }),
+      ]);
 
       return {
         tournament: {
@@ -33,6 +39,7 @@ export const tournamentRouter = createTRPCRouter({
           datePST: tournament.datePST,
         },
         events,
+        viewerHasWca: !!viewerUser?.wcaId,
       };
     }),
 
@@ -50,7 +57,13 @@ export const tournamentRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
       }
 
-      const overview = await service.getLeaderboardOverview(tournament.id);
+      const [overview, viewerUser] = await Promise.all([
+        service.getLeaderboardOverview(tournament.id),
+        ctx.prisma.user.findUnique({
+          where: { id: ctx.viewer.userId },
+          select: { wcaId: true },
+        }),
+      ]);
 
       return {
         tournament: {
@@ -60,6 +73,7 @@ export const tournamentRouter = createTRPCRouter({
           datePST: tournament.datePST,
         },
         events: overview,
+        viewerHasWca: !!viewerUser?.wcaId,
       };
     }),
 
@@ -80,12 +94,18 @@ export const tournamentRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
       }
 
-      const leaderboard = await service.getLeaderboard(
-        tournament.id,
-        input.eventId,
-        input.page,
-        input.pageSize
-      );
+      const [leaderboard, viewerUser] = await Promise.all([
+        service.getLeaderboard(
+          tournament.id,
+          input.eventId,
+          input.page,
+          input.pageSize
+        ),
+        ctx.prisma.user.findUnique({
+          where: { id: ctx.viewer.userId },
+          select: { wcaId: true },
+        }),
+      ]);
 
       return {
         tournament: {
@@ -95,6 +115,7 @@ export const tournamentRouter = createTRPCRouter({
           datePST: tournament.datePST,
         },
         ...leaderboard,
+        viewerHasWca: !!viewerUser?.wcaId,
       };
     }),
 
