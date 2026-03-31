@@ -149,7 +149,7 @@ function FollowListModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm max-h-[70vh] flex flex-col">
+      <DialogContent className="sm:max-w-sm h-[50vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{type === "followers" ? "Followers" : "Following"}</DialogTitle>
           <DialogDescription>
