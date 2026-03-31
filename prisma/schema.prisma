@@ -28,6 +28,7 @@ model User {
   tournamentEntries TournamentEntry[]
   practicePosts     PracticePost[]
   postLikes         PostLike[]
+  postComments      PostComment[]
   medals            Medal[]
 }
 
@@ -165,6 +166,7 @@ model PracticePost {
   event       Event       @relation(fields: [eventId], references: [id])
   scrambleSet ScrambleSet @relation(fields: [scrambleSetId], references: [id])
   likes       PostLike[]
+  comments    PostComment[]
 
   @@index([userId, createdAt(sort: Desc)])
 }
@@ -179,6 +181,19 @@ model PostLike {
   post PracticePost  @relation(fields: [postId], references: [id])
 
   @@unique([userId, postId])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  user User          @relation(fields: [userId], references: [id])
+  post PracticePost  @relation(fields: [postId], references: [id])
+
+  @@index([postId, createdAt])
 }
 
 model Follow {
