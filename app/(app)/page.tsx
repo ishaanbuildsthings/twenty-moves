@@ -297,11 +297,52 @@ export default function TimerPage() {
       }
     };
 
+    const handleTouchStart = (e: TouchEvent) => {
+      // Ignore touches on interactive elements (buttons, inputs, links, etc.)
+      const target = e.target as HTMLElement;
+      if (target.closest("button, a, input, select, textarea, [role='button'], dialog")) return;
+
+      const s = stateRef.current;
+      if (s === "running") {
+        stopTimer();
+      } else if (s === "idle") {
+        if (settingsRef.current.useInspection) {
+          startInspection();
+        } else {
+          beginHold();
+        }
+      } else if (s === "inspecting") {
+        beginHold();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("button, a, input, select, textarea, [role='button'], dialog")) return;
+
+      const s = stateRef.current;
+      if (s === "ready") {
+        cancelHold();
+        startTimer();
+      } else if (s === "holding") {
+        cancelHold();
+        if (settingsRef.current.useInspection && inspectionStartRef.current !== null) {
+          setState("inspecting");
+        } else {
+          setState("idle");
+        }
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [startTimer, stopTimer, startInspection, beginHold, cancelHold]);
 
