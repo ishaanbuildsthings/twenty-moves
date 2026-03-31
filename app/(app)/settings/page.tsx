@@ -13,6 +13,23 @@ import { UserAvatar } from "@/lib/components/user-avatar";
 import { validateAvatarFile, uploadAvatar, deleteAvatar, ACCEPTED_IMAGE_TYPES } from "@/lib/supabase/upload-avatar";
 import { useSettings } from "@/lib/context/settings";
 import { ACCENT_COLORS } from "@/lib/settings/display";
+import { publicEnv } from "@/lib/env";
+
+const WCA_AUTHORIZE_URL = "https://www.worldcubeassociation.org/oauth/authorize";
+const WCA_STATE_COOKIE = "wca_oauth_state";
+
+function startWcaOAuth() {
+  const state = crypto.randomUUID();
+  document.cookie = `${WCA_STATE_COOKIE}=${state}; path=/; max-age=600; SameSite=Lax`;
+  const params = new URLSearchParams({
+    client_id: publicEnv().NEXT_PUBLIC_WCA_CLIENT_ID,
+    redirect_uri: `${window.location.origin}/api/wca/callback`,
+    response_type: "code",
+    scope: "public",
+    state,
+  });
+  window.location.href = `${WCA_AUTHORIZE_URL}?${params}`;
+}
 
 type EditingField = "firstName" | "lastName" | "username" | "bio" | "youtubeChannelUrl" | null;
 
@@ -529,34 +546,49 @@ export default function SettingsPage() {
       </section>
 
       {/* Linked Accounts section */}
-      {viewer.wcaId && (
-        <section className="space-y-1 mb-8">
-          <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
-            Linked Accounts
-          </h2>
-          <div className="flex items-center justify-between py-3 border-b border-border">
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">WCA Account</p>
-              <a
-                href={`https://www.worldcubeassociation.org/persons/${viewer.wcaId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-muted-foreground transition-colors"
+      <section className="space-y-1 mb-8">
+        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Linked Accounts
+        </h2>
+        <div className="flex items-center justify-between py-3 border-b border-border">
+          {viewer.wcaId ? (
+            <>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">WCA Account</p>
+                <a
+                  href={`https://www.worldcubeassociation.org/persons/${viewer.wcaId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-muted-foreground transition-colors"
+                >
+                  {viewer.wcaId}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <button
+                className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                onClick={() => unlinkWcaMutation.mutate()}
+                disabled={unlinkWcaMutation.isPending}
               >
-                {viewer.wcaId}
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-            <button
-              className="text-xs text-red-500 hover:text-red-400 transition-colors"
-              onClick={() => unlinkWcaMutation.mutate()}
-              disabled={unlinkWcaMutation.isPending}
-            >
-              {unlinkWcaMutation.isPending ? "Unlinking..." : "Unlink"}
-            </button>
-          </div>
-        </section>
-      )}
+                {unlinkWcaMutation.isPending ? "Unlinking..." : "Unlink"}
+              </button>
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs text-muted-foreground">WCA Account</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Link to appear on tournament leaderboards</p>
+              </div>
+              <button
+                className={`text-xs font-semibold px-3 py-1.5 rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow}`}
+                onClick={startWcaOAuth}
+              >
+                Link WCA
+              </button>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* Display section */}
       <section>

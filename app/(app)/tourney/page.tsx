@@ -792,7 +792,7 @@ function LeaderboardOverview({
       {!viewerHasWca && !overviewQuery.isFetching && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
           <p className="text-sm text-yellow-200/80">
-            Link your WCA account to appear on the leaderboard and earn medals.
+            Your results are hidden from other competitors. Link your WCA account to appear on the leaderboard and earn medals.
           </p>
           <a
             href="/settings"
@@ -1008,6 +1008,19 @@ function EventLeaderboardDetail({
         </div>
       ) : (
         <>
+          {!leaderboardQuery.data.viewerHasWca && !leaderboardQuery.isFetching && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 mb-4">
+              <p className="text-sm text-yellow-200/80">
+                Your results are hidden from other competitors. Link your WCA account to appear on the leaderboard and earn medals.
+              </p>
+              <a
+                href="/settings"
+                className="shrink-0 text-sm font-semibold text-yellow-400 hover:text-yellow-300 transition-colors"
+              >
+                Link WCA →
+              </a>
+            </div>
+          )}
           {/* Full results table */}
           <div className="rounded-lg bg-card border border-border">
             <table className="w-full text-sm">
@@ -1037,9 +1050,6 @@ function EventLeaderboardDetail({
                       </td>
                       <td className="px-3 py-3">
                         <span className="font-semibold text-orange-400">You</span>
-                        {!leaderboardQuery.data!.viewerHasWca && (
-                          <span className="block text-[10px] text-yellow-400/70 mt-0.5">Not on leaderboard</span>
-                        )}
                       </td>
                       <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
                         {singleStr}
