@@ -1,9 +1,15 @@
-import type { User, MedalType } from "@/app/generated/prisma/client";
+import type { User, MedalType, PbType } from "@/app/generated/prisma/client";
 
 export interface MedalCounts {
   gold: number;
   silver: number;
   bronze: number;
+}
+
+export interface IPersonalBest {
+  eventId: string;
+  type: PbType;
+  time: number;
 }
 
 export interface IUser {
@@ -17,6 +23,7 @@ export interface IUser {
   bio: string;
   youtubeChannelUrl: string | null;
   medals: MedalCounts;
+  personalBests: IPersonalBest[];
   followerCount: number;
   followingCount: number;
 }
@@ -25,6 +32,7 @@ export function userToIUser(
   user: User,
   medalRows?: { type: MedalType; _count: number }[],
   counts?: { followers: number; following: number },
+  pbRows?: { type: PbType; time: number; event: { name: string } }[],
 ): IUser {
   const medals: MedalCounts = { gold: 0, silver: 0, bronze: 0 };
   if (medalRows) {
@@ -45,6 +53,7 @@ export function userToIUser(
     bio: user.bio,
     youtubeChannelUrl: user.youtubeChannelUrl,
     medals,
+    personalBests: pbRows?.map((pb) => ({ eventId: pb.event.name, type: pb.type, time: pb.time })) ?? [],
     followerCount: counts?.followers ?? 0,
     followingCount: counts?.following ?? 0,
   };

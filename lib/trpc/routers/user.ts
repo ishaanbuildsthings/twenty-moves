@@ -53,7 +53,7 @@ export const userRouter = createTRPCRouter({
         }
         throw e;
       }
-      const [medalRows, followerCount, followingCount] = await Promise.all([
+      const [medalRows, followerCount, followingCount, pbRows] = await Promise.all([
         ctx.prisma.medal.groupBy({
           by: ["type"],
           where: { userId: user.id },
@@ -61,8 +61,12 @@ export const userRouter = createTRPCRouter({
         }),
         ctx.prisma.follow.count({ where: { followeeId: user.id } }),
         ctx.prisma.follow.count({ where: { followerId: user.id } }),
+        ctx.prisma.personalBest.findMany({
+          where: { userId: user.id },
+          select: { type: true, time: true, event: { select: { name: true } } },
+        }),
       ]);
-      return userToIUser(user, medalRows, { followers: followerCount, following: followingCount });
+      return userToIUser(user, medalRows, { followers: followerCount, following: followingCount }, pbRows);
     }),
 
   // Check if a username is available. Returns { available: boolean }.

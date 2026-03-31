@@ -9,15 +9,19 @@ import { publicEnv } from "@/lib/env";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/context/settings";
 
-import { ExternalLink, Puzzle } from "lucide-react";
+import { ExternalLink, Puzzle, Trophy } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { PracticePostCard } from "@/lib/components/practice-post-card";
-import { type IUser } from "@/lib/transforms/user";
+import { EventIcon } from "@/lib/components/event-icon";
+import { type IUser, type IPersonalBest } from "@/lib/transforms/user";
 import { countryCodeToFlag } from "@/lib/countries";
 import { CubeLoader } from "@/lib/components/cube-loader";
+import { EVENT_MAP, EVENT_CONFIGS, type CubeEvent } from "@/lib/cubing/events";
+import { formatTime } from "@/lib/cubing/format";
+import type { PbType } from "@/app/generated/prisma/client";
 
-type ProfileTab = "overview" | "collection" | "clubs";
+type ProfileTab = "overview" | "achievements" | "collection" | "clubs";
 
 const WCA_AUTHORIZE_URL = "https://www.worldcubeassociation.org/oauth/authorize";
 const WCA_STATE_COOKIE = "wca_oauth_state";
@@ -179,6 +183,7 @@ export default function ProfilePage() {
 
   const tabs: { key: ProfileTab; label: string; comingSoon?: boolean }[] = [
     { key: "overview", label: "Overview" },
+    { key: "achievements", label: "Achievements" },
     { key: "collection", label: "Collection", comingSoon: true },
     { key: "clubs", label: "Clubs", comingSoon: true },
   ];
@@ -281,32 +286,11 @@ export default function ProfilePage() {
       {/* Tab content */}
       <div className="px-8 py-6 max-w-3xl mx-auto w-full">
         {activeTab === "overview" && (
-          <div className="space-y-6">
-            {/* Medal Showcase */}
-            <section>
-              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">
-                🎖️ Medal Showcase
-              </h2>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl">🥇</span>
-                  <span className="text-lg font-extrabold tabular-nums">{user.medals.gold}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl">🥈</span>
-                  <span className="text-lg font-extrabold tabular-nums">{user.medals.silver}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl">🥉</span>
-                  <span className="text-lg font-extrabold tabular-nums">{user.medals.bronze}</span>
-                </div>
-              </div>
-            </section>
+          <ProfilePosts userId={user.id} />
+        )}
 
-
-            {/* Posts */}
-            <ProfilePosts userId={user.id} />
-          </div>
+        {activeTab === "achievements" && (
+          <AchievementsTab user={user} />
         )}
 
         {activeTab === "collection" && (
@@ -320,6 +304,114 @@ export default function ProfilePage() {
         )}
 
       </div>
+    </div>
+  );
+}
+
+const PB_TYPE_LABELS: Record<PbType, string> = {
+  single: "Single",
+  mo3: "Mo3",
+  avg5: "Ao5",
+  avg12: "Ao12",
+  avg100: "Ao100",
+};
+
+const PB_TYPE_ORDER: PbType[] = ["single", "mo3", "avg5", "avg12", "avg100"];
+
+function AchievementsTab({ user }: { user: IUser }) {
+  // Group PBs by event, ordered by EVENT_CONFIGS order
+  const pbsByEvent = new Map<string, IPersonalBest[]>();
+  for (const pb of user.personalBests) {
+    if (!pbsByEvent.has(pb.eventId)) pbsByEvent.set(pb.eventId, []);
+    pbsByEvent.get(pb.eventId)!.push(pb);
+  }
+
+  // Sort events by their position in EVENT_CONFIGS
+  const eventOrder = EVENT_CONFIGS.map((e) => e.id as string);
+  const sortedEvents = [...pbsByEvent.entries()].sort(
+    (a, b) => eventOrder.indexOf(a[0]) - eventOrder.indexOf(b[0])
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Medal Table */}
+      <section>
+        <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Trophy className="w-4 h-4" />
+          Medals
+        </h2>
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🥇</span>
+            <div>
+              <span className="text-xl font-extrabold tabular-nums">{user.medals.gold}</span>
+              <p className="text-xs text-muted-foreground">Gold</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🥈</span>
+            <div>
+              <span className="text-xl font-extrabold tabular-nums">{user.medals.silver}</span>
+              <p className="text-xs text-muted-foreground">Silver</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🥉</span>
+            <div>
+              <span className="text-xl font-extrabold tabular-nums">{user.medals.bronze}</span>
+              <p className="text-xs text-muted-foreground">Bronze</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Personal Bests Table */}
+      <section>
+        <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Trophy className="w-4 h-4" />
+          Personal Bests
+        </h2>
+        {sortedEvents.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No PBs recorded. PBs are only logged when you make a post.</p>
+        ) : (
+          <div className="border border-border rounded-lg overflow-hidden">
+            {/* Table header */}
+            <div className="grid grid-cols-[2.5rem_5rem_1fr] items-center gap-x-3 px-4 py-2 bg-muted/50 border-b border-border">
+              <span />
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Event</span>
+              <div className="flex gap-4">
+                {PB_TYPE_ORDER.map((type) => (
+                  <span key={type} className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest w-16 text-right">
+                    {PB_TYPE_LABELS[type]}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {/* Table rows */}
+            {sortedEvents.map(([eventId, pbs]) => {
+              const config = EVENT_MAP[eventId as CubeEvent];
+              if (!config) return null;
+              const pbMap = new Map(pbs.map((pb) => [pb.type, pb.time]));
+              return (
+                <div
+                  key={eventId}
+                  className="grid grid-cols-[2.5rem_5rem_1fr] items-center gap-x-3 px-4 py-2.5 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors"
+                >
+                  <EventIcon event={config} size={18} />
+                  <span className="text-sm font-semibold">{config.name}</span>
+                  <div className="flex gap-4">
+                    {PB_TYPE_ORDER.map((type) => (
+                      <span key={type} className="font-mono tabular-nums text-sm w-16 text-right">
+                        {pbMap.has(type) ? formatTime(pbMap.get(type)!) : <span className="text-muted-foreground/30">-</span>}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
