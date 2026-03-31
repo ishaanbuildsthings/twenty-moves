@@ -273,23 +273,26 @@ function CommentsModal({ post, open, onOpenChange }: { post: PostWithInteraction
         </div>
 
         {/* Comment input */}
-        <form onSubmit={handleSubmitComment} className="flex items-center gap-2 border-t border-border pt-3">
-          <input
-            ref={inputRef}
-            type="text"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Add a comment..."
-            maxLength={500}
-            className="flex-1 bg-muted rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-          <button
-            type="submit"
-            disabled={addComment.isPending || !commentText.trim()}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+        <form onSubmit={handleSubmitComment} className="border-t border-border pt-3 space-y-1">
+          <div className="flex items-center gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Add a comment..."
+              maxLength={200}
+              className="flex-1 bg-muted rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              type="submit"
+              disabled={addComment.isPending || !commentText.trim()}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground text-right">{commentText.length}/200</p>
         </form>
       </DialogContent>
     </Dialog>

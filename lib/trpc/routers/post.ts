@@ -6,6 +6,7 @@ import { CubeEvent, EVENT_MAP, getEnabledStats } from "@/lib/cubing/events";
 import { eventService } from "@/lib/services/event";
 import { postService } from "@/lib/services/post";
 import { practicePostToIPracticePost } from "@/lib/transforms/post";
+import { userToIUser } from "@/lib/transforms/user";
 
 
 const solveSchema = z.object({
@@ -31,6 +32,10 @@ export const postRouter = createTRPCRouter({
           user: true,
           event: true,
           likes: { where: { userId: ctx.viewer.userId }, select: { id: true } },
+          comments: {
+            include: { user: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: FEED_PAGE_SIZE + 1,
@@ -46,6 +51,12 @@ export const postRouter = createTRPCRouter({
         posts: posts.map((p) => ({
           ...practicePostToIPracticePost(p),
           liked: p.likes.length > 0,
+          comments: p.comments.map((c) => ({
+            id: c.id,
+            user: userToIUser(c.user),
+            body: c.body,
+            createdAt: c.createdAt,
+          })),
         })),
         nextCursor,
       };
@@ -74,6 +85,10 @@ export const postRouter = createTRPCRouter({
           user: true,
           event: true,
           likes: { where: { userId: ctx.viewer.userId }, select: { id: true } },
+          comments: {
+            include: { user: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: FEED_PAGE_SIZE + 1,
@@ -89,6 +104,12 @@ export const postRouter = createTRPCRouter({
         posts: posts.map((p) => ({
           ...practicePostToIPracticePost(p),
           liked: p.likes.length > 0,
+          comments: p.comments.map((c) => ({
+            id: c.id,
+            user: userToIUser(c.user),
+            body: c.body,
+            createdAt: c.createdAt,
+          })),
         })),
         nextCursor,
       };
@@ -127,6 +148,47 @@ export const postRouter = createTRPCRouter({
         await tx.practicePost.update({
           where: { id: input.postId },
           data: { numLikes: { decrement: 1 } },
+        });
+      });
+      return { success: true };
+    }),
+
+  addComment: authedProcedure
+    .input(z.object({ postId: z.string(), body: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      const comment = await ctx.prisma.$transaction(async (tx) => {
+        const c = await tx.postComment.create({
+          data: { userId: ctx.viewer.userId, postId: input.postId, body: input.body },
+          include: { user: true },
+        });
+        await tx.practicePost.update({
+          where: { id: input.postId },
+          data: { numComments: { increment: 1 } },
+        });
+        return c;
+      });
+      return {
+        id: comment.id,
+        user: userToIUser(comment.user),
+        body: comment.body,
+        createdAt: comment.createdAt,
+      };
+    }),
+
+  deleteComment: authedProcedure
+    .input(z.object({ commentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.$transaction(async (tx) => {
+        const comment = await tx.postComment.findUnique({
+          where: { id: input.commentId },
+        });
+        if (!comment || comment.userId !== ctx.viewer.userId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot delete this comment" });
+        }
+        await tx.postComment.delete({ where: { id: input.commentId } });
+        await tx.practicePost.update({
+          where: { id: comment.postId },
+          data: { numComments: { decrement: 1 } },
         });
       });
       return { success: true };
