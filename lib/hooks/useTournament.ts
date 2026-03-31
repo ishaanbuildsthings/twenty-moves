@@ -2,6 +2,7 @@
 
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { CubeEvent } from "@/lib/cubing/events";
 
 // Fetches the viewer's status across all events for a contest.
 // If no contest number is provided, fetches the current contest.
@@ -51,7 +52,7 @@ export function useSubmitSolve() {
 // Fetches the leaderboard for a specific event in a contest.
 export function useLeaderboard(
   tournamentNumber: number,
-  eventId: string,
+  eventId: CubeEvent,
   page: number = 1,
   pageSize: number = 25
 ) {
