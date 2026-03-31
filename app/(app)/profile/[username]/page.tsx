@@ -9,8 +9,8 @@ import { publicEnv } from "@/lib/env";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/context/settings";
 
-import { ExternalLink, Info, Puzzle, Trophy } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { ExternalLink, Puzzle, Trophy } from "lucide-react";
+import { InfoTooltip } from "@/lib/components/info-tooltip";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { PracticePostCard } from "@/lib/components/practice-post-card";
@@ -422,14 +422,7 @@ function AchievementsTab({ user }: { user: IUser }) {
         <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
           <Trophy className="w-4 h-4" />
           Medals
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger className="text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
-                <Info className="w-3.5 h-3.5" />
-              </TooltipTrigger>
-              <TooltipContent className="bg-muted text-white *:last:bg-muted *:last:fill-muted">Compete in the daily tournament to collect medals.</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <InfoTooltip>Compete in the daily tournament to collect medals.</InfoTooltip>
         </h2>
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2">
@@ -461,14 +454,7 @@ function AchievementsTab({ user }: { user: IUser }) {
         <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
           <Trophy className="w-4 h-4" />
           Personal Bests
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger className="text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
-                <Info className="w-3.5 h-3.5" />
-              </TooltipTrigger>
-              <TooltipContent className="bg-muted text-white *:last:bg-muted *:last:fill-muted">Personal bests are only logged when you make a post.</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <InfoTooltip>Personal bests are only logged when you make a post.</InfoTooltip>
         </h2>
         {sortedEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground">No PBs recorded. PBs are only logged when you make a post.</p>
