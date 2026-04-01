@@ -37,9 +37,9 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           key={i}
           className={`h-1.5 rounded-full transition-all duration-300 ${
             i < current
-              ? "w-8 bg-blue-500"
+              ? "w-8 bg-amber-500"
               : i === current
-                ? "w-8 bg-blue-400"
+                ? "w-8 bg-amber-400"
                 : "w-4 bg-muted"
           }`}
         />
@@ -212,7 +212,7 @@ function StepProfile({
         <button
           type="submit"
           disabled={createProfile.isPending}
-          className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px]"
+          className="w-full rounded-lg bg-amber-600 hover:bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[3px]"
         >
           {createProfile.isPending ? "Creating..." : "Continue"}
         </button>
@@ -242,15 +242,15 @@ function StepWCA({ onNext }: { onNext: () => void }) {
           <p>Link your World Cube Association account to:</p>
           <ul className="text-left space-y-1.5 pl-4">
             <li className="flex items-start gap-2">
-              <span className="text-blue-400 mt-0.5">•</span>
+              <span className="text-amber-400 mt-0.5">•</span>
               Appear on daily tournament leaderboards
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-400 mt-0.5">•</span>
+              <span className="text-amber-400 mt-0.5">•</span>
               Earn 🥇🥈🥉 medals for top 3 finishes
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-400 mt-0.5">•</span>
+              <span className="text-amber-400 mt-0.5">•</span>
               Show your WCA ID on your profile
             </li>
           </ul>
@@ -259,7 +259,7 @@ function StepWCA({ onNext }: { onNext: () => void }) {
         <div className="w-full space-y-3">
           <button
             onClick={startWcaOAuth}
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px]"
+            className="w-full rounded-lg bg-amber-600 hover:bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-[0_3px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[3px]"
           >
             Link WCA Account
           </button>
@@ -335,7 +335,7 @@ function StepYouTube({ onNext }: { onNext: () => void }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px]"
+            className="w-full rounded-lg bg-amber-600 hover:bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[3px]"
           >
             {saving ? "Saving..." : url.trim() ? "Save & Continue" : "Continue"}
           </button>
@@ -409,7 +409,7 @@ function StepFollow({ onNext }: { onNext: () => void }) {
       <div className="flex flex-col gap-4">
         {loadingUsers ? (
           <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-2 border-muted-foreground/30 border-t-blue-500 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-muted-foreground/30 border-t-amber-500 rounded-full animate-spin" />
           </div>
         ) : (
           resolvedUsers.map((user) => (
@@ -428,7 +428,7 @@ function StepFollow({ onNext }: { onNext: () => void }) {
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                   following
                     ? "bg-muted text-muted-foreground"
-                    : "bg-blue-600 hover:bg-blue-500 text-white"
+                    : "bg-amber-600 hover:bg-amber-500 text-white"
                 }`}
               >
                 {following ? "Following" : followMutation.isPending ? "..." : "Follow"}
@@ -439,7 +439,7 @@ function StepFollow({ onNext }: { onNext: () => void }) {
 
         <button
           onClick={onNext}
-          className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px] mt-4"
+          className="w-full rounded-lg bg-amber-600 hover:bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-[0_3px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[3px] mt-4"
         >
           {following ? "Let's go!" : "Continue"}
         </button>

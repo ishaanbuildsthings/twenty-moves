@@ -117,7 +117,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px]"
+            className="w-full rounded-lg bg-amber-600 hover:bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[3px]"
           >
             {loading
               ? "..."
@@ -142,7 +142,7 @@ export default function LoginPage() {
                 onClick={() => { setMode("signup"); setError(null); setMessage(null); }}
                 className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Need an account? <span className="font-semibold text-blue-400">Sign up</span>
+                Need an account? <span className="font-semibold text-amber-400">Sign up</span>
               </button>
             </>
           )}
@@ -151,7 +151,7 @@ export default function LoginPage() {
               onClick={() => { setMode("signin"); setError(null); setMessage(null); }}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Already have an account? <span className="font-semibold text-blue-400">Sign in</span>
+              Already have an account? <span className="font-semibold text-amber-400">Sign in</span>
             </button>
           )}
           {mode === "forgot" && (
