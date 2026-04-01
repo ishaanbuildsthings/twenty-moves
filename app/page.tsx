@@ -6,8 +6,12 @@ export default async function RootPage() {
   const trpc = await caller();
   const session = await trpc.auth.whoAmI();
 
-  if (session.state === "authenticated") {
+  if (session.state === "ready") {
     redirect("/practice");
+  }
+
+  if (session.state === "needs-profile") {
+    redirect("/create-profile");
   }
 
   return <LandingPage />;
