@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -409,6 +409,14 @@ function StepFollow({ onNext }: { onNext: () => void }) {
 // --- Main onboarding page ---
 
 export default function CreateProfilePage() {
+  return (
+    <Suspense>
+      <CreateProfileInner />
+    </Suspense>
+  );
+}
+
+function CreateProfileInner() {
   const router = useRouter();
   const trpc = useTRPC();
 
