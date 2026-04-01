@@ -423,14 +423,14 @@ export default function CreateProfilePage() {
 
   useEffect(() => {
     if (whoAmI.data?.state === "ready" && !justCreated && resumingStep === 0) {
-      router.replace("/");
+      router.replace("/practice");
     }
   }, [whoAmI.data, justCreated, resumingStep, router]);
 
   const [step, setStep] = useState(resumingStep);
 
   const handleComplete = () => {
-    router.push("/");
+    router.push("/practice");
     router.refresh();
   };
 

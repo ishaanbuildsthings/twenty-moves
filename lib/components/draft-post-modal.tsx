@@ -12,7 +12,7 @@ import { type EventStats, DNF_SENTINEL, recomputeStats, findBestAverageIndex, co
 import { formatTime, daysAgo, ONE_DAY, ONE_WEEK_IN_DAYS } from "@/lib/cubing/format";
 import { type EventConfig, getEnabledStats } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
-import { type Solve } from "@/app/(app)/idb";
+import { type Solve } from "@/app/(app)/practice/idb";
 import {
   Select,
   SelectContent,

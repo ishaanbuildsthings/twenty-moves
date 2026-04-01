@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    router.push("/");
+    router.push("/practice");
     router.refresh();
   };
 

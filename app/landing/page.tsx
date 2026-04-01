@@ -3,36 +3,33 @@ import Link from "next/link";
 
 const features = [
   {
-    emoji: "⏱️",
-    title: "Practice Timer",
-    description:
-      "Full-featured timer with scrambles for every WCA event. Track your times, see your averages, and watch yourself improve.",
-    screenshot: "/screenshots/timer.png",
-  },
-  {
     emoji: "🏆",
     title: "Daily Tournaments",
     description:
-      "A new tournament drops every day with multiple events. Compete on the same scrambles as everyone else and see where you rank.",
-    screenshot: "/screenshots/tourney.png",
+      "Compete in live tournaments with shared scrambles to climb the leaderboard.",
+    details: [
+      "Same scrambles for everyone",
+      "Earn medals on your profile",
+      "Link your WCA account to show up on the leaderboard",
+    ],
+    screenshot: "/tourneypic.png",
   },
   {
     emoji: "📣",
     title: "Share Sessions",
     description:
-      "Post your practice sessions to a feed your friends can see. Celebrate PBs, track streaks, and stay motivated together.",
-  },
-  {
-    emoji: "🏅",
-    title: "Medals & Rankings",
-    description:
-      "Earn gold, silver, and bronze in daily tournaments. Build up your medal collection and climb the all-time leaderboard.",
+      "Share your practice sessions with friends and celebrate PBs.",
+    details: [
+      "See what your friends are practicing",
+      "Follow famous cubers",
+    ],
+    screenshot: "/timerpic.png",
   },
   {
     emoji: "🏁",
     title: "Live Race Rooms",
     description:
-      "Head-to-head racing with friends in real time. Same scramble, same countdown — pure speed.",
+      "Head-to-head racing with friends in real time.",
     comingSoon: true,
   },
   {
@@ -46,93 +43,148 @@ const features = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-full bg-background text-foreground">
+    <div className="min-h-full bg-background text-foreground font-sans">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-5 max-w-4xl mx-auto">
-        <span className="text-lg font-extrabold tracking-tight">
-          twenty moves
-        </span>
-        <Link
-          href="/login"
-          className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Sign in
+      <nav className="flex items-center justify-between px-6 py-5 max-w-5xl mx-auto">
+        <Link href="/" className="flex items-center gap-2.5">
+          <img
+            src="/twenty-moves-favicon.svg"
+            alt="twenty moves"
+            className="w-8 h-8 rounded-lg"
+          />
+          <span className="text-lg font-extrabold tracking-tight">
+            twenty moves
+          </span>
         </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/login"
+            className="text-sm font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-lg px-4 py-2 shadow-[0_2px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[2px] transition-all"
+          >
+            Sign up
+          </Link>
+        </div>
       </nav>
 
       {/* Hero */}
-      <section className="max-w-4xl mx-auto px-6 pt-16 pb-20">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.15] mb-4">
-          The social platform
-          <br />
-          for speedcubers.
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-xl mb-8 leading-relaxed">
-          Practice with a built-in timer, compete in daily tournaments, share
-          your sessions, and see how you stack up. Free and open to all skill
-          levels.
-        </p>
-        <Link
-          href="/login"
-          className="inline-flex text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg px-6 py-3 shadow-[0_2px_0_0_theme(colors.blue.800)] transition-colors"
-        >
-          Get Started
-        </Link>
+      <section className="max-w-5xl mx-auto px-6 pt-20 pb-16">
+        <div className="max-w-2xl">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-5">
+            The social platform
+            <br />
+            <span className="text-amber-400">for speedcubers.</span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-xl leading-relaxed">
+            Share your times, compete in tournaments, earn medals, and more.
+          </p>
+        </div>
       </section>
 
-      {/* Feature sections with screenshots */}
-      {features.map((feature, i) => (
-        <section key={feature.title} className="max-w-4xl mx-auto px-6 py-16 border-t border-border">
-          <div className={`flex flex-col ${feature.screenshot ? "gap-8" : ""}`}>
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl leading-none">{feature.emoji}</span>
-                <h2 className="text-xl font-bold">{feature.title}</h2>
-                {feature.comingSoon && (
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide bg-muted px-1.5 py-0.5 rounded">
-                    Soon
-                  </span>
+      {features.map((feature, i) => {
+        const isReversed = i % 2 === 1;
+        const hasScreenshot = !!(feature.screenshot || feature.screenshotPlaceholder);
+
+        return (
+          <section
+            key={feature.title}
+            className="max-w-5xl mx-auto px-6 pb-20"
+          >
+            <div
+              className={`flex flex-col ${
+                hasScreenshot ? "lg:flex-row lg:items-center" : ""
+              } gap-8 lg:gap-12 ${isReversed && hasScreenshot ? "lg:flex-row-reverse" : ""}`}
+            >
+              {/* Text */}
+              <div className={hasScreenshot ? "lg:w-5/12" : "max-w-xl"}>
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="text-2xl leading-none">{feature.emoji}</span>
+                  <h3 className="text-xl font-bold">{feature.title}</h3>
+                  {feature.comingSoon && (
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide bg-muted px-1.5 py-0.5 rounded">
+                      Soon
+                    </span>
+                  )}
+                </div>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  {feature.description}
+                </p>
+                {feature.details && (
+                  <ul className="space-y-2">
+                    {feature.details.map((d) => (
+                      <li
+                        key={d}
+                        className="flex items-start gap-2 text-sm text-muted-foreground"
+                      >
+                        <span className="mt-1.5 w-1 h-1 rounded-full bg-amber-500 shrink-0" />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
-              <p className="text-muted-foreground leading-relaxed max-w-xl">
-                {feature.description}
-              </p>
+
+              {/* Screenshot */}
+              {hasScreenshot && (
+                <div className="lg:w-7/12">
+                  {feature.screenshot ? (
+                    <div className="rounded-xl border border-border overflow-hidden">
+                      <Image
+                        src={feature.screenshot}
+                        alt={`${feature.title} screenshot`}
+                        width={1200}
+                        height={750}
+                        className="w-full h-auto"
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-border bg-card overflow-hidden aspect-[16/10] flex items-center justify-center">
+                      <div className="text-center text-muted-foreground/40">
+                        <div className="text-4xl mb-2">{feature.emoji}</div>
+                        <div className="text-xs font-medium uppercase tracking-wide">
+                          Screenshot placeholder
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            {feature.screenshot && (
-              <div className="rounded-xl border border-border overflow-hidden">
-                <Image
-                  src={feature.screenshot}
-                  alt={`${feature.title} screenshot`}
-                  width={1200}
-                  height={700}
-                  className="w-full h-auto"
-                />
-              </div>
-            )}
-          </div>
-        </section>
-      ))}
+          </section>
+        );
+      })}
 
       {/* CTA */}
-      <section className="max-w-4xl mx-auto px-6 py-20 border-t border-border">
-        <h2 className="text-2xl font-extrabold tracking-tight mb-3">
-          Ready to start?
-        </h2>
-        <p className="text-muted-foreground mb-6">
-          Create an account and start timing. It&apos;s free.
-        </p>
-        <Link
-          href="/login"
-          className="inline-flex text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg px-6 py-3 shadow-[0_2px_0_0_theme(colors.blue.800)] transition-colors"
-        >
-          Create Account
-        </Link>
+      <section className="border-t border-border">
+        <div className="max-w-5xl mx-auto px-6 py-24 text-center">
+          <img
+            src="/twenty-moves-favicon.svg"
+            alt=""
+            className="w-12 h-12 rounded-xl mx-auto mb-6"
+          />
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-8">
+            Ready to start cubing?
+          </h2>
+          <Link
+            href="/login"
+            className="inline-flex text-sm font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-lg px-8 py-3.5 shadow-[0_3px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[3px] transition-all"
+          >
+            Let&apos;s cube!
+          </Link>
+        </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-border">
-        <div className="max-w-4xl mx-auto px-6 py-6 text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} twenty moves
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          <div className="text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} twenty moves
+          </div>
         </div>
       </footer>
     </div>
