@@ -61,13 +61,28 @@ export default function LoginPage() {
     forgot: "Reset your password",
   }[mode];
 
+  const subtitle = {
+    signin: "Welcome back, cuber",
+    signup: "Join the community",
+    forgot: "We'll send you a reset link",
+  }[mode];
+
   return (
     <div className="flex flex-col flex-1 items-center justify-center p-8 font-sans">
+      {/* Logo */}
+      <div className="mb-8 flex flex-col items-center gap-3">
+        <img src="/twenty-moves-favicon.svg" alt="twenty moves" className="w-14 h-14 rounded-xl" />
+      </div>
+
       <div className="w-full max-w-sm space-y-6">
-        <h1 className="text-2xl font-bold text-center">{title}</h1>
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-extrabold">{title}</h1>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
+            <label htmlFor="email" className="block text-sm font-medium text-muted-foreground mb-1">
               Email
             </label>
             <input
@@ -76,12 +91,13 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+              className="block w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="you@example.com"
             />
           </div>
           {mode !== "forgot" && (
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
+              <label htmlFor="password" className="block text-sm font-medium text-muted-foreground mb-1">
                 Password
               </label>
               <input
@@ -91,16 +107,17 @@ export default function LoginPage() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                className="block w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="••••••••"
               />
             </div>
           )}
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {message && <p className="text-sm text-green-600">{message}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {message && <p className="text-sm text-emerald-400">{message}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
           >
             {loading
               ? "..."
@@ -111,35 +128,36 @@ export default function LoginPage() {
                   : "Sign in"}
           </button>
         </form>
+
         <div className="space-y-2">
           {mode === "signin" && (
             <>
               <button
                 onClick={() => { setMode("forgot"); setError(null); setMessage(null); }}
-                className="w-full text-center text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Forgot your password?
               </button>
               <button
                 onClick={() => { setMode("signup"); setError(null); setMessage(null); }}
-                className="w-full text-center text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Need an account? Sign up
+                Need an account? <span className="font-semibold text-blue-400">Sign up</span>
               </button>
             </>
           )}
           {mode === "signup" && (
             <button
               onClick={() => { setMode("signin"); setError(null); setMessage(null); }}
-              className="w-full text-center text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Already have an account? Sign in
+              Already have an account? <span className="font-semibold text-blue-400">Sign in</span>
             </button>
           )}
           {mode === "forgot" && (
             <button
               onClick={() => { setMode("signin"); setError(null); setMessage(null); }}
-              className="w-full text-center text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Back to sign in
             </button>
