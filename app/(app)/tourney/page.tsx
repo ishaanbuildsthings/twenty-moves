@@ -23,7 +23,7 @@ import { useTimer } from "@/lib/hooks/useTimer";
 import { useSettings } from "@/lib/context/settings";
 import { Settings } from "lucide-react";
 import { TimerSettingsDialog } from "@/lib/components/timer-settings-dialog";
-import { computeAo5, computeMo3, computeBestSingle, effectiveTime, DNF_SENTINEL, type SolveForStats } from "@/lib/cubing/stats";
+import { computeBestSingle, effectiveTime, DNF_SENTINEL, type SolveForStats } from "@/lib/cubing/stats";
 import { formatTime, formatSolveTime, getBestAndWorst } from "@/lib/cubing/format";
 
 type Tab = "compete" | "leaderboard";
@@ -73,17 +73,13 @@ function getStatColumnLabel(config: typeof EVENT_CONFIGS[number]): string {
 
 // Compute display values (single, average/mean) from solves based on event config.
 // Uses the shared compute functions so display is always correct.
-function computeDisplayStats(solves: SolveForStats[], config: typeof EVENT_CONFIGS[number]) {
+function computeDisplayStats(solves: SolveForStats[], config: typeof EVENT_CONFIGS[number], result: number | null) {
   const single = computeBestSingle(solves);
   const singleStr = single === null ? "—" : formatTime(single);
 
-  let avg: number | null = null;
-  if (config.tournamentSolveCount === 5) {
-    avg = computeAo5(solves);
-  } else if (config.tournamentSolveCount === 3) {
-    avg = computeMo3(solves);
-  }
-  const avgStr = avg === null ? "—" : formatTime(avg);
+  // Use the stored result from the tournament entry rather than recomputing.
+  // The backend handles DNF padding for incomplete Ao5s (4/5 solves).
+  const avgStr = result !== null ? formatTime(result) : "—";
 
   // The ranking result — what determines your position on the leaderboard.
   // For BLD events ranked by single, this is the best single.
@@ -116,6 +112,7 @@ function TournamentSolveView({
   const { timerSettings, updateTimerSettings, accent } = useSettings();
   const submitSolve = useSubmitSolve();
   const [solves, setSolves] = useState<SolveForStats[]>(initialSolves);
+
   const [pendingTime, setPendingTime] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +167,7 @@ function TournamentSolveView({
   };
 
   // Compute current display stats from submitted solves.
-  const displayStats = solves.length > 0 ? computeDisplayStats(solves, eventConfig) : null;
+  const displayStats = solves.length > 0 ? computeDisplayStats(solves, eventConfig, null) : null;
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden select-none">
@@ -460,7 +457,11 @@ export default function TourneyPage() {
           // Switch to leaderboard for this event.
           updateParams({ tab: "leaderboard", event: solvingEvent.eventId });
         }}
-        onExit={() => setSolvingEvent(null)}
+        onExit={() => {
+          setSolvingEvent(null);
+          // Invalidate contest status so compete tab shows updated solves.
+          queryClient.invalidateQueries({ queryKey: trpc.tournament.getContestStatus.queryKey() });
+        }}
       />
     );
   }
@@ -542,6 +543,7 @@ export default function TourneyPage() {
             <EventLeaderboardDetail
               event={validEvent}
               tournamentNumber={viewingContest}
+              isCurrent={isCurrent}
               onBack={() => setSelectedEvent(null)}
               onChangeEvent={setSelectedEvent}
               page={page}
@@ -665,9 +667,9 @@ function EventCard({
 
   const completedSolves = enteredEvent?.solves.length ?? 0;
 
-  // Compute display result from solves using shared compute functions.
+  // Use the stored result from the tournament entry.
   const displayStats = enteredEvent
-    ? computeDisplayStats(enteredEvent.solves, config)
+    ? computeDisplayStats(enteredEvent.solves, config, enteredEvent.result)
     : null;
 
   return (
@@ -691,7 +693,7 @@ function EventCard({
               {enteredEvent?.rank && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                   rank {enteredEvent.rank}/{totalCompetitors}
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
+                  {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />}
                 </span>
               )}
             </>
@@ -847,7 +849,7 @@ function LeaderboardOverview({
                     {eventData.viewerEntry && (() => {
                       const viewer = eventData.viewerEntry;
                       const { bestIdx, worstIdx } = getBestAndWorst(viewer.solves);
-                      const { singleStr, avgStr } = computeDisplayStats(viewer.solves, config);
+                      const { singleStr, avgStr } = computeDisplayStats(viewer.solves, config, viewer.result);
                       return (
                         <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
                           <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-orange-400">
@@ -875,7 +877,7 @@ function LeaderboardOverview({
                           {/* Fill empty solve columns if viewer has fewer solves */}
                           {Array.from({ length: solveCount - viewer.solves.length }).map((_, i) => (
                             <td key={`empty-${i}`} className="px-2 py-2.5 text-right font-mono tabular-nums text-muted-foreground">
-                              —
+                              {isCurrent ? "—" : "DNS"}
                             </td>
                           ))}
                         </tr>
@@ -885,7 +887,7 @@ function LeaderboardOverview({
                     {/* Top 3 */}
                     {eventData.top3.map((entry, rowIdx) => {
                       const { bestIdx, worstIdx } = getBestAndWorst(entry.solves);
-                      const { singleStr, avgStr } = computeDisplayStats(entry.solves, config);
+                      const { singleStr, avgStr } = computeDisplayStats(entry.solves, config, entry.result);
                       return (
                         <tr
                           key={entry.rank}
@@ -945,10 +947,11 @@ function LeaderboardOverview({
 // --- Leaderboard Tab: Full table for one event ---
 
 function EventLeaderboardDetail({
-  event, tournamentNumber, onBack, onChangeEvent, page, onPageChange,
+  event, tournamentNumber, isCurrent, onBack, onChangeEvent, page, onPageChange,
 }: {
   event: CubeEvent;
   tournamentNumber: number;
+  isCurrent: boolean;
   onBack: () => void;
   onChangeEvent: (event: CubeEvent) => void;
   page: number;
@@ -1042,7 +1045,7 @@ function EventLeaderboardDetail({
                   const viewer = leaderboardQuery.data!.viewerEntry;
                   if (!viewer) return null;
                   const { bestIdx, worstIdx } = getBestAndWorst(viewer.solves);
-                  const { singleStr, avgStr } = computeDisplayStats(viewer.solves, eventConfig);
+                  const { singleStr, avgStr } = computeDisplayStats(viewer.solves, eventConfig, viewer.result);
                   return (
                     <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
                       <td className="px-4 py-3 text-center text-sm font-bold text-orange-400">
@@ -1068,7 +1071,7 @@ function EventLeaderboardDetail({
                       })}
                       {Array.from({ length: solveCount - viewer.solves.length }).map((_, i) => (
                         <td key={`empty-${i}`} className="px-2 py-3 text-right font-mono tabular-nums text-muted-foreground">
-                          —
+                          {isCurrent ? "—" : "DNS"}
                         </td>
                       ))}
                     </tr>
@@ -1077,7 +1080,7 @@ function EventLeaderboardDetail({
 
                 {leaderboardQuery.data!.entries.map((entry, rowIdx) => {
                   const { bestIdx, worstIdx } = getBestAndWorst(entry.solves);
-                  const { singleStr, avgStr } = computeDisplayStats(entry.solves, eventConfig);
+                  const { singleStr, avgStr } = computeDisplayStats(entry.solves, eventConfig, entry.result);
                   return (
                     <tr
                       key={entry.rank}
@@ -1124,7 +1127,7 @@ function EventLeaderboardDetail({
                       })}
                       {Array.from({ length: solveCount - entry.solves.length }).map((_, i) => (
                         <td key={`empty-${i}`} className="px-2 py-3 text-right font-mono tabular-nums text-muted-foreground">
-                          —
+                          {isCurrent ? "—" : "DNS"}
                         </td>
                       ))}
                     </tr>

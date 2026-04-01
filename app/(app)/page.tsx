@@ -132,11 +132,43 @@ function StatDetailModal({
     for (let j = sorted.length - trimCount; j < sorted.length; j++) trimmedIndices.add(sorted[j].i);
   }
 
+  // Compute the actual stat value
+  const statValue = (() => {
+    if (windowSolves.length === 0) return null;
+    if (detail.stat === "single") {
+      return effectiveTime(windowSolves[0]);
+    }
+    if (detail.stat === "mean") {
+      const times = windowSolves.map(effectiveTime);
+      if (times.some((t) => t >= DNF_SENTINEL)) return DNF_SENTINEL;
+      return times.reduce((a, b) => a + b, 0) / times.length;
+    }
+    // For ao5/ao12/ao100/mo3: compute trimmed mean
+    const times = windowSolves.map(effectiveTime);
+    if (detail.stat === "mo3") {
+      if (times.some((t) => t >= DNF_SENTINEL)) return DNF_SENTINEL;
+      return times.reduce((a, b) => a + b, 0) / times.length;
+    }
+    // Trimmed average
+    const sorted = [...times].sort((a, b) => a - b);
+    const trimCount = detail.stat === "ao100" ? 5 : 1;
+    const middle = sorted.slice(trimCount, sorted.length - trimCount);
+    if (middle.some((t) => t >= DNF_SENTINEL)) return DNF_SENTINEL;
+    return middle.reduce((a, b) => a + b, 0) / middle.length;
+  })();
+
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-3">
+            {title}
+            {statValue !== null && (
+              <span className="font-mono tabular-nums text-lg">
+                {statValue >= DNF_SENTINEL ? "DNF" : formatTime(statValue)}
+              </span>
+            )}
+          </DialogTitle>
           <DialogDescription>
             {windowSolves.length} solve{windowSolves.length !== 1 ? "s" : ""}
           </DialogDescription>
@@ -144,7 +176,7 @@ function StatDetailModal({
             <button
               className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded transition-colors w-fit ${
                 copiedAll
-                  ? `${accent.bgSubtle} ${accent.text}`
+                  ? "bg-green-500/10 text-green-500"
                   : `bg-muted hover:bg-muted/80 text-muted-foreground`
               }`}
               onClick={() => {
@@ -188,15 +220,15 @@ function StatDetailModal({
                       <button
                         className={`p-0.5 rounded transition-colors shrink-0 ${
                           copiedId === solve.id
-                            ? accent.text
+                            ? "text-green-500"
                             : "text-muted-foreground/50 hover:text-foreground"
                         }`}
                         onClick={() => {
-                          navigator.clipboard.writeText(solve.scramble);
+                          navigator.clipboard.writeText(`${formatSolveTime(solve)}   ${solve.scramble}`);
                           setCopiedId(solve.id);
                           setTimeout(() => setCopiedId(null), 1500);
                         }}
-                        title="Copy scramble"
+                        title="Copy solve"
                       >
                         {copiedId === solve.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                       </button>
@@ -431,16 +463,24 @@ export default function TimerPage() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space" || e.repeat) return;
+      if (e.repeat) return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      e.preventDefault();
 
       const s = stateRef.current;
 
+      // Any key stops the timer when running.
       if (s === "running") {
+        e.preventDefault();
         stopTimer();
-      } else if (s === "idle") {
+        return;
+      }
+
+      // Only spacebar starts the timer / begins hold.
+      if (e.code !== "Space") return;
+      e.preventDefault();
+
+      if (s === "idle") {
         if (settingsRef.current.useInspection) {
           startInspection();
         } else {
@@ -607,10 +647,10 @@ export default function TimerPage() {
                 {getPracticeStats(selectedEvent).includes("single") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Single</span>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => solves.length > 0 && setStatDetail({ stat: "single", variant: "current" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => solves.length > 0 && setStatDetail({ stat: "single", variant: "current" })}>
                       {solves.length > 0 ? formatSolveTime(solves[0]) : "-"}
                     </button>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestSingle !== null && setStatDetail({ stat: "single", variant: "best" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestSingle !== null && setStatDetail({ stat: "single", variant: "best" })}>
                       {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}
                     </button>
                   </div>
@@ -618,10 +658,10 @@ export default function TimerPage() {
                 {getPracticeStats(selectedEvent).includes("mo3") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Mo3</span>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentMo3 !== null && setStatDetail({ stat: "mo3", variant: "current" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentMo3 !== null && setStatDetail({ stat: "mo3", variant: "current" })}>
                       {stats.currentMo3 !== null ? formatTime(stats.currentMo3) : "-"}
                     </button>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestMo3 !== null && setStatDetail({ stat: "mo3", variant: "best" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestMo3 !== null && setStatDetail({ stat: "mo3", variant: "best" })}>
                       {stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}
                     </button>
                   </div>
@@ -629,10 +669,10 @@ export default function TimerPage() {
                 {getPracticeStats(selectedEvent).includes("ao5") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Ao5</span>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo5 !== null && setStatDetail({ stat: "ao5", variant: "current" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentAo5 !== null && setStatDetail({ stat: "ao5", variant: "current" })}>
                       {stats.currentAo5 !== null ? formatTime(stats.currentAo5) : "-"}
                     </button>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo5 !== null && setStatDetail({ stat: "ao5", variant: "best" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestAo5 !== null && setStatDetail({ stat: "ao5", variant: "best" })}>
                       {stats.bestAo5 !== null ? formatTime(stats.bestAo5) : "-"}
                     </button>
                   </div>
@@ -640,10 +680,10 @@ export default function TimerPage() {
                 {getPracticeStats(selectedEvent).includes("ao12") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Ao12</span>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo12 !== null && setStatDetail({ stat: "ao12", variant: "current" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentAo12 !== null && setStatDetail({ stat: "ao12", variant: "current" })}>
                       {stats.currentAo12 !== null ? formatTime(stats.currentAo12) : "-"}
                     </button>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo12 !== null && setStatDetail({ stat: "ao12", variant: "best" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestAo12 !== null && setStatDetail({ stat: "ao12", variant: "best" })}>
                       {stats.bestAo12 !== null ? formatTime(stats.bestAo12) : "-"}
                     </button>
                   </div>
@@ -651,17 +691,17 @@ export default function TimerPage() {
                 {getPracticeStats(selectedEvent).includes("ao100") && (
                   <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                     <span className="text-sm font-semibold text-muted-foreground">Ao100</span>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo100 !== null && setStatDetail({ stat: "ao100", variant: "current" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentAo100 !== null && setStatDetail({ stat: "ao100", variant: "current" })}>
                       {stats.currentAo100 !== null ? formatTime(stats.currentAo100) : "-"}
                     </button>
-                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo100 !== null && setStatDetail({ stat: "ao100", variant: "best" })}>
+                    <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestAo100 !== null && setStatDetail({ stat: "ao100", variant: "best" })}>
                       {stats.bestAo100 !== null ? formatTime(stats.bestAo100) : "-"}
                     </button>
                   </div>
                 )}
                 <div className="grid grid-cols-[1fr_4rem_4rem] gap-x-3 items-center px-1">
                   <span className="text-sm font-semibold text-muted-foreground">Mean</span>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.sessionMean !== null && setStatDetail({ stat: "mean", variant: "current" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.sessionMean !== null && setStatDetail({ stat: "mean", variant: "current" })}>
                     {stats.sessionMean !== null ? formatTime(stats.sessionMean) : "-"}
                   </button>
                   <span />
@@ -736,10 +776,10 @@ export default function TimerPage() {
               {getPracticeStats(selectedEvent).includes("single") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Single</span>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => solves.length > 0 && setStatDetail({ stat: "single", variant: "current" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => solves.length > 0 && setStatDetail({ stat: "single", variant: "current" })}>
                     {solves.length > 0 ? formatSolveTime(solves[0]) : "-"}
                   </button>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestSingle !== null && setStatDetail({ stat: "single", variant: "best" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestSingle !== null && setStatDetail({ stat: "single", variant: "best" })}>
                     {stats.bestSingle !== null ? formatTime(stats.bestSingle) : "-"}
                   </button>
                 </div>
@@ -747,10 +787,10 @@ export default function TimerPage() {
               {getPracticeStats(selectedEvent).includes("mo3") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Mo3</span>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentMo3 !== null && setStatDetail({ stat: "mo3", variant: "current" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentMo3 !== null && setStatDetail({ stat: "mo3", variant: "current" })}>
                     {stats.currentMo3 !== null ? formatTime(stats.currentMo3) : "-"}
                   </button>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestMo3 !== null && setStatDetail({ stat: "mo3", variant: "best" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestMo3 !== null && setStatDetail({ stat: "mo3", variant: "best" })}>
                     {stats.bestMo3 !== null ? formatTime(stats.bestMo3) : "-"}
                   </button>
                 </div>
@@ -758,10 +798,10 @@ export default function TimerPage() {
               {getPracticeStats(selectedEvent).includes("ao5") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao5</span>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo5 !== null && setStatDetail({ stat: "ao5", variant: "current" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentAo5 !== null && setStatDetail({ stat: "ao5", variant: "current" })}>
                     {stats.currentAo5 !== null ? formatTime(stats.currentAo5) : "-"}
                   </button>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo5 !== null && setStatDetail({ stat: "ao5", variant: "best" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestAo5 !== null && setStatDetail({ stat: "ao5", variant: "best" })}>
                     {stats.bestAo5 !== null ? formatTime(stats.bestAo5) : "-"}
                   </button>
                 </div>
@@ -769,10 +809,10 @@ export default function TimerPage() {
               {getPracticeStats(selectedEvent).includes("ao12") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao12</span>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo12 !== null && setStatDetail({ stat: "ao12", variant: "current" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentAo12 !== null && setStatDetail({ stat: "ao12", variant: "current" })}>
                     {stats.currentAo12 !== null ? formatTime(stats.currentAo12) : "-"}
                   </button>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo12 !== null && setStatDetail({ stat: "ao12", variant: "best" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestAo12 !== null && setStatDetail({ stat: "ao12", variant: "best" })}>
                     {stats.bestAo12 !== null ? formatTime(stats.bestAo12) : "-"}
                   </button>
                 </div>
@@ -780,17 +820,17 @@ export default function TimerPage() {
               {getPracticeStats(selectedEvent).includes("ao100") && (
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                   <span className="text-xs font-semibold text-muted-foreground">Ao100</span>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.currentAo100 !== null && setStatDetail({ stat: "ao100", variant: "current" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.currentAo100 !== null && setStatDetail({ stat: "ao100", variant: "current" })}>
                     {stats.currentAo100 !== null ? formatTime(stats.currentAo100) : "-"}
                   </button>
-                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.bestAo100 !== null && setStatDetail({ stat: "ao100", variant: "best" })}>
+                  <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.bestAo100 !== null && setStatDetail({ stat: "ao100", variant: "best" })}>
                     {stats.bestAo100 !== null ? formatTime(stats.bestAo100) : "-"}
                   </button>
                 </div>
               )}
               <div className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-x-3 items-center">
                 <span className="text-xs font-semibold text-muted-foreground">Mean</span>
-                <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors ${accent.hoverSubtle}`} onClick={() => stats.sessionMean !== null && setStatDetail({ stat: "mean", variant: "current" })}>
+                <button className={`font-mono tabular-nums text-sm font-bold text-right rounded px-1 -mx-1 transition-colors hover:bg-muted`} onClick={() => stats.sessionMean !== null && setStatDetail({ stat: "mean", variant: "current" })}>
                   {stats.sessionMean !== null ? formatTime(stats.sessionMean) : "-"}
                 </button>
                 <span />
@@ -856,15 +896,15 @@ export default function TimerPage() {
                         <button
                           className={`p-1 rounded-md transition-colors shrink-0 ${
                             copiedId === solve.id
-                              ? "text-primary"
+                              ? "text-green-500"
                               : "text-muted-foreground hover:text-foreground hover:bg-muted"
                           }`}
                           onClick={() => {
-                            navigator.clipboard.writeText(solve.scramble);
+                            navigator.clipboard.writeText(`${formatSolveTime(solve)}   ${solve.scramble}`);
                             setCopiedId(solve.id);
                             setTimeout(() => setCopiedId(null), 1500);
                           }}
-                          title="Copy scramble"
+                          title="Copy solve"
                         >
                           {copiedId === solve.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
