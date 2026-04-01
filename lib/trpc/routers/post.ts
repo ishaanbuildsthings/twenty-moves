@@ -193,6 +193,56 @@ export const postRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  deletePost: authedProcedure
+    .input(z.object({ postId: z.string().min(1).max(50) }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.$transaction(async (tx) => {
+        const post = await tx.practicePost.findUnique({ where: { id: input.postId } });
+        if (!post || post.userId !== ctx.viewer.userId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot delete this post" });
+        }
+
+        // Delete related records
+        await tx.postLike.deleteMany({ where: { postId: post.id } });
+        await tx.postComment.deleteMany({ where: { postId: post.id } });
+        await tx.solve.deleteMany({ where: { scrambleSetId: post.scrambleSetId } });
+        await tx.practicePost.delete({ where: { id: post.id } });
+
+        // Recompute PBs for this user+event from remaining posts
+        const PB_FIELDS: { type: "single" | "mo3" | "avg5" | "avg12" | "avg100"; field: "bestSingle" | "bestMo3" | "bestAo5" | "bestAo12" | "bestAo100" }[] = [
+          { type: "single", field: "bestSingle" },
+          { type: "mo3", field: "bestMo3" },
+          { type: "avg5", field: "bestAo5" },
+          { type: "avg12", field: "bestAo12" },
+          { type: "avg100", field: "bestAo100" },
+        ];
+
+        for (const { type, field } of PB_FIELDS) {
+          // Find the best value across all remaining posts for this user+event
+          const best = await tx.practicePost.aggregate({
+            where: { userId: post.userId, eventId: post.eventId, [field]: { not: null } },
+            _min: { [field]: true },
+          });
+
+          const bestTime = (best._min as Record<string, number | null>)[field];
+
+          if (bestTime !== null) {
+            await tx.personalBest.upsert({
+              where: { userId_eventId_type: { userId: post.userId, eventId: post.eventId, type } },
+              create: { userId: post.userId, eventId: post.eventId, type, time: bestTime },
+              update: { time: bestTime },
+            });
+          } else {
+            // No remaining posts have this stat — delete the PB
+            await tx.personalBest.deleteMany({
+              where: { userId: post.userId, eventId: post.eventId, type },
+            });
+          }
+        }
+      });
+      return { success: true };
+    }),
+
   createPracticeSessionPost: authedProcedure
     .input(
       z.object({

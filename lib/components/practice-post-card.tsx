@@ -8,7 +8,7 @@ import { UserAvatar } from "@/lib/components/user-avatar";
 import { formatTime, timeAgo } from "@/lib/cubing/format";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Trash2, Send } from "lucide-react";
+import { Heart, MessageCircle, Trash2, Send, MoreHorizontal } from "lucide-react";
 import { ViewerContext } from "@/lib/context/viewer";
 import {
   Dialog,
@@ -17,7 +17,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export interface IComment {
   id: string;
@@ -33,8 +40,21 @@ interface PracticePostCardProps {
 }
 
 export function PracticePostCard({ post }: PracticePostCardProps) {
+  const viewer = useContext(ViewerContext);
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const eventConfig = EVENT_MAP[post.eventName as CubeEvent];
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const deletePost = useMutation(trpc.post.deletePost.mutationOptions({
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: [["post"]] });
+      removePostFromCache(queryClient, post.id);
+    },
+    onSuccess: () => {
+      toast.success("Post deleted!");
+      queryClient.invalidateQueries({ queryKey: [["user"]] });
+    },
+  }));
 
   const highlights: { label: string; value: number; isPb: boolean }[] = [];
   if (post.bestSingle !== null) highlights.push({ label: "Single", value: post.bestSingle, isPb: post.isPbSingle });
@@ -64,6 +84,27 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
             <span>{post.numSolves} solve{post.numSolves !== 1 ? "s" : ""}</span>
           </div>
         </div>
+        {viewer && viewer.viewer.id === post.user.id && (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="p-1 text-muted-foreground/50 hover:text-foreground transition-colors">
+              <MoreHorizontal className="w-5 h-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuItem
+                className="text-red-500 focus:text-red-500"
+                onClick={() => deletePost.mutate({ postId: post.id })}
+              >
+                <div className="flex items-start gap-2">
+                  <Trash2 className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="font-medium">Delete</div>
+                    <div className="text-[11px] text-muted-foreground font-normal leading-snug">Deleting a post with a PB will recompute your PBs from previous posts.</div>
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Stat highlights */}
@@ -109,6 +150,28 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
 }
 
 type PostPageData = { pages: { posts: PostWithInteractions[]; nextCursor?: string }[]; pageParams: unknown[] };
+
+// Remove a post from all infinite query caches (feed + profile posts)
+function removePostFromCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  postId: string,
+) {
+  for (const key of [[["post", "getFeed"]], [["post", "getUserPosts"]]]) {
+    queryClient.setQueriesData<PostPageData>(
+      { queryKey: key },
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            posts: page.posts.filter((p) => p.id !== postId),
+          })),
+        };
+      }
+    );
+  }
+}
 
 // Update a post in all infinite query caches (feed + profile posts)
 function updatePostInCache(
