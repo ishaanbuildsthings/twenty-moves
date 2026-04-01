@@ -176,14 +176,15 @@ function removePostFromCache(
 
 /** Colored isometric cube icon matching the favicon (blue top, red left, white right). */
 function CubeIcon({ className, filled }: { className?: string; filled?: boolean }) {
+  // Taller proportions with rounded joins to match reference icon
   return (
-    <svg viewBox="0 0 24 24" className={className}>
+    <svg viewBox="0 0 24 28" className={className}>
       {/* Top face — blue */}
-      <polygon points="12,2 21.5,7.5 12,13 2.5,7.5" fill={filled ? "#3B82F6" : "none"} stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
+      <path d="M12,3 L21,8 L12,13 L3,8 Z" fill={filled ? "#3B82F6" : "none"} stroke="#333" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" />
       {/* Left face — red */}
-      <polygon points="2.5,7.5 12,13 12,22 2.5,16.5" fill={filled ? "#E53E3E" : "none"} stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
+      <path d="M3,8 L12,13 L12,25 L3,20 Z" fill={filled ? "#E53E3E" : "none"} stroke="#333" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" />
       {/* Right face — white */}
-      <polygon points="21.5,7.5 12,13 12,22 21.5,16.5" fill={filled ? "#F5F5F5" : "none"} stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
+      <path d="M21,8 L12,13 L12,25 L21,20 Z" fill={filled ? "#F5F5F5" : "none"} stroke="#333" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
