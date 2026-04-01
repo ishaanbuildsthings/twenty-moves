@@ -286,6 +286,9 @@ export function DraftPostModal({
               placeholder="How did the session go?"
               className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-white"
             />
+            <p className="text-xs text-right mt-1 text-muted-foreground">
+              {caption.length}/500
+            </p>
           </div>
           <div>
             <label htmlFor="post-youtube" className="block text-sm font-medium mb-1">
