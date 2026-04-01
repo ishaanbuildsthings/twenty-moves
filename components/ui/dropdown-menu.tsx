@@ -49,6 +49,19 @@ function DropdownMenuContent({
   )
 }
 
+function DropdownMenuArrow({
+  className,
+  ...props
+}: MenuPrimitive.Arrow.Props) {
+  return (
+    <MenuPrimitive.Arrow
+      data-slot="dropdown-menu-arrow"
+      className={cn("fill-popover [&>path:first-of-type]:fill-foreground/10", className)}
+      {...props}
+    />
+  )
+}
+
 function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
 }
@@ -253,6 +266,7 @@ export {
   DropdownMenu,
   DropdownMenuPortal,
   DropdownMenuTrigger,
+  DropdownMenuArrow,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,

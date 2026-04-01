@@ -8,7 +8,7 @@ import { UserAvatar } from "@/lib/components/user-avatar";
 import { formatTime, timeAgo } from "@/lib/cubing/format";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Trash2, Send } from "lucide-react";
+import { Heart, MessageCircle, Trash2, Send, MoreHorizontal } from "lucide-react";
 import { ViewerContext } from "@/lib/context/viewer";
 import {
   Dialog,
@@ -17,7 +17,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export interface IComment {
   id: string;
@@ -38,15 +45,13 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
   const queryClient = useQueryClient();
   const eventConfig = EVENT_MAP[post.eventName as CubeEvent];
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
   const deletePost = useMutation(trpc.post.deletePost.mutationOptions({
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: [["post"]] });
       removePostFromCache(queryClient, post.id);
     },
     onSuccess: () => {
-      // Invalidate user queries to refresh PBs on profile
+      toast.success("Post deleted!");
       queryClient.invalidateQueries({ queryKey: [["user"]] });
     },
   }));
@@ -80,29 +85,25 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
           </div>
         </div>
         {viewer && viewer.viewer.id === post.user.id && (
-          confirmDelete ? (
-            <div className="flex items-center gap-1.5">
-              <button
-                className="text-xs text-red-500 font-medium hover:text-red-400 transition-colors"
-                onClick={() => { deletePost.mutate({ postId: post.id }); setConfirmDelete(false); }}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="p-1 text-muted-foreground/50 hover:text-foreground transition-colors">
+              <MoreHorizontal className="w-5 h-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuItem
+                className="text-red-500 focus:text-red-500"
+                onClick={() => deletePost.mutate({ postId: post.id })}
               >
-                Delete
-              </button>
-              <button
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setConfirmDelete(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              className="p-1 text-muted-foreground/50 hover:text-red-500 transition-colors"
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )
+                <div className="flex items-start gap-2">
+                  <Trash2 className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="font-medium">Delete</div>
+                    <div className="text-[11px] text-muted-foreground font-normal leading-snug">Deleting a post with a PB will recompute your PBs from previous posts.</div>
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
