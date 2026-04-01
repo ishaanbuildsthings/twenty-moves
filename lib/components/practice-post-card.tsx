@@ -174,16 +174,25 @@ function removePostFromCache(
   }
 }
 
-/** Simple isometric cube icon for likes. */
+/** Rounded 3D cube icon for likes. */
 function CubeIcon({ className, filled }: { className?: string; filled?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={filled ? 0 : 1.8} strokeLinejoin="round">
-      {/* Top face */}
-      <polygon points="12,2 22,8 12,14 2,8" fill={filled ? "currentColor" : "none"} opacity={filled ? 0.9 : 1} />
-      {/* Left face */}
-      <polygon points="2,8 12,14 12,22 2,16" fill={filled ? "currentColor" : "none"} opacity={filled ? 0.6 : 1} />
-      {/* Right face */}
-      <polygon points="22,8 12,14 12,22 22,16" fill={filled ? "currentColor" : "none"} opacity={filled ? 0.35 : 1} />
+    <svg viewBox="0 0 24 24" className={className} fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* Outer cube outline */}
+      <path
+        d="M12 2L21 7.5V16.5L12 22L3 16.5V7.5L12 2Z"
+        stroke="currentColor"
+        strokeWidth={2}
+        fill={filled ? "currentColor" : "none"}
+        opacity={filled ? 0.2 : 1}
+      />
+      {/* Inner edges — center vertical + two diagonals to corners */}
+      <path
+        d="M12 22V12M3 7.5L12 12L21 7.5"
+        stroke="currentColor"
+        strokeWidth={2}
+        opacity={filled ? 0.8 : 1}
+      />
     </svg>
   );
 }
