@@ -73,13 +73,27 @@ function getStatColumnLabel(config: typeof EVENT_CONFIGS[number]): string {
 
 // Compute display values (single, average/mean) from solves based on event config.
 // Uses the shared compute functions so display is always correct.
-function computeDisplayStats(solves: SolveForStats[], config: typeof EVENT_CONFIGS[number], result: number | null) {
+function computeDisplayStats(
+  solves: SolveForStats[],
+  config: typeof EVENT_CONFIGS[number],
+  result: number | null,
+  isCurrent: boolean = true,
+) {
   const single = computeBestSingle(solves);
   const singleStr = single === null ? "—" : formatTime(single);
 
   // Use the stored result from the tournament entry rather than recomputing.
   // The backend handles DNF padding for incomplete Ao5s (4/5 solves).
-  const avgStr = result !== null ? formatTime(result) : "—";
+  // If the tournament has ended and result is null but solves exist, show DNF
+  // (the user didn't finish all solves, so no valid average was computed).
+  let avgStr: string;
+  if (result !== null) {
+    avgStr = formatTime(result);
+  } else if (!isCurrent && solves.length > 0) {
+    avgStr = "DNF";
+  } else {
+    avgStr = "—";
+  }
 
   // The ranking result — what determines your position on the leaderboard.
   // For BLD events ranked by single, this is the best single.
@@ -654,12 +668,13 @@ function EventCard({
   const totalSolves = config.tournamentSolveCount;
   const formatLabel = getFormatLabel(config);
 
-  // Determine status from entry existence, not solve count.
+  // Determine status from entry existence and result.
   // If a TournamentEntry exists, the user started (even if 0 solves).
+  // If a result is stored, or the tournament has ended, treat as completed.
   let status: "not-started" | "in-progress" | "completed";
   if (!enteredEvent) {
     status = "not-started";
-  } else if (enteredEvent.solves.length >= totalSolves) {
+  } else if (enteredEvent.solves.length >= totalSolves || enteredEvent.result !== null || !isCurrent) {
     status = "completed";
   } else {
     status = "in-progress";
@@ -669,7 +684,7 @@ function EventCard({
 
   // Use the stored result from the tournament entry.
   const displayStats = enteredEvent
-    ? computeDisplayStats(enteredEvent.solves, config, enteredEvent.result)
+    ? computeDisplayStats(enteredEvent.solves, config, enteredEvent.result, isCurrent)
     : null;
 
   return (
@@ -850,7 +865,7 @@ function LeaderboardOverview({
                     {eventData.viewerEntry && (() => {
                       const viewer = eventData.viewerEntry;
                       const { bestIdx, worstIdx } = getBestAndWorst(viewer.solves);
-                      const { singleStr, avgStr } = computeDisplayStats(viewer.solves, config, viewer.result);
+                      const { singleStr, avgStr } = computeDisplayStats(viewer.solves, config, viewer.result, isCurrent);
                       return (
                         <tr className={`${accent.bgRow} border-l-2 ${accent.borderRow} border-b ${accent.borderRowBottom}`}>
                           <td className={`px-4 py-2.5 w-10 text-center text-sm font-bold ${accent.text}`}>
@@ -888,7 +903,7 @@ function LeaderboardOverview({
                     {/* Top 3 */}
                     {eventData.top3.map((entry, rowIdx) => {
                       const { bestIdx, worstIdx } = getBestAndWorst(entry.solves);
-                      const { singleStr, avgStr } = computeDisplayStats(entry.solves, config, entry.result);
+                      const { singleStr, avgStr } = computeDisplayStats(entry.solves, config, entry.result, isCurrent);
                       return (
                         <tr
                           key={entry.rank}
@@ -931,6 +946,12 @@ function LeaderboardOverview({
                               </td>
                             );
                           })}
+                          {/* Fill empty solve columns with DNS for ended tournaments */}
+                          {Array.from({ length: solveCount - entry.solves.length }).map((_, i) => (
+                            <td key={`empty-${i}`} className="px-2 py-2.5 text-right font-mono tabular-nums text-muted-foreground">
+                              {isCurrent ? "—" : "DNS"}
+                            </td>
+                          ))}
                         </tr>
                       );
                     })}
@@ -1047,7 +1068,7 @@ function EventLeaderboardDetail({
                   const viewer = leaderboardQuery.data!.viewerEntry;
                   if (!viewer) return null;
                   const { bestIdx, worstIdx } = getBestAndWorst(viewer.solves);
-                  const { singleStr, avgStr } = computeDisplayStats(viewer.solves, eventConfig, viewer.result);
+                  const { singleStr, avgStr } = computeDisplayStats(viewer.solves, eventConfig, viewer.result, isCurrent);
                   return (
                     <tr className={`${accent.bgRow} border-l-2 ${accent.borderRow} border-b ${accent.borderRowBottom}`}>
                       <td className={`px-4 py-3 text-center text-sm font-bold ${accent.text}`}>
@@ -1082,7 +1103,7 @@ function EventLeaderboardDetail({
 
                 {leaderboardQuery.data!.entries.map((entry, rowIdx) => {
                   const { bestIdx, worstIdx } = getBestAndWorst(entry.solves);
-                  const { singleStr, avgStr } = computeDisplayStats(entry.solves, eventConfig, entry.result);
+                  const { singleStr, avgStr } = computeDisplayStats(entry.solves, eventConfig, entry.result, isCurrent);
                   return (
                     <tr
                       key={entry.rank}

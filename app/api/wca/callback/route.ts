@@ -30,17 +30,21 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login", url.origin));
   }
 
-  const profileUrl = new URL(`/profile/${user.username}`, url.origin);
-
   // Validate CSRF state.
   const cookieStore = await cookies();
   const expectedState = cookieStore.get(WCA_STATE_COOKIE)?.value;
+
+  // Check if we should redirect back to onboarding instead of the profile page.
+  const wcaRedirect = cookieStore.get("wca_redirect")?.value;
+  const redirectPath = wcaRedirect ?? `/profile/${user.username}`;
+  const profileUrl = new URL(redirectPath, url.origin);
 
   if (!code || !state || state !== expectedState) {
     profileUrl.searchParams.set("wca", "error");
     profileUrl.searchParams.set("reason", "invalid_state");
     const response = NextResponse.redirect(profileUrl);
     response.cookies.delete(WCA_STATE_COOKIE);
+    response.cookies.delete("wca_redirect");
     return response;
   }
 
@@ -60,6 +64,7 @@ export async function GET(request: Request) {
     profileUrl.searchParams.set("wca", "linked");
     const response = NextResponse.redirect(profileUrl);
     response.cookies.delete(WCA_STATE_COOKIE);
+    response.cookies.delete("wca_redirect");
     return response;
   } catch (e) {
     console.error("WCA OAuth callback error:", e);
@@ -78,6 +83,7 @@ export async function GET(request: Request) {
     profileUrl.searchParams.set("reason", reason);
     const response = NextResponse.redirect(profileUrl);
     response.cookies.delete(WCA_STATE_COOKIE);
+    response.cookies.delete("wca_redirect");
     return response;
   }
 }

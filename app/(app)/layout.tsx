@@ -15,7 +15,7 @@ export default async function AppLayout({
   const session = await trpc.auth.whoAmI();
 
   if (session.state === "unauthenticated") {
-    redirect("/login");
+    redirect("/");
   }
 
   if (session.state === "needs-profile") {
