@@ -95,7 +95,7 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
       {/* Caption */}
       {post.caption && (
         <div className="px-5 pb-4">
-          <p className="text-sm leading-relaxed">{post.caption}</p>
+          <p className="text-sm leading-relaxed break-all">{post.caption}</p>
         </div>
       )}
 
@@ -247,7 +247,7 @@ function CommentsModal({ post, open, onOpenChange }: { post: PostWithInteraction
 
         {/* Caption */}
         {post.caption && (
-          <p className="text-sm leading-relaxed">{post.caption}</p>
+          <p className="text-sm leading-relaxed break-all">{post.caption}</p>
         )}
 
         {/* Comments list */}
@@ -259,7 +259,7 @@ function CommentsModal({ post, open, onOpenChange }: { post: PostWithInteraction
               <div key={comment.id} className="flex items-start gap-2 group">
                 <UserAvatar user={comment.user} size="sm" rounded="full" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm">
+                  <p className="text-sm break-all">
                     <span className="font-semibold mr-1.5">{comment.user.username}</span>
                     {comment.body}
                   </p>
