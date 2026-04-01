@@ -8,8 +8,9 @@ import { UserAvatar } from "@/lib/components/user-avatar";
 import { formatTime, timeAgo } from "@/lib/cubing/format";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Trash2, Send, MoreHorizontal } from "lucide-react";
+import { MessageCircle, Trash2, Send, MoreHorizontal } from "lucide-react";
 import { ViewerContext } from "@/lib/context/viewer";
+import { useSettings } from "@/lib/context/settings";
 import {
   Dialog,
   DialogContent,
@@ -173,6 +174,20 @@ function removePostFromCache(
   }
 }
 
+/** Simple isometric cube icon for likes. */
+function CubeIcon({ className, filled }: { className?: string; filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={filled ? 0 : 1.8} strokeLinejoin="round">
+      {/* Top face */}
+      <polygon points="12,2 22,8 12,14 2,8" fill={filled ? "currentColor" : "none"} opacity={filled ? 0.9 : 1} />
+      {/* Left face */}
+      <polygon points="2,8 12,14 12,22 2,16" fill={filled ? "currentColor" : "none"} opacity={filled ? 0.6 : 1} />
+      {/* Right face */}
+      <polygon points="22,8 12,14 12,22 22,16" fill={filled ? "currentColor" : "none"} opacity={filled ? 0.35 : 1} />
+    </svg>
+  );
+}
+
 // Update a post in all infinite query caches (feed + profile posts)
 function updatePostInCache(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -196,7 +211,8 @@ function updatePostInCache(
   }
 }
 
-function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOpenComments: () => void }) {
+function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOpenComments: () => void; }) {
+  const { accent } = useSettings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -226,13 +242,13 @@ function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOp
       <button
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
           post.liked
-            ? "text-red-500"
-            : "text-muted-foreground hover:text-red-500 hover:bg-muted"
+            ? accent.text
+            : `text-muted-foreground ${accent.hoverSubtle}`
         }`}
         disabled={likePending}
         onClick={() => post.liked ? unlike.mutate({ postId: post.id }) : like.mutate({ postId: post.id })}
       >
-        <Heart className={`w-4 h-4 ${post.liked ? "fill-current" : ""}`} />
+        <CubeIcon className="w-4 h-4" filled={post.liked} />
         <span>{post.numLikes}</span>
       </button>
       <button
