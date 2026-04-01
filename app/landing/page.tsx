@@ -88,7 +88,7 @@ export default function LandingPage() {
 
       {features.map((feature, i) => {
         const isReversed = i % 2 === 1;
-        const hasScreenshot = !!(feature.screenshot || feature.screenshotPlaceholder);
+        const hasScreenshot = !!feature.screenshot;
 
         return (
           <section
@@ -132,26 +132,15 @@ export default function LandingPage() {
               {/* Screenshot */}
               {hasScreenshot && (
                 <div className="lg:w-7/12">
-                  {feature.screenshot ? (
-                    <div className="rounded-xl border border-border overflow-hidden">
-                      <Image
-                        src={feature.screenshot}
-                        alt={`${feature.title} screenshot`}
-                        width={1200}
-                        height={750}
-                        className="w-full h-auto"
-                      />
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-border bg-card overflow-hidden aspect-[16/10] flex items-center justify-center">
-                      <div className="text-center text-muted-foreground/40">
-                        <div className="text-4xl mb-2">{feature.emoji}</div>
-                        <div className="text-xs font-medium uppercase tracking-wide">
-                          Screenshot placeholder
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <Image
+                      src={feature.screenshot!}
+                      alt={`${feature.title} screenshot`}
+                      width={1200}
+                      height={750}
+                      className="w-full h-auto"
+                    />
+                  </div>
                 </div>
               )}
             </div>
