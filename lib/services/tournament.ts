@@ -632,8 +632,14 @@ export function tournamentService(ctx: ServiceContext) {
         // BLD events: result is best single, available from first solve.
         result = computeBestSingle(solvesForStats);
       } else if (solvesForStats.length >= 4 && expectedSolves === 5) {
-        // Ao5: computable with 4+ solves (missing solves treated as DNF).
-        result = computeAo5(solvesForStats);
+        // Ao5: computable with 4+ solves. Pad missing solves with DNF —
+        // in tournaments you get a (disadvantaged) result even if you
+        // don't finish all 5, but you can't win with a missing solve.
+        const padded = [...solvesForStats];
+        while (padded.length < 5) {
+          padded.push({ timeMs: 0, penalty: "dnf" as const });
+        }
+        result = computeAo5(padded);
       } else if (solvesForStats.length >= 3 && expectedSolves === 3) {
         // Mo3: computable when all 3 solves are in.
         result = computeMo3(solvesForStats);

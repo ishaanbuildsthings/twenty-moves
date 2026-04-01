@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import { TRPCReactProvider } from "@/lib/trpc/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -44,6 +45,7 @@ export default function RootLayout({
         <TRPCReactProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </TRPCReactProvider>
+        <Analytics />
       </body>
     </html>
   );

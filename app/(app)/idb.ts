@@ -310,21 +310,21 @@ export async function getStats(event: CubeEvent): Promise<EventStats> {
     const tx = db.transaction(STATS_STORE, "readonly");
     const req = tx.objectStore(STATS_STORE).get(event);
     req.onsuccess = () => {
-      resolve(
-        (req.result as EventStats) ?? {
-          event,
-          bestSingle: null,
-          bestAo5: null,
-          bestAo12: null,
-          bestAo100: null,
-          bestMo3: null,
-          sessionMean: null,
-          currentAo5: null,
-          currentAo12: null,
-          currentAo100: null,
-          currentMo3: null,
-        }
-      );
+      const defaults: EventStats = {
+        event,
+        bestSingle: null,
+        bestAo5: null,
+        bestAo12: null,
+        bestAo100: null,
+        bestMo3: null,
+        sessionMean: null,
+        currentAo5: null,
+        currentAo12: null,
+        currentAo100: null,
+        currentMo3: null,
+      };
+      // Merge with defaults to handle records created before new fields were added.
+      resolve(req.result ? { ...defaults, ...(req.result as EventStats) } : defaults);
     };
     req.onerror = () => reject(req.error);
   });
