@@ -212,7 +212,7 @@ function StepProfile({
         <button
           type="submit"
           disabled={createProfile.isPending}
-          className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
+          className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px]"
         >
           {createProfile.isPending ? "Creating..." : "Continue"}
         </button>
@@ -259,7 +259,7 @@ function StepWCA({ onNext }: { onNext: () => void }) {
         <div className="w-full space-y-3">
           <button
             onClick={startWcaOAuth}
-            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors"
+            className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px]"
           >
             Link WCA Account
           </button>
@@ -335,7 +335,7 @@ function StepYouTube({ onNext }: { onNext: () => void }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
+            className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px]"
           >
             {saving ? "Saving..." : url.trim() ? "Save & Continue" : "Continue"}
           </button>
@@ -439,7 +439,7 @@ function StepFollow({ onNext }: { onNext: () => void }) {
 
         <button
           onClick={onNext}
-          className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors mt-4"
+          className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-[0_3px_0_0_#1e40af] active:shadow-none active:translate-y-[3px] mt-4"
         >
           {following ? "Let's go!" : "Continue"}
         </button>
