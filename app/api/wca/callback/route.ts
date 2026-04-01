@@ -44,6 +44,7 @@ export async function GET(request: Request) {
     profileUrl.searchParams.set("reason", "invalid_state");
     const response = NextResponse.redirect(profileUrl);
     response.cookies.delete(WCA_STATE_COOKIE);
+    response.cookies.delete("wca_redirect");
     return response;
   }
 
@@ -82,6 +83,7 @@ export async function GET(request: Request) {
     profileUrl.searchParams.set("reason", reason);
     const response = NextResponse.redirect(profileUrl);
     response.cookies.delete(WCA_STATE_COOKIE);
+    response.cookies.delete("wca_redirect");
     return response;
   }
 }
