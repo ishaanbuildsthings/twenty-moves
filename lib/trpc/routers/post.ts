@@ -226,7 +226,7 @@ export const postRouter = createTRPCRouter({
 
           const bestTime = (best._min as Record<string, number | null>)[field];
 
-          if (bestTime != null) {
+          if (bestTime !== null) {
             await tx.personalBest.upsert({
               where: { userId_eventId_type: { userId: post.userId, eventId: post.eventId, type } },
               create: { userId: post.userId, eventId: post.eventId, type, time: bestTime },
