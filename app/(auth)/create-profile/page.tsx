@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation } from "@tanstack/react-query";
@@ -452,10 +453,23 @@ function StepFollow({ onNext }: { onNext: () => void }) {
 
 export default function CreateProfilePage() {
   const router = useRouter();
+  const trpc = useTRPC();
+
+  // Check if the user already has a profile (e.g. refreshed after step 1).
+  const whoAmI = useQuery(trpc.auth.whoAmI.queryOptions());
+  const profileExists = whoAmI.data?.state === "ready";
+
   // Resume from a specific step (e.g. after WCA OAuth redirect).
   const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const initialStep = parseInt(searchParams.get("step") ?? "0", 10);
   const [step, setStep] = useState(isNaN(initialStep) ? 0 : initialStep);
+
+  // If profile already exists but we're on step 0, skip to step 1.
+  useEffect(() => {
+    if (profileExists && step === 0) {
+      setStep(1);
+    }
+  }, [profileExists, step]);
 
   const handleComplete = () => {
     router.push("/");
