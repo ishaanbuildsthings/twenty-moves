@@ -20,12 +20,18 @@ export const ACCENT_STYLES: Record<AccentColor, {
   hoverSubtle: string;
   toggle: string;
   border: string;
+  /** Very faint background for highlighted rows (e.g. viewer row on leaderboard). */
+  bgRow: string;
+  /** Subtle left-border for highlighted rows. */
+  borderRow: string;
+  /** Subtle bottom-border for highlighted rows. */
+  borderRowBottom: string;
 }> = {
-  orange: { bg: "bg-amber-600",    hover: "hover:bg-amber-500",    shadow: "shadow-[0_2px_0_0_theme(colors.amber.800)]",    text: "text-amber-500",    bgSubtle: "bg-amber-500/20", hoverSubtle: "hover:bg-amber-500/20",   toggle: "bg-amber-600",    border: "border-amber-500" },
-  red:    { bg: "bg-red-600",      hover: "hover:bg-red-500",      shadow: "shadow-[0_2px_0_0_theme(colors.red.800)]",      text: "text-red-500",      bgSubtle: "bg-red-500/20",   hoverSubtle: "hover:bg-red-500/20",     toggle: "bg-red-600",      border: "border-red-500" },
-  green:  { bg: "bg-emerald-600",  hover: "hover:bg-emerald-500",  shadow: "shadow-[0_2px_0_0_theme(colors.emerald.800)]",  text: "text-emerald-500",  bgSubtle: "bg-emerald-500/20", hoverSubtle: "hover:bg-emerald-500/20", toggle: "bg-emerald-600", border: "border-emerald-500" },
-  blue:   { bg: "bg-blue-600",     hover: "hover:bg-blue-500",     shadow: "shadow-[0_2px_0_0_theme(colors.blue.800)]",     text: "text-blue-500",     bgSubtle: "bg-blue-500/20",  hoverSubtle: "hover:bg-blue-500/20",    toggle: "bg-blue-600",     border: "border-blue-500" },
-  yellow: { bg: "bg-yellow-500",   hover: "hover:bg-yellow-400",   shadow: "shadow-[0_2px_0_0_theme(colors.yellow.700)]",   text: "text-yellow-400",   bgSubtle: "bg-yellow-400/20", hoverSubtle: "hover:bg-yellow-400/20", toggle: "bg-yellow-500",  border: "border-yellow-400" },
+  orange: { bg: "bg-amber-600",    hover: "hover:bg-amber-500",    shadow: "shadow-[0_2px_0_0_theme(colors.amber.800)]",    text: "text-amber-500",    bgSubtle: "bg-amber-500/20", hoverSubtle: "hover:bg-amber-500/20",   toggle: "bg-amber-600",    border: "border-amber-500",   bgRow: "bg-amber-500/[0.03]",    borderRow: "border-l-amber-500/40",    borderRowBottom: "border-b-amber-500/10" },
+  red:    { bg: "bg-red-600",      hover: "hover:bg-red-500",      shadow: "shadow-[0_2px_0_0_theme(colors.red.800)]",      text: "text-red-500",      bgSubtle: "bg-red-500/20",   hoverSubtle: "hover:bg-red-500/20",     toggle: "bg-red-600",      border: "border-red-500",     bgRow: "bg-red-500/[0.03]",      borderRow: "border-l-red-500/40",      borderRowBottom: "border-b-red-500/10" },
+  green:  { bg: "bg-emerald-600",  hover: "hover:bg-emerald-500",  shadow: "shadow-[0_2px_0_0_theme(colors.emerald.800)]",  text: "text-emerald-500",  bgSubtle: "bg-emerald-500/20", hoverSubtle: "hover:bg-emerald-500/20", toggle: "bg-emerald-600", border: "border-emerald-500", bgRow: "bg-emerald-500/[0.03]",  borderRow: "border-l-emerald-500/40",  borderRowBottom: "border-b-emerald-500/10" },
+  blue:   { bg: "bg-blue-600",     hover: "hover:bg-blue-500",     shadow: "shadow-[0_2px_0_0_theme(colors.blue.800)]",     text: "text-blue-500",     bgSubtle: "bg-blue-500/20",  hoverSubtle: "hover:bg-blue-500/20",    toggle: "bg-blue-600",     border: "border-blue-500",    bgRow: "bg-blue-500/[0.03]",     borderRow: "border-l-blue-500/40",     borderRowBottom: "border-b-blue-500/10" },
+  yellow: { bg: "bg-yellow-500",   hover: "hover:bg-yellow-400",   shadow: "shadow-[0_2px_0_0_theme(colors.yellow.700)]",   text: "text-yellow-400",   bgSubtle: "bg-yellow-400/20", hoverSubtle: "hover:bg-yellow-400/20", toggle: "bg-yellow-500",  border: "border-yellow-400",  bgRow: "bg-yellow-400/[0.03]",   borderRow: "border-l-yellow-400/40",   borderRowBottom: "border-b-yellow-400/10" },
 };
 
 export interface DisplaySettings {

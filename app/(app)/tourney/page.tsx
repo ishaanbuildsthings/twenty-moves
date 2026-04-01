@@ -770,6 +770,7 @@ function LeaderboardOverview({
   isCurrent: boolean;
   onSelectEvent: (event: CubeEvent) => void;
 }) {
+  const { accent } = useSettings();
   const overviewQuery = useLeaderboardOverview(tournamentNumber);
 
   if (overviewQuery.isLoading) {
@@ -851,12 +852,12 @@ function LeaderboardOverview({
                       const { bestIdx, worstIdx } = getBestAndWorst(viewer.solves);
                       const { singleStr, avgStr } = computeDisplayStats(viewer.solves, config, viewer.result);
                       return (
-                        <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
-                          <td className="px-4 py-2.5 w-10 text-center text-sm font-bold text-orange-400">
+                        <tr className={`${accent.bgRow} border-l-2 ${accent.borderRow} border-b ${accent.borderRowBottom}`}>
+                          <td className={`px-4 py-2.5 w-10 text-center text-sm font-bold ${accent.text}`}>
                             {viewer.rank ?? "—"}
                           </td>
                           <td className="py-2.5">
-                            <span className="font-semibold text-orange-400">You</span>
+                            <span className={`font-semibold ${accent.text}`}>You</span>
                           </td>
                           <td className="pl-8 pr-4 py-2.5 text-right font-mono tabular-nums font-bold">
                             {singleStr}
@@ -957,6 +958,7 @@ function EventLeaderboardDetail({
   page: number;
   onPageChange: (page: number) => void;
 }) {
+  const { accent } = useSettings();
   const eventConfig = EVENT_MAP[event];
   const solveCount = eventConfig.tournamentSolveCount;
 
@@ -1047,12 +1049,12 @@ function EventLeaderboardDetail({
                   const { bestIdx, worstIdx } = getBestAndWorst(viewer.solves);
                   const { singleStr, avgStr } = computeDisplayStats(viewer.solves, eventConfig, viewer.result);
                   return (
-                    <tr className="bg-orange-500/[0.03] border-l-2 border-l-orange-500/40 border-b border-b-orange-500/10">
-                      <td className="px-4 py-3 text-center text-sm font-bold text-orange-400">
+                    <tr className={`${accent.bgRow} border-l-2 ${accent.borderRow} border-b ${accent.borderRowBottom}`}>
+                      <td className={`px-4 py-3 text-center text-sm font-bold ${accent.text}`}>
                         {viewer.rank ?? "—"}
                       </td>
                       <td className="px-3 py-3">
-                        <span className="font-semibold text-orange-400">You</span>
+                        <span className={`font-semibold ${accent.text}`}>You</span>
                       </td>
                       <td className="pl-8 pr-4 py-3 text-right font-mono tabular-nums font-bold">
                         {singleStr}
