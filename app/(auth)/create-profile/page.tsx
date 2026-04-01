@@ -352,9 +352,7 @@ function StepFollow({ onNext }: { onNext: () => void }) {
   const trpc = useTRPC();
   const [following, setFollowing] = useState(false);
 
-  const followMutation = useMutation(trpc.user.follow.mutationOptions({
-    onSuccess: () => setFollowing(true),
-  }));
+  const followMutation = useMutation(trpc.user.follow.mutationOptions());
 
   // Fetch the recommended user via tRPC query
   const recommendedUser = useQuery(trpc.user.getByUsername.queryOptions({ username: "ishaan" }));
@@ -383,15 +381,15 @@ function StepFollow({ onNext }: { onNext: () => void }) {
               <p className="text-xs text-muted-foreground">@{user.username}</p>
             </div>
             <button
-              onClick={() => followMutation.mutate({ userId: user.id })}
-              disabled={following || followMutation.isPending}
+              onClick={() => { setFollowing(true); followMutation.mutate({ userId: user.id }); }}
+              disabled={following}
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 following
                   ? "bg-muted text-muted-foreground"
                   : "bg-amber-600 hover:bg-amber-500 text-white"
               }`}
             >
-              {following ? "Following" : followMutation.isPending ? "..." : "Follow"}
+              {following ? "Following" : "Follow"}
             </button>
           </div>
         ) : null}
