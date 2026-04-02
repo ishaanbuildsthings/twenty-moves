@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { NotificationBell } from "@/lib/components/notification-bell";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import {
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/sidebar";
 import { useViewer } from "@/lib/hooks/useViewer";
 import { useSettings } from "@/lib/context/settings";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const navItems = [
   { label: "Practice", href: "/practice", icon: "⏱️", comingSoon: false, hoverClass: "hover:bg-orange-500/15 hover:text-orange-300" },
@@ -29,16 +28,9 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { viewer } = useViewer();
   const { accent } = useSettings();
   const { setOpenMobile } = useSidebar();
-  const supabase = createBrowserSupabaseClient();
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.refresh();
-  };
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -97,15 +89,6 @@ export function AppSidebar() {
               </svg>
             </Link>
             <NotificationBell />
-            <button
-              onClick={handleSignOut}
-              className="p-2 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
-              title="Sign out"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
-                <path fillRule="evenodd" d="M7.5 3.75A1.5 1.5 0 0 0 6 5.25v13.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V15a.75.75 0 0 1 1.5 0v3.75a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3V5.25a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3V9a.75.75 0 0 1-1.5 0V5.25a1.5 1.5 0 0 0-1.5-1.5h-6Zm10.72 4.72a.75.75 0 0 1 1.06 0l3 3a.75.75 0 0 1 0 1.06l-3 3a.75.75 0 1 1-1.06-1.06l1.72-1.72H9a.75.75 0 0 1 0-1.5h10.94l-1.72-1.72a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </button>
           </div>
         </div>
       </SidebarFooter>
