@@ -446,54 +446,9 @@ function ComparePBsModal({ viewer, onClose }: { viewer: IUser; onClose: () => vo
     (a, b) => eventOrder.indexOf(a) - eventOrder.indexOf(b)
   );
 
-  function PBTable({ pbs, highlight }: { pbs: Map<string, Map<PbType, number>>; highlight?: Map<string, Map<PbType, number>> }) {
-    const eventIds = [...pbs.keys()];
-    const ordered = eventOrder.filter((e) => eventIds.includes(e));
-    if (ordered.length === 0) return <p className="text-sm text-muted-foreground py-4">No PBs recorded.</p>;
-    return (
-      <div className="border border-border rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[2rem_4rem_1fr] items-center gap-x-3 px-3 py-2 bg-muted/50 border-b border-border">
-          <span />
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Event</span>
-          <div className="flex gap-3">
-            {PB_TYPE_ORDER.map((type) => (
-              <span key={type} className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest w-14 text-right">
-                {PB_TYPE_LABELS[type]}
-              </span>
-            ))}
-          </div>
-        </div>
-        {ordered.map((eventId) => {
-          const config = EVENT_MAP[eventId as CubeEvent];
-          if (!config) return null;
-          const pbMap = pbs.get(eventId) ?? new Map<PbType, number>();
-          const hMap = highlight?.get(eventId) ?? new Map<PbType, number>();
-          return (
-            <div key={eventId} className="grid grid-cols-[2rem_4rem_1fr] items-center gap-x-3 px-3 py-2 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors">
-              <EventIcon event={config} size={16} />
-              <span className="text-xs font-semibold">{config.name}</span>
-              <div className="flex gap-3">
-                {PB_TYPE_ORDER.map((type) => {
-                  const time = pbMap.get(type);
-                  const otherTime = hMap.get(type);
-                  const faster = time != null && otherTime != null && time < otherTime;
-                  return (
-                    <span key={type} className={`font-mono tabular-nums text-xs w-14 text-right ${faster ? "text-green-400 font-bold" : ""}`}>
-                      {time != null ? formatTime(time) : <span className="text-muted-foreground/30">-</span>}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="!max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowRightLeft className="w-5 h-5" />
@@ -502,43 +457,37 @@ function ComparePBsModal({ viewer, onClose }: { viewer: IUser; onClose: () => vo
           <DialogDescription>Compare your personal bests side by side with another user.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-8">
-          {/* Left: Viewer */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <UserAvatar user={viewer} size="sm" rounded="full" />
-              <span className="font-semibold text-sm">{viewer.username}</span>
-              <span className="text-xs text-muted-foreground">(You)</span>
-            </div>
-            <PBTable pbs={viewerPBs} highlight={opponentData ? opponentPBs : undefined} />
+        {/* User headers + search */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <UserAvatar user={viewer} size="sm" rounded="full" />
+            <span className="font-semibold text-sm">{viewer.username}</span>
           </div>
-
-          {/* Right: Opponent */}
-          <div>
+          <div className="flex items-center gap-2">
             {opponent ? (
-              <div className="flex items-center gap-2 mb-4">
+              <>
                 <UserAvatar user={opponentData ?? opponent} size="sm" rounded="full" />
                 <span className="font-semibold text-sm">{opponent.username}</span>
                 <button
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => { setOpponent(null); setSearchQuery(""); }}
                 >
                   Change
                 </button>
-              </div>
+              </>
             ) : (
-              <div className="relative mb-4">
+              <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for a user..."
-                  className="w-full rounded-md border border-border bg-muted pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white"
+                  className="w-64 rounded-md border border-border bg-muted pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white"
                   autoFocus
                 />
                 {debouncedQuery.length > 0 && !opponent && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full right-0 w-64 mt-1 bg-popover border border-border rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
                     {searching ? (
                       <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
                     ) : searchResults && searchResults.length > 0 ? (
@@ -562,17 +511,77 @@ function ComparePBsModal({ viewer, onClose }: { viewer: IUser; onClose: () => vo
                 )}
               </div>
             )}
-
-            {opponent && loadingOpponent && (
-              <div className="flex justify-center py-8"><CubeLoader /></div>
-            )}
-            {opponentData && (
-              <PBTable pbs={opponentPBs} highlight={viewerPBs} />
-            )}
-            {!opponent && (
-              <p className="text-sm text-muted-foreground py-4">Search for a user to compare against.</p>
-            )}
           </div>
+        </div>
+
+        {opponent && loadingOpponent && (
+          <div className="flex justify-center py-8"><CubeLoader /></div>
+        )}
+
+        {/* Interlaced comparison table */}
+        <div className="border border-border rounded-lg overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center px-3 py-2 bg-muted/50 border-b border-border">
+            <div className="w-16 shrink-0 flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Event</span>
+            </div>
+            <div className="flex-1 flex gap-2">
+              {PB_TYPE_ORDER.map((type) => (
+                <div key={type} className="flex-1 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  {PB_TYPE_LABELS[type]}
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Rows */}
+          {sortedEventIds.map((eventId) => {
+            const config = EVENT_MAP[eventId as CubeEvent];
+            if (!config) return null;
+            const vMap = viewerPBs.get(eventId) ?? new Map<PbType, number>();
+            const oMap = opponentPBs.get(eventId) ?? new Map<PbType, number>();
+            return (
+              <div
+                key={eventId}
+                className="flex items-center px-3 py-1.5 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors"
+              >
+                <div className="w-16 shrink-0 flex items-center gap-1.5">
+                  <EventIcon event={config} size={16} />
+                  <span className="text-xs font-semibold">{config.name}</span>
+                </div>
+                <div className="flex-1 flex gap-2">
+                  {PB_TYPE_ORDER.map((type) => {
+                    const vTime = vMap.get(type);
+                    const oTime = oMap.get(type);
+                    const vFaster = vTime != null && oTime != null && vTime < oTime;
+                    const oFaster = oTime != null && vTime != null && oTime < vTime;
+                    return (
+                      <div key={type} className="flex-1 relative h-10 overflow-hidden rounded border border-border/30">
+                        {/* Viewer time — top-left */}
+                        <span className={`absolute top-0.5 left-1.5 font-mono tabular-nums text-[11px] ${vFaster ? "text-green-400 font-bold" : ""}`}>
+                          {vTime != null ? formatTime(vTime) : <span className="text-muted-foreground/30">-</span>}
+                        </span>
+                        {/* Diagonal line */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          <svg className="w-full h-full" preserveAspectRatio="none">
+                            <line x1="0" y1="100%" x2="100%" y2="0" stroke="currentColor" className="text-border" strokeWidth="1" />
+                          </svg>
+                        </div>
+                        {/* Opponent time — bottom-right */}
+                        <span className={`absolute bottom-0.5 right-1.5 font-mono tabular-nums text-[11px] ${oFaster ? "text-green-400 font-bold" : ""}`}>
+                          {oTime != null ? formatTime(oTime) : <span className="text-muted-foreground/30">-</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {sortedEventIds.length === 0 && (
+            <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+              {opponent ? "No PBs to compare." : "Search for a user to compare PBs."}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
