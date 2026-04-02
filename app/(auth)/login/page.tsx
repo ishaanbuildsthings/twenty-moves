@@ -71,7 +71,7 @@ export default function LoginPage() {
     <div className="flex flex-col flex-1 items-center justify-center p-8 font-sans">
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-3">
-        <img src="/twenty-moves-favicon.svg" alt="twenty moves" className="w-14 h-14 rounded-xl" />
+        <img src="/tm_logo_ccw.svg" alt="twenty moves" className="w-48 h-auto" />
       </div>
 
       <div className="w-full max-w-sm space-y-6">

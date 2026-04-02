@@ -46,11 +46,11 @@ export default function LandingPage() {
     <div className="min-h-full bg-background text-foreground font-sans">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5 max-w-5xl mx-auto">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-1">
           <img
-            src="/twenty-moves-favicon.svg"
+            src="/tm_logo_ccw.svg"
             alt="twenty moves"
-            className="w-8 h-8 rounded-lg"
+            className="w-32 h-auto"
           />
           <span className="text-lg font-extrabold tracking-tight">
             twenty moves
@@ -152,9 +152,9 @@ export default function LandingPage() {
       <section className="border-t border-border">
         <div className="max-w-5xl mx-auto px-6 py-24 text-center">
           <img
-            src="/twenty-moves-favicon.svg"
+            src="/tm_logo_ccw.svg"
             alt=""
-            className="w-12 h-12 rounded-xl mx-auto mb-6"
+            className="w-48 h-auto mx-auto mb-6"
           />
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-8">
             Ready to start cubing?
