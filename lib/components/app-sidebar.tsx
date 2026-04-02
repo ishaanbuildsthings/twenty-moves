@@ -63,25 +63,20 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="mx-2 mb-2 space-y-1.5">
-          {/* Profile link */}
+        <div className="mx-2 mb-2 flex items-center gap-2 rounded-lg bg-[oklch(0.18_0.005_60)] p-2 px-3 hover:bg-[oklch(0.22_0.005_60)] transition-colors">
           <Link
             href={`/profile/${viewer.username}`}
             onClick={() => setOpenMobile(false)}
-            className="flex items-center gap-2 rounded-lg bg-[oklch(0.18_0.005_60)] p-2 px-3 hover:bg-[oklch(0.24_0.005_60)] transition-colors"
+            className="flex items-center gap-2 min-w-0 flex-1"
           >
             <UserAvatar user={viewer} size="sm" rounded="xl" />
-            <div className="flex flex-col items-start overflow-hidden">
-              <span className="text-base font-bold truncate w-full text-left">{viewer.firstName}</span>
-              <span className="text-xs text-muted-foreground truncate w-full text-left">@{viewer.username}</span>
-            </div>
+            <span className="text-base font-bold truncate">{viewer.firstName}</span>
           </Link>
-          {/* Actions row */}
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center gap-0.5 shrink-0">
             <Link
               href="/settings"
               onClick={() => setOpenMobile(false)}
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
               title="Settings"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
