@@ -1029,8 +1029,21 @@ function EventLeaderboardDetail({
       {leaderboardQuery.isLoading ? (
         <CubeLoader message="Loading results..." />
       ) : !leaderboardQuery.data || leaderboardQuery.data.entries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
           <p className="text-muted-foreground">No entries yet for this event.</p>
+          {leaderboardQuery.data && !leaderboardQuery.data.viewerHasWca && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 mt-2 w-full max-w-lg">
+              <p className="text-sm text-yellow-200/80">
+                If you competed but don&apos;t see your results, you need to link your WCA account first.
+              </p>
+              <a
+                href="/settings"
+                className="shrink-0 text-sm font-semibold text-yellow-400 hover:text-yellow-300 transition-colors"
+              >
+                Link WCA →
+              </a>
+            </div>
+          )}
         </div>
       ) : (
         <>
