@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "twenty moves",
   description: "The social platform for speedcubers",
   icons: {
-    icon: "/tm_logo_ccw.svg",
+    icon: "/t_logo_large.svg",
   },
 };
 

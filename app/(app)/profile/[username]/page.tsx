@@ -9,7 +9,7 @@ import { publicEnv } from "@/lib/env";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/context/settings";
 
-import { ExternalLink, Puzzle, Trophy } from "lucide-react";
+import { ExternalLink, Puzzle, Trophy, Search, ArrowRightLeft, Loader2 } from "lucide-react";
 import { InfoTooltip } from "@/lib/components/info-tooltip";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
@@ -401,7 +401,200 @@ const PB_TYPE_LABELS: Record<PbType, string> = {
 
 const PB_TYPE_ORDER: PbType[] = ["single", "mo3", "avg5", "avg12", "avg100"];
 
+function ComparePBsModal({ viewer, onClose }: { viewer: IUser; onClose: () => void }) {
+  const trpc = useTRPC();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [opponent, setOpponent] = useState<IUser | null>(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const { data: searchResults, isLoading: searching } = useQuery({
+    ...trpc.user.search.queryOptions({ query: debouncedQuery }),
+    enabled: debouncedQuery.length > 0 && !opponent,
+  });
+
+  const { data: opponentUser, isLoading: loadingOpponent } = useQuery({
+    ...trpc.user.getByUsername.queryOptions({ username: opponent?.username ?? "" }),
+    enabled: !!opponent,
+  });
+
+  const opponentData = opponentUser ?? null;
+
+  // Build unified event list from both users
+  const viewerPBs = new Map<string, Map<PbType, number>>();
+  for (const pb of viewer.personalBests) {
+    if (!viewerPBs.has(pb.eventId)) viewerPBs.set(pb.eventId, new Map());
+    viewerPBs.get(pb.eventId)!.set(pb.type, pb.time);
+  }
+
+  const opponentPBs = new Map<string, Map<PbType, number>>();
+  if (opponentData) {
+    for (const pb of opponentData.personalBests) {
+      if (!opponentPBs.has(pb.eventId)) opponentPBs.set(pb.eventId, new Map());
+      opponentPBs.get(pb.eventId)!.set(pb.type, pb.time);
+    }
+  }
+
+  const allEventIds = new Set([...viewerPBs.keys(), ...opponentPBs.keys()]);
+  const eventOrder = EVENT_CONFIGS.map((e) => e.id as string);
+  const sortedEventIds = [...allEventIds].sort(
+    (a, b) => eventOrder.indexOf(a) - eventOrder.indexOf(b)
+  );
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="!max-w-4xl w-[calc(100%-2rem)] mx-auto max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ArrowRightLeft className="w-5 h-5" />
+            Compare PBs
+          </DialogTitle>
+          <DialogDescription>Compare your personal bests side by side with another user.</DialogDescription>
+        </DialogHeader>
+
+        {/* User headers + search */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <UserAvatar user={viewer} size="sm" rounded="full" />
+            <span className="font-semibold text-sm">{viewer.username}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {opponent ? (
+              <>
+                <UserAvatar user={opponentData ?? opponent} size="sm" rounded="full" />
+                <span className="font-semibold text-sm">{opponent.username}</span>
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => { setOpponent(null); setSearchQuery(""); }}
+                >
+                  Change
+                </button>
+              </>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search for a user..."
+                  className="w-64 rounded-md border border-border bg-muted pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white"
+                  autoFocus
+                />
+                {debouncedQuery.length > 0 && !opponent && (
+                  <div className="absolute top-full right-0 w-64 mt-1 bg-popover border border-border rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                    {searching ? (
+                      <div className="flex justify-center py-3"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /></div>
+                    ) : searchResults && searchResults.length > 0 ? (
+                      searchResults
+                        .filter((u) => u.id !== viewer.id)
+                        .map((u) => (
+                          <button
+                            key={u.id}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                            onClick={() => setOpponent(u as unknown as IUser)}
+                          >
+                            <UserAvatar user={u} size="sm" rounded="full" />
+                            <span className="font-medium">{u.username}</span>
+                            <span className="text-muted-foreground text-xs">{u.firstName} {u.lastName}</span>
+                          </button>
+                        ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No users found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {opponent && loadingOpponent && (
+          <div className="flex justify-center py-8"><CubeLoader /></div>
+        )}
+
+        {/* Interlaced comparison table */}
+        <div className="overflow-x-auto -mx-4 px-4">
+        <div className="border border-border rounded-lg overflow-hidden min-w-[600px]">
+          {/* Header */}
+          <div className="flex items-center px-3 py-2 bg-muted/50 border-b border-border">
+            <div className="w-16 shrink-0 flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Event</span>
+            </div>
+            <div className="flex-1 flex gap-2">
+              {PB_TYPE_ORDER.map((type) => (
+                <div key={type} className="flex-1 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  {PB_TYPE_LABELS[type]}
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Rows */}
+          {sortedEventIds.map((eventId) => {
+            const config = EVENT_MAP[eventId as CubeEvent];
+            if (!config) return null;
+            const vMap = viewerPBs.get(eventId) ?? new Map<PbType, number>();
+            const oMap = opponentPBs.get(eventId) ?? new Map<PbType, number>();
+            return (
+              <div
+                key={eventId}
+                className="flex items-center px-3 py-1.5 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors"
+              >
+                <div className="w-16 shrink-0 flex items-center gap-1.5">
+                  <EventIcon event={config} size={16} />
+                  <span className="text-xs font-semibold">{config.name}</span>
+                </div>
+                <div className="flex-1 flex gap-2">
+                  {PB_TYPE_ORDER.map((type) => {
+                    const vTime = vMap.get(type);
+                    const oTime = oMap.get(type);
+                    const vFaster = vTime != null && oTime != null && vTime < oTime;
+                    const oFaster = oTime != null && vTime != null && oTime < vTime;
+                    return (
+                      <div key={type} className="flex-1 relative h-10 overflow-hidden rounded border border-border/30">
+                        {/* Viewer time — top-left */}
+                        <span className={`absolute top-0.5 left-1.5 font-mono tabular-nums text-[11px] ${vFaster ? "text-green-400 font-bold" : ""}`}>
+                          {vTime != null ? formatTime(vTime) : <span className="text-muted-foreground/30">-</span>}
+                        </span>
+                        {/* Diagonal line */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          <svg className="w-full h-full" preserveAspectRatio="none">
+                            <line x1="0" y1="100%" x2="100%" y2="0" stroke="currentColor" className="text-border" strokeWidth="1" />
+                          </svg>
+                        </div>
+                        {/* Opponent time — bottom-right */}
+                        <span className={`absolute bottom-0.5 right-1.5 font-mono tabular-nums text-[11px] ${oFaster ? "text-green-400 font-bold" : ""}`}>
+                          {oTime != null ? formatTime(oTime) : <span className="text-muted-foreground/30">-</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {sortedEventIds.length === 0 && (
+            <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+              {opponent ? "No PBs to compare." : "Search for a user to compare PBs."}
+            </div>
+          )}
+        </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AchievementsTab({ user }: { user: IUser }) {
+  const { viewer } = useViewer();
+  const { accent } = useSettings();
+  const [compareOpen, setCompareOpen] = useState(false);
+
   // Group PBs by event, ordered by EVENT_CONFIGS order
   const pbsByEvent = new Map<string, IPersonalBest[]>();
   for (const pb of user.personalBests) {
@@ -451,11 +644,20 @@ function AchievementsTab({ user }: { user: IUser }) {
 
       {/* Personal Bests Table */}
       <section>
-        <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Trophy className="w-4 h-4" />
-          Personal Bests
-          <InfoTooltip>Personal bests are only logged when you make a post.</InfoTooltip>
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+            <Trophy className="w-4 h-4" />
+            Personal Bests
+            <InfoTooltip>Personal bests are only logged when you make a post.</InfoTooltip>
+          </h2>
+          <button
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md ${accent.bg} text-white ${accent.hover} transition-colors`}
+            onClick={() => setCompareOpen(true)}
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5" />
+            Compare
+          </button>
+        </div>
         {sortedEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground">No PBs recorded. PBs are only logged when you make a post.</p>
         ) : (
@@ -497,6 +699,8 @@ function AchievementsTab({ user }: { user: IUser }) {
           </div>
         )}
       </section>
+
+      {compareOpen && <ComparePBsModal viewer={user} onClose={() => setCompareOpen(false)} />}
     </div>
   );
 }
