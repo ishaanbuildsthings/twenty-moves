@@ -125,10 +125,22 @@ export const postRouter = createTRPCRouter({
         await tx.postLike.create({
           data: { userId: ctx.viewer.userId, postId: input.postId },
         });
-        await tx.practicePost.update({
+        const post = await tx.practicePost.update({
           where: { id: input.postId },
           data: { numLikes: { increment: 1 } },
+          select: { userId: true },
         });
+        // Notify post author (don't notify yourself)
+        if (post.userId !== ctx.viewer.userId) {
+          await tx.notification.create({
+            data: {
+              userId: post.userId,
+              type: "like",
+              actorId: ctx.viewer.userId,
+              resourceId: input.postId,
+            },
+          });
+        }
       });
       return { success: true };
     }),

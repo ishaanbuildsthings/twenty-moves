@@ -30,6 +30,8 @@ model User {
   postLikes         PostLike[]
   postComments      PostComment[]
   medals            Medal[]
+  notifications     Notification[]    @relation("notifications")
+  actedNotifications Notification[]   @relation("notificationActor")
 }
 
 model Event {
@@ -232,4 +234,26 @@ model Medal {
   event      Event      @relation(fields: [eventId], references: [id])
 
   @@unique([tournamentId, eventId, type])
+}
+
+enum NotificationType {
+  like
+  comment
+  follow
+  medal
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String           // recipient
+  type       NotificationType
+  actorId    String           // who triggered it
+  resourceId String?          // e.g. post id, tournament id
+  read       Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  user  User @relation("notifications", fields: [userId], references: [id])
+  actor User @relation("notificationActor", fields: [actorId], references: [id])
+
+  @@index([userId, read, createdAt(sort: Desc)])
 }
