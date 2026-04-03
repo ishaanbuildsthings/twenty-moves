@@ -33,6 +33,11 @@ export interface IComment {
   createdAt: Date;
 }
 
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return match?.[1] ?? null;
+}
+
 type PostWithInteractions = IPracticePost & { liked: boolean; comments: IComment[] };
 
 interface PracticePostCardProps {
@@ -139,6 +144,21 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
           <p className="text-sm leading-relaxed break-all">{post.caption}</p>
         </div>
       )}
+
+      {/* YouTube embed */}
+      {post.youtubeUrl && (() => {
+        const videoId = extractYouTubeId(post.youtubeUrl!);
+        return videoId ? (
+          <div className="mx-5 mb-4 rounded-lg overflow-hidden aspect-video">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        ) : null;
+      })()}
 
       {/* Footer — like + comment buttons */}
       <PostFooter post={post} onOpenComments={() => setCommentsOpen(true)} />
