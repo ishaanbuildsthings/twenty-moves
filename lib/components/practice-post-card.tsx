@@ -264,27 +264,26 @@ function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOp
 
   return (
     <div className="flex items-center gap-1 px-3 py-2 border-t border-border">
-      <div className="flex items-center">
-        <button
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-muted ${
-            post.liked ? "text-white" : "text-muted-foreground"
-          }`}
-          disabled={likePending}
-          onClick={() => post.liked ? unlike.mutate({ postId: post.id }) : like.mutate({ postId: post.id })}
-        >
-          <CubeIcon className={`w-4 h-4 ${post.liked ? "cube-pop" : ""}`} filled={post.liked} key={post.liked ? "liked" : "not-liked"} />
-        </button>
+      <button
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-muted ${
+          post.liked ? "text-white" : "text-muted-foreground"
+        }`}
+        disabled={likePending}
+        onClick={() => post.liked ? unlike.mutate({ postId: post.id }) : like.mutate({ postId: post.id })}
+      >
+        <CubeIcon className={`w-4 h-4 ${post.liked ? "cube-pop" : ""}`} filled={post.liked} key={post.liked ? "liked" : "not-liked"} />
         {post.numLikes > 0 && (
-          <button
-            className={`-ml-1.5 text-sm tabular-nums transition-colors hover:underline ${
-              post.liked ? "text-white" : "text-muted-foreground"
-            }`}
-            onClick={() => setLikesOpen(true)}
+          <span
+            role="button"
+            tabIndex={0}
+            className="tabular-nums hover:underline"
+            onClick={(e) => { e.stopPropagation(); setLikesOpen(true); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setLikesOpen(true); } }}
           >
             {post.numLikes}
-          </button>
+          </span>
         )}
-      </div>
+      </button>
       <button
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         onClick={onOpenComments}
