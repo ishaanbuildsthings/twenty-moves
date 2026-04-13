@@ -447,7 +447,7 @@ function CommentsModal({ post, open, onOpenChange }: { post: PostWithInteraction
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..."
               maxLength={200}
-              className="flex-1 bg-muted rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 bg-muted rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-border"
             />
             <button
               type="submit"
