@@ -114,6 +114,21 @@ export const postRouter = createTRPCRouter({
       };
     }),
 
+  getPostLikes: authedProcedure
+    .input(z.object({ postId: z.string().min(1).max(50) }))
+    .query(async ({ ctx, input }) => {
+      const likes = await ctx.prisma.postLike.findMany({
+        where: { postId: input.postId },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePictureUrl: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return likes.map((l) => l.user);
+    }),
+
   likePost: authedProcedure
     .input(z.object({ postId: z.string().min(1).max(50) }))
     .mutation(async ({ ctx, input }) => {

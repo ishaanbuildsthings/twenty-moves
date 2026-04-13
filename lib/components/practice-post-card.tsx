@@ -7,8 +7,8 @@ import { EventIcon } from "@/lib/components/event-icon";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { formatTime, timeAgo } from "@/lib/cubing/format";
 import { useTRPC } from "@/lib/trpc/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Trash2, Send, MoreHorizontal } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MessageCircle, Trash2, Send, MoreHorizontal, Loader2 } from "lucide-react";
 import { ViewerContext } from "@/lib/context/viewer";
 import {
   Dialog,
@@ -239,6 +239,7 @@ function updatePostInCache(
 function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOpenComments: () => void; }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const [likesOpen, setLikesOpen] = useState(false);
 
   const like = useMutation(trpc.post.likePost.mutationOptions({
     onMutate: async () => {
@@ -263,16 +264,27 @@ function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOp
 
   return (
     <div className="flex items-center gap-1 px-3 py-2 border-t border-border">
-      <button
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-muted ${
-          post.liked ? "text-white" : "text-muted-foreground"
-        }`}
-        disabled={likePending}
-        onClick={() => post.liked ? unlike.mutate({ postId: post.id }) : like.mutate({ postId: post.id })}
-      >
-        <CubeIcon className={`w-4 h-4 ${post.liked ? "cube-pop" : ""}`} filled={post.liked} key={post.liked ? "liked" : "not-liked"} />
-        <span>{post.numLikes}</span>
-      </button>
+      <div className="flex items-center">
+        <button
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-muted ${
+            post.liked ? "text-white" : "text-muted-foreground"
+          }`}
+          disabled={likePending}
+          onClick={() => post.liked ? unlike.mutate({ postId: post.id }) : like.mutate({ postId: post.id })}
+        >
+          <CubeIcon className={`w-4 h-4 ${post.liked ? "cube-pop" : ""}`} filled={post.liked} key={post.liked ? "liked" : "not-liked"} />
+        </button>
+        {post.numLikes > 0 && (
+          <button
+            className={`-ml-1.5 text-sm tabular-nums transition-colors hover:underline ${
+              post.liked ? "text-white" : "text-muted-foreground"
+            }`}
+            onClick={() => setLikesOpen(true)}
+          >
+            {post.numLikes}
+          </button>
+        )}
+      </div>
       <button
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         onClick={onOpenComments}
@@ -280,7 +292,54 @@ function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOp
         <MessageCircle className="w-4 h-4" />
         {post.numComments > 0 && <span>{post.numComments}</span>}
       </button>
+
+      <LikesDialog postId={post.id} open={likesOpen} onOpenChange={setLikesOpen} />
     </div>
+  );
+}
+
+function LikesDialog({ postId, open, onOpenChange }: { postId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const trpc = useTRPC();
+  const { data: users, isLoading } = useQuery({
+    ...trpc.post.getPostLikes.queryOptions({ postId }),
+    enabled: open,
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm max-h-[60vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Likes</DialogTitle>
+          <DialogDescription className="sr-only">People who liked this post</DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !users?.length ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No likes yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {users.map((user) => (
+                <Link
+                  key={user.id}
+                  href={`/profile/${user.username}`}
+                  className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted transition-colors"
+                  onClick={() => onOpenChange(false)}
+                >
+                  <UserAvatar user={user} size="sm" rounded="full" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{user.username}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.firstName} {user.lastName}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
