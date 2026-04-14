@@ -113,6 +113,10 @@ function FollowButton({ userId, username }: { userId: string; username: string }
   const isFollowing = isFollowingQuery.data?.following ?? false;
   const isPending = follow.isPending || unfollow.isPending;
 
+  if (isFollowingQuery.isLoading) {
+    return <div className="px-4 py-2 text-sm font-bold rounded bg-neutral-600/50 text-transparent select-none shadow-[0_2px_0_0_#1a1a1a]">Follow</div>;
+  }
+
   return (
     <button
       className={`px-4 py-2 text-sm font-bold rounded transition-all ${
@@ -120,7 +124,7 @@ function FollowButton({ userId, username }: { userId: string; username: string }
           ? "bg-neutral-600 text-foreground hover:bg-neutral-500 shadow-[0_2px_0_0_#1a1a1a]"
           : `${accent.bg} text-white ${accent.hover} ${accent.shadow}`
       }`}
-      disabled={isPending || isFollowingQuery.isLoading}
+      disabled={isPending}
       onClick={() => isFollowing ? unfollow.mutate({ userId }) : follow.mutate({ userId })}
     >
       {isFollowing ? "Following" : "Follow"}
@@ -179,10 +183,8 @@ function FollowListModal({
                 >
                   <UserAvatar user={user} size="sm" rounded="full" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{user.username}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.firstName} {user.lastName}
-                    </p>
+                    <p className="text-sm font-bold truncate">{user.firstName} {user.lastName}</p>
+                    <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
                   </div>
                 </Link>
               ))}
@@ -272,7 +274,7 @@ export default function ProfilePage() {
             <UserAvatar user={user} size="lg" rounded="xl" />
             <div>
               <h1 className="text-2xl font-extrabold">
-                {user.username}
+                {user.firstName} {user.lastName}
                 {user.country && (
                   <span className="ml-2" title={user.country}>
                     {countryCodeToFlag(user.country)}
@@ -280,7 +282,7 @@ export default function ProfilePage() {
                 )}
               </h1>
               <p className="text-muted-foreground">
-                {user.firstName} {user.lastName}
+                @{user.username}
               </p>
               <div className="flex items-center gap-4 mt-2 text-sm flex-wrap">
                 <button onClick={() => setFollowListOpen("followers")} className="hover:underline decoration-muted-foreground/40"><strong className="text-foreground font-extrabold">{user.followerCount}</strong> <span className="text-muted-foreground text-xs">Followers</span></button>
@@ -317,7 +319,7 @@ export default function ProfilePage() {
                 )}
               </div>
               {user.bio && (
-                <p className="text-sm text-muted-foreground mt-2">{user.bio}</p>
+                <p className="text-sm text-foreground mt-2">{user.bio}</p>
               )}
             </div>
           </div>
@@ -650,7 +652,7 @@ function AchievementsTab({ user }: { user: IUser }) {
             <InfoTooltip>Personal bests are only logged when you make a post.</InfoTooltip>
           </h2>
           <button
-            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md ${accent.bg} text-white ${accent.hover} transition-colors`}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded bg-neutral-600 text-foreground hover:bg-neutral-500 shadow-[0_2px_0_0_#1a1a1a] transition-colors"
             onClick={() => setCompareOpen(true)}
           >
             <ArrowRightLeft className="w-3.5 h-3.5" />
@@ -667,7 +669,7 @@ function AchievementsTab({ user }: { user: IUser }) {
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Event</span>
               <div className="flex gap-4">
                 {PB_TYPE_ORDER.map((type) => (
-                  <span key={type} className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest w-16 text-right">
+                  <span key={type} className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex-1 text-center">
                     {PB_TYPE_LABELS[type]}
                   </span>
                 ))}
@@ -687,7 +689,7 @@ function AchievementsTab({ user }: { user: IUser }) {
                   <span className="text-sm font-semibold">{config.name}</span>
                   <div className="flex gap-4">
                     {PB_TYPE_ORDER.map((type) => (
-                      <span key={type} className="font-mono tabular-nums text-sm w-16 text-right">
+                      <span key={type} className="font-mono tabular-nums text-sm flex-1 text-center">
                         {pbMap.has(type) ? formatTime(pbMap.get(type)!) : <span className="text-muted-foreground/30">-</span>}
                       </span>
                     ))}
