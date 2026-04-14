@@ -1,5 +1,6 @@
 import type { PracticePost, User, Event } from "@/app/generated/prisma/client";
 import { userToIUser, type IUser } from "./user";
+import type { StatSolve } from "@/lib/cubing/stats";
 
 export interface IPracticePost {
   id: string;
@@ -17,7 +18,10 @@ export interface IPracticePost {
   isPbAo12: boolean;
   isPbAo100: boolean;
   isPbMo3: boolean;
-  displaySolves: number[];
+  singleSolves: StatSolve[] | null;
+  ao5Solves: StatSolve[] | null;
+  ao12Solves: StatSolve[] | null;
+  ao100Solves: StatSolve[] | null;
   numSolves: number;
   numLikes: number;
   numComments: number;
@@ -44,7 +48,10 @@ export function practicePostToIPracticePost(
     isPbAo12: post.isPbAo12,
     isPbAo100: post.isPbAo100,
     isPbMo3: post.isPbMo3,
-    displaySolves: post.displaySolves,
+    singleSolves: post.singleSolves as StatSolve[] | null,
+    ao5Solves: post.ao5Solves as StatSolve[] | null,
+    ao12Solves: post.ao12Solves as StatSolve[] | null,
+    ao100Solves: post.ao100Solves as StatSolve[] | null,
     numSolves: post.numSolves,
     numLikes: post.numLikes,
     numComments: post.numComments,

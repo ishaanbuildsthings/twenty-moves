@@ -5,7 +5,8 @@ import { type IPracticePost } from "@/lib/transforms/post";
 import { EVENT_MAP, type CubeEvent } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
 import { UserAvatar } from "@/lib/components/user-avatar";
-import { formatTime, timeAgo } from "@/lib/cubing/format";
+import { formatTime, timeAgo, getBestAndWorst } from "@/lib/cubing/format";
+import { effectiveTime, type StatSolve } from "@/lib/cubing/stats";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircle, Trash2, Send, MoreHorizontal, Loader2, ChevronDown, LinkIcon } from "lucide-react";
@@ -158,9 +159,18 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
           </div>
 
           {/* Expanded solve detail */}
-          {expandedStat && (
-            <StatDetail label={expandedStat} parentValue={highlights.find((h) => h.label === expandedStat)!.value} />
-          )}
+          {expandedStat && (() => {
+            const solvesMap: Record<string, StatSolve[] | null> = {
+              Single: post.singleSolves,
+              Ao5: post.ao5Solves,
+              Ao12: post.ao12Solves,
+              Ao100: post.ao100Solves,
+            };
+            const solves = solvesMap[expandedStat];
+            return solves && solves.length > 0 ? (
+              <StatDetail label={expandedStat} solves={solves} />
+            ) : null;
+          })()}
         </div>
       )}
 
@@ -217,53 +227,15 @@ function removePostFromCache(
   }
 }
 
-// Mock solve data for the expandable stat detail.
-// TODO: Replace with real data once the data model is ready.
-function getMockSolves(label: string, parentValue: number): { timeMs: number; scramble: string; isBest: boolean; isWorst: boolean }[] {
-  const count = label === "Single" ? 1 : label === "Ao5" ? 5 : label === "Ao12" ? 12 : 100;
-  // Generate realistic-looking times scattered around the parent value
-  const base = parentValue;
-  const solves = Array.from({ length: Math.min(count, 12) }, (_, i) => {
-    const variance = base * 0.15; // 15% variance
-    const offset = (Math.sin(i * 2.7 + base) * variance);
-    return { timeMs: Math.max(10, Math.round(base + offset)), scramble: mockScramble(i), isBest: false, isWorst: false };
-  });
-  if (solves.length > 1) {
-    let bestIdx = 0, worstIdx = 0;
-    solves.forEach((s, i) => {
-      if (s.timeMs < solves[bestIdx].timeMs) bestIdx = i;
-      if (s.timeMs > solves[worstIdx].timeMs) worstIdx = i;
-    });
-    if (bestIdx !== worstIdx) {
-      solves[bestIdx].isBest = true;
-      solves[worstIdx].isWorst = true;
-    }
-  }
-  return solves;
-}
-
-function mockScramble(seed: number): string {
-  const moves = ["R", "U", "F", "L", "D", "B"];
-  const mods = ["", "'", "2"];
-  let s = "";
-  let last = "";
-  for (let i = 0; i < 20; i++) {
-    let m: string;
-    do { m = moves[(seed * 7 + i * 3) % moves.length]; } while (m === last);
-    last = m;
-    s += m + mods[(seed * 11 + i * 5) % mods.length] + " ";
-  }
-  return s.trim();
-}
-
-function SolveRow({ solve, index }: { solve: { timeMs: number; scramble: string; isBest: boolean; isWorst: boolean }; index: number }) {
+function SolveRow({ solve, index, isBest, isWorst }: { solve: StatSolve; index: number; isBest: boolean; isWorst: boolean }) {
+  const display = effectiveTime({ timeMs: solve.time, penalty: (solve.penalty as "plus_two" | "dnf" | null) });
   return (
     <div className="flex items-baseline gap-3 py-1">
       <span className="text-[10px] text-muted-foreground w-4 text-right shrink-0">{index + 1}.</span>
       <span className={`font-mono tabular-nums text-xs shrink-0 ${
-        solve.isBest ? "text-emerald-400" : solve.isWorst ? "text-red-400" : "text-foreground"
+        isBest ? "text-emerald-400" : isWorst ? "text-red-400" : "text-foreground"
       }`}>
-        {solve.isBest || solve.isWorst ? `(${formatTime(solve.timeMs)})` : formatTime(solve.timeMs)}
+        {isBest || isWorst ? `(${formatTime(display)})` : formatTime(display)}
       </span>
       <span className="text-[11px] text-muted-foreground font-mono truncate">
         {solve.scramble}
@@ -272,14 +244,17 @@ function SolveRow({ solve, index }: { solve: { timeMs: number; scramble: string;
   );
 }
 
-function StatDetail({ label, parentValue }: { label: string; parentValue: number }) {
-  const solves = getMockSolves(label, parentValue);
+function StatDetail({ label, solves }: { label: string; solves: StatSolve[] }) {
   const [showAll, setShowAll] = useState(false);
+
+  const { bestIdx, worstIdx } = getBestAndWorst(
+    solves.map((s) => ({ timeMs: s.time, penalty: (s.penalty as "plus_two" | "dnf" | null) }))
+  );
 
   if (label === "Single") {
     return (
       <div className="mt-4 pt-3 border-t border-border/30">
-        <SolveRow solve={solves[0]} index={0} />
+        <SolveRow solve={solves[0]} index={0} isBest={false} isWorst={false} />
       </div>
     );
   }
@@ -292,7 +267,7 @@ function StatDetail({ label, parentValue }: { label: string; parentValue: number
     <div className="mt-4 pt-3 border-t border-border/30">
       <div className="space-y-0">
         {visible.map((solve, i) => (
-          <SolveRow key={i} solve={solve} index={i} />
+          <SolveRow key={i} solve={solve} index={i} isBest={i === bestIdx} isWorst={i === worstIdx} />
         ))}
       </div>
       {hasMore && !showAll && (

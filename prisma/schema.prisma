@@ -159,7 +159,10 @@ model PracticePost {
   isPbAo100     Boolean @default(false)
   isPbMo3       Boolean @default(false)
   scrambleSetId  String
-  displaySolves      Int[]
+  singleSolves  Json?
+  ao5Solves     Json?
+  ao12Solves    Json?
+  ao100Solves   Json?
   numSolves   Int
   numLikes    Int
   numComments Int

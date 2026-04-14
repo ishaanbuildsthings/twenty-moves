@@ -12,7 +12,10 @@ type CreatePracticeSessionInput = {
   bestAo100: number | null;
   bestMo3: number | null;
   sessionMean: number | null;
-  displaySolves: number[];
+  singleSolves: { time: number; penalty: string | null; scramble: string }[] | null;
+  ao5Solves: { time: number; penalty: string | null; scramble: string }[] | null;
+  ao12Solves: { time: number; penalty: string | null; scramble: string }[] | null;
+  ao100Solves: { time: number; penalty: string | null; scramble: string }[] | null;
   numSolves: number;
   solves: {
     timeMs: number;
@@ -57,7 +60,10 @@ export function postService(ctx: ServiceContext) {
             bestAo100: input.bestAo100,
             bestMo3: input.bestMo3,
             sessionMean: input.sessionMean,
-            displaySolves: input.displaySolves,
+            singleSolves: input.singleSolves ?? undefined,
+            ao5Solves: input.ao5Solves ?? undefined,
+            ao12Solves: input.ao12Solves ?? undefined,
+            ao100Solves: input.ao100Solves ?? undefined,
             numSolves: input.numSolves,
             numLikes: 0,
             numComments: 0,

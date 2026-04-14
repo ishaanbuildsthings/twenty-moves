@@ -52,10 +52,10 @@ export function daysAgo(n: number): number {
   return Date.now() - n * 24 * 60 * 60 * 1000;
 }
 
-// Find the indices of the best and worst solves in an ao5.
+// Find the indices of the best and worst solves in an average.
 // Used to determine which times get parenthesized in display.
 export function getBestAndWorst(solves: SolveForStats[]): { bestIdx: number; worstIdx: number } {
-  if (solves.length !== 5) return { bestIdx: -1, worstIdx: -1 };
+  if (solves.length < 2) return { bestIdx: -1, worstIdx: -1 };
   const times = solves.map((s) => effectiveTime(s));
   let bestIdx = 0, worstIdx = 0;
   times.forEach((t, i) => {

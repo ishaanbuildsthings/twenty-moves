@@ -138,6 +138,76 @@ export function findBestAverageIndex(
   return bestIdx;
 }
 
+export interface StatSolve {
+  time: number;
+  penalty: string | null;
+  scramble: string;
+}
+
+export interface StatSolveWindows {
+  singleSolves: StatSolve[] | null;
+  ao5Solves: StatSolve[] | null;
+  ao12Solves: StatSolve[] | null;
+  ao100Solves: StatSolve[] | null;
+}
+
+// Extract the actual solve windows that produced each best stat.
+// `solves` must be in session order (newest-first, same as passed to recomputeStats).
+// `inputSolves` provides the scrambles and penalties alongside the SolveForStats data.
+export function extractStatSolves(
+  solves: SolveForStats[],
+  inputSolves: { timeMs: number; penalty?: "plus_two" | "dnf" | null; scramble: string }[],
+  enabledStats: StatType[]
+): StatSolveWindows {
+  const has = (s: StatType) => enabledStats.includes(s);
+
+  const toStatSolve = (idx: number): StatSolve => ({
+    time: inputSolves[idx].timeMs,
+    penalty: inputSolves[idx].penalty ?? null,
+    scramble: inputSolves[idx].scramble,
+  });
+
+  let singleSolves: StatSolve[] | null = null;
+  if (has("single")) {
+    const best = computeBestSingle(solves);
+    if (best !== null) {
+      // Find the index of the solve that produced the best single
+      for (let i = 0; i < solves.length; i++) {
+        if (effectiveTime(solves[i]) === best) {
+          singleSolves = [toStatSolve(i)];
+          break;
+        }
+      }
+    }
+  }
+
+  let ao5Solves: StatSolve[] | null = null;
+  if (has("ao5")) {
+    const idx = findBestAverageIndex(solves, computeAo5);
+    if (idx >= 0) {
+      ao5Solves = Array.from({ length: 5 }, (_, i) => toStatSolve(idx + i));
+    }
+  }
+
+  let ao12Solves: StatSolve[] | null = null;
+  if (has("ao12")) {
+    const idx = findBestAverageIndex(solves, computeAo12);
+    if (idx >= 0) {
+      ao12Solves = Array.from({ length: 12 }, (_, i) => toStatSolve(idx + i));
+    }
+  }
+
+  let ao100Solves: StatSolve[] | null = null;
+  if (has("ao100")) {
+    const idx = findBestAverageIndex(solves, computeAo100);
+    if (idx >= 0) {
+      ao100Solves = Array.from({ length: 100 }, (_, i) => toStatSolve(idx + i));
+    }
+  }
+
+  return { singleSolves, ao5Solves, ao12Solves, ao100Solves };
+}
+
 export interface EventStats {
   event: string;
   bestSingle: number | null;
