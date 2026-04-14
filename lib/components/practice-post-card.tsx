@@ -10,6 +10,7 @@ import { effectiveTime, type StatSolve } from "@/lib/cubing/stats";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircle, Trash2, Send, MoreHorizontal, Loader2, ChevronDown, LinkIcon } from "lucide-react";
+import { CompactFollowButton } from "@/lib/components/follow-button";
 import { ViewerContext } from "@/lib/context/viewer";
 import {
   Dialog,
@@ -39,7 +40,7 @@ function extractYouTubeId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
-type PostWithInteractions = IPracticePost & { liked: boolean; comments: IComment[] };
+type PostWithInteractions = IPracticePost & { liked: boolean; comments: IComment[]; isSuggested?: boolean };
 
 interface PracticePostCardProps {
   post: PostWithInteractions;
@@ -86,6 +87,7 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
           <span className="text-muted-foreground">·</span>
           <span className="text-muted-foreground shrink-0">{timeAgo(post.createdAt)}</span>
         </div>
+        {post.isSuggested && <CompactFollowButton userId={post.user.id} />}
         <DropdownMenu>
           <DropdownMenuTrigger className="shrink-0 p-1 text-muted-foreground/50 hover:text-foreground transition-colors">
             <MoreHorizontal className="w-3.5 h-3.5" />

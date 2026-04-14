@@ -14,7 +14,10 @@ const solveSchema = z.object({
   scramble: z.string().min(1).max(500),
 });
 
-const FEED_PAGE_SIZE = 20;
+const FEED_PAGE_SIZE = 15;
+const SUGGESTED_PAGE_SIZE = 5;
+const SUGGESTED_OVERFETCH = 40;
+const MIN_ENGAGEMENT = 10;
 
 export const postRouter = createTRPCRouter({
   getUserPosts: authedProcedure
@@ -64,7 +67,10 @@ export const postRouter = createTRPCRouter({
   getFeed: authedProcedure
     .input(
       z.object({
-        cursor: z.string().max(50).optional(),
+        cursor: z.object({
+          followed: z.string().max(50).optional(),
+          suggested: z.string().max(50).optional(),
+        }).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -78,39 +84,92 @@ export const postRouter = createTRPCRouter({
       // Include the current user's own posts in the feed
       const feedUserIds = [...followedUserIds, ctx.viewer.userId];
 
-      const posts = await ctx.prisma.practicePost.findMany({
-        where: { userId: { in: feedUserIds } },
-        include: {
-          user: true,
-          event: true,
-          likes: { where: { userId: ctx.viewer.userId }, select: { id: true } },
-          comments: {
-            include: { user: { select: { id: true, username: true, profilePictureUrl: true, firstName: true, lastName: true } } },
-            orderBy: { createdAt: "desc" },
-          },
+      const postInclude = {
+        user: true,
+        event: true,
+        likes: { where: { userId: ctx.viewer.userId }, select: { id: true } },
+        comments: {
+          include: { user: { select: { id: true, username: true, profilePictureUrl: true, firstName: true, lastName: true } } },
+          orderBy: { createdAt: "desc" } as const,
         },
+      };
+
+      // 1. Followed stream (15 + 1 for pagination)
+      const followedPosts = await ctx.prisma.practicePost.findMany({
+        where: { userId: { in: feedUserIds } },
+        include: postInclude,
         orderBy: { createdAt: "desc" },
         take: FEED_PAGE_SIZE + 1,
-        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+        ...(input.cursor?.followed ? { cursor: { id: input.cursor.followed }, skip: 1 } : {}),
       });
 
-      let nextCursor: string | undefined;
-      if (posts.length > FEED_PAGE_SIZE) {
-        nextCursor = posts.pop()!.id;
+      let followedNextCursor: string | undefined;
+      if (followedPosts.length > FEED_PAGE_SIZE) {
+        followedNextCursor = followedPosts.pop()!.id;
       }
 
-      return {
-        posts: posts.map((p) => ({
-          ...practicePostToIPracticePost(p),
-          liked: p.likes.length > 0,
-          comments: p.comments.map((c) => ({
-            id: c.id,
-            user: c.user,
-            body: c.body,
-            createdAt: c.createdAt,
-          })),
+      // 2. Suggested stream — overfetch then filter by engagement
+      const suggestedRaw = await ctx.prisma.practicePost.findMany({
+        where: { userId: { notIn: feedUserIds } },
+        include: postInclude,
+        orderBy: { createdAt: "desc" },
+        take: SUGGESTED_OVERFETCH + 1,
+        ...(input.cursor?.suggested ? { cursor: { id: input.cursor.suggested }, skip: 1 } : {}),
+      });
+
+      // Filter to posts with minimum engagement
+      const suggestedFiltered = suggestedRaw.filter(
+        (p) => p.numLikes + p.numComments >= MIN_ENGAGEMENT
+      );
+
+      // Take SUGGESTED_PAGE_SIZE + 1, find next cursor from the last raw post we consumed
+      const suggestedPage = suggestedFiltered.slice(0, SUGGESTED_PAGE_SIZE + 1);
+      let suggestedNextCursor: string | undefined;
+      if (suggestedPage.length > SUGGESTED_PAGE_SIZE) {
+        suggestedPage.pop();
+        // Cursor is the last raw post ID we examined (so we don't re-scan)
+        suggestedNextCursor = suggestedRaw[suggestedRaw.length - 1]?.id;
+      } else if (suggestedRaw.length > SUGGESTED_OVERFETCH) {
+        // We had more raw posts but ran out of qualifying ones in this batch
+        suggestedNextCursor = suggestedRaw[suggestedRaw.length - 1]?.id;
+      }
+
+      // 3. Interleave at 3:1 ratio — every 4th slot is a suggested post
+      const toPost = (p: (typeof followedPosts)[number], isSuggested: boolean) => ({
+        ...practicePostToIPracticePost(p),
+        liked: p.likes.length > 0,
+        isSuggested,
+        comments: p.comments.map((c) => ({
+          id: c.id,
+          user: c.user,
+          body: c.body,
+          createdAt: c.createdAt,
         })),
-        nextCursor,
+      });
+
+      const merged: ReturnType<typeof toPost>[] = [];
+      let fi = 0;
+      let si = 0;
+      while (fi < followedPosts.length || si < suggestedPage.length) {
+        // Every 4th slot (index 3, 7, 11...) is a suggested post
+        if ((merged.length + 1) % 4 === 0 && si < suggestedPage.length) {
+          merged.push(toPost(suggestedPage[si++], true));
+        } else if (fi < followedPosts.length) {
+          merged.push(toPost(followedPosts[fi++], false));
+        } else if (si < suggestedPage.length) {
+          merged.push(toPost(suggestedPage[si++], true));
+        } else {
+          break;
+        }
+      }
+
+      const hasMore = followedNextCursor || suggestedNextCursor;
+
+      return {
+        posts: merged,
+        nextCursor: hasMore
+          ? { followed: followedNextCursor, suggested: suggestedNextCursor }
+          : undefined,
       };
     }),
 

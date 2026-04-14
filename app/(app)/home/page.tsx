@@ -76,7 +76,7 @@ export default function HomePage() {
         )}
         {!hasNextPage && !isFetchingNextPage && posts.length > 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">
-            You&apos;re all caught up! Follow more cubers to see more posts.
+            You&apos;re all caught up!
           </p>
         )}
         </div>
