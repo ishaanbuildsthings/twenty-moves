@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useContext, useRef, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { type IPracticePost } from "@/lib/transforms/post";
 import { EVENT_MAP, type CubeEvent } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
@@ -10,6 +11,7 @@ import { effectiveTime, type StatSolve } from "@/lib/cubing/stats";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircle, Trash2, Send, MoreHorizontal, Loader2, ChevronDown, LinkIcon } from "lucide-react";
+import { CompactFollowButton } from "@/lib/components/follow-button";
 import { ViewerContext } from "@/lib/context/viewer";
 import {
   Dialog,
@@ -39,7 +41,7 @@ function extractYouTubeId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
-type PostWithInteractions = IPracticePost & { liked: boolean; comments: IComment[] };
+type PostWithInteractions = IPracticePost & { liked: boolean; comments: IComment[]; isSuggested?: boolean };
 
 interface PracticePostCardProps {
   post: PostWithInteractions;
@@ -49,8 +51,11 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
   const viewer = useContext(ViewerContext);
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
   const eventConfig = EVENT_MAP[post.eventName as CubeEvent];
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const isSinglePostView = pathname.startsWith("/post/");
   const deletePost = useMutation(trpc.post.deletePost.mutationOptions({
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: [["post"]] });
@@ -59,6 +64,9 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
     onSuccess: () => {
       toast.success("Post deleted!");
       queryClient.invalidateQueries({ queryKey: [["user"]] });
+      if (isSinglePostView) {
+        router.replace("/home");
+      }
     },
   }));
 
@@ -86,6 +94,7 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
           <span className="text-muted-foreground">·</span>
           <span className="text-muted-foreground shrink-0">{timeAgo(post.createdAt)}</span>
         </div>
+        {post.isSuggested && <CompactFollowButton userId={post.user.id} />}
         <DropdownMenu>
           <DropdownMenuTrigger className="shrink-0 p-1 text-muted-foreground/50 hover:text-foreground transition-colors">
             <MoreHorizontal className="w-3.5 h-3.5" />
@@ -310,12 +319,13 @@ function CubeIcon({ className, filled }: { className?: string; filled?: boolean 
   );
 }
 
-// Update a post in all infinite query caches (feed + profile posts)
+// Update a post in all query caches (feed, profile posts, and single post view)
 function updatePostInCache(
   queryClient: ReturnType<typeof useQueryClient>,
   postId: string,
   updater: (post: PostWithInteractions) => PostWithInteractions
 ) {
+  // Infinite query caches (feed + profile posts)
   for (const key of [[["post", "getFeed"]], [["post", "getUserPosts"]]]) {
     queryClient.setQueriesData<PostPageData>(
       { queryKey: key },
@@ -331,6 +341,14 @@ function updatePostInCache(
       }
     );
   }
+  // Single post view cache
+  queryClient.setQueriesData<PostWithInteractions>(
+    { queryKey: [["post", "getPost"]] },
+    (old) => {
+      if (!old || old.id !== postId) return old;
+      return updater(old);
+    }
+  );
 }
 
 function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOpenComments: () => void; }) {
@@ -369,17 +387,15 @@ function PostFooter({ post, onOpenComments }: { post: PostWithInteractions; onOp
         onClick={() => post.liked ? unlike.mutate({ postId: post.id }) : like.mutate({ postId: post.id })}
       >
         <CubeIcon className={`w-4 h-4 ${post.liked ? "cube-pop" : ""}`} filled={post.liked} key={post.liked ? "liked" : "not-liked"} />
-        {post.numLikes > 0 && (
-          <span
-            role="button"
-            tabIndex={0}
-            className="tabular-nums hover:underline"
-            onClick={(e) => { e.stopPropagation(); setLikesOpen(true); }}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setLikesOpen(true); } }}
-          >
-            {post.numLikes}
-          </span>
-        )}
+        <span
+          role={post.numLikes > 0 ? "button" : undefined}
+          tabIndex={post.numLikes > 0 ? 0 : undefined}
+          className={`tabular-nums min-w-[1ch] ${post.numLikes > 0 ? "hover:underline" : "invisible"}`}
+          onClick={(e) => { if (post.numLikes > 0) { e.stopPropagation(); setLikesOpen(true); } }}
+          onKeyDown={(e) => { if (post.numLikes > 0 && e.key === "Enter") { e.stopPropagation(); setLikesOpen(true); } }}
+        >
+          {post.numLikes || 0}
+        </span>
       </button>
       <button
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

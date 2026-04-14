@@ -11,6 +11,7 @@ import { useSettings } from "@/lib/context/settings";
 
 import { ExternalLink, Puzzle, Search, ArrowRightLeft, Loader2 } from "lucide-react";
 import { InfoTooltip } from "@/lib/components/info-tooltip";
+import { FollowButton } from "@/lib/components/follow-button";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { PracticePostCard } from "@/lib/components/practice-post-card";
@@ -57,80 +58,6 @@ const WCA_FLASH_MESSAGES: Record<string, { message: string; type: "success" | "e
   invalid_state: { message: "WCA linking failed — please try again.", type: "error" },
   unknown: { message: "Something went wrong linking your WCA account.", type: "error" },
 };
-
-function FollowButton({ userId, username }: { userId: string; username: string }) {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const { accent } = useSettings();
-
-  const isFollowingQuery = useQuery(
-    trpc.user.isFollowing.queryOptions({ userId })
-  );
-
-  const userQueryKey = trpc.user.getByUsername.queryKey({ username });
-  type UserData = IUser;
-
-  const follow = useMutation(trpc.user.follow.mutationOptions({
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: userQueryKey });
-      queryClient.setQueryData<UserData>(userQueryKey, (old) =>
-        old ? { ...old, followerCount: old.followerCount + 1 } : old
-      );
-      queryClient.setQueryData(trpc.user.isFollowing.queryKey({ userId }), { following: true });
-    },
-    onError: () => {
-      queryClient.setQueryData<UserData>(userQueryKey, (old) =>
-        old ? { ...old, followerCount: old.followerCount - 1 } : old
-      );
-      queryClient.setQueryData(trpc.user.isFollowing.queryKey({ userId }), { following: false });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: userQueryKey });
-      queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) });
-    },
-  }));
-
-  const unfollow = useMutation(trpc.user.unfollow.mutationOptions({
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: userQueryKey });
-      queryClient.setQueryData<UserData>(userQueryKey, (old) =>
-        old ? { ...old, followerCount: old.followerCount - 1 } : old
-      );
-      queryClient.setQueryData(trpc.user.isFollowing.queryKey({ userId }), { following: false });
-    },
-    onError: () => {
-      queryClient.setQueryData<UserData>(userQueryKey, (old) =>
-        old ? { ...old, followerCount: old.followerCount + 1 } : old
-      );
-      queryClient.setQueryData(trpc.user.isFollowing.queryKey({ userId }), { following: true });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: userQueryKey });
-      queryClient.invalidateQueries({ queryKey: trpc.user.isFollowing.queryKey({ userId }) });
-    },
-  }));
-
-  const isFollowing = isFollowingQuery.data?.following ?? false;
-  const isPending = follow.isPending || unfollow.isPending;
-
-  if (isFollowingQuery.isLoading) {
-    return <div className="px-4 py-2 text-sm font-bold rounded bg-neutral-600/50 text-transparent select-none shadow-[0_2px_0_0_#1a1a1a]">Follow</div>;
-  }
-
-  return (
-    <button
-      className={`px-4 py-2 text-sm font-bold rounded transition-all ${
-        isFollowing
-          ? "bg-neutral-600 text-foreground hover:bg-neutral-500 shadow-[0_2px_0_0_#1a1a1a]"
-          : `${accent.bg} text-white ${accent.hover} ${accent.shadow}`
-      }`}
-      disabled={isPending}
-      onClick={() => isFollowing ? unfollow.mutate({ userId }) : follow.mutate({ userId })}
-    >
-      {isFollowing ? "Following" : "Follow"}
-    </button>
-  );
-}
 
 type FollowListType = "followers" | "following";
 
@@ -743,9 +670,9 @@ function ProfilePosts({ userId }: { userId: string }) {
 
   if (posts.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-4">
-        No posts yet.
-      </p>
+      <div className="flex flex-1 items-center justify-center py-16">
+        <p className="text-sm text-muted-foreground">No posts yet.</p>
+      </div>
     );
   }
 
