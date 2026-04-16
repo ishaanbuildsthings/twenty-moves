@@ -69,6 +69,44 @@ export const raceRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Room not found or closed" });
       }
 
+      // WCA average gating for public rooms
+      if (room.maxTimeMs !== null) {
+        const user = await ctx.prisma.user.findUniqueOrThrow({
+          where: { id: ctx.viewer.userId },
+        });
+
+        if (!user.wcaId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Link your WCA account to join this room",
+          });
+        }
+
+        const checkEvent = room.maxTimeEvent ?? room.event.name;
+        const res = await fetch(
+          `https://www.worldcubeassociation.org/api/v0/persons/${user.wcaId}`
+        );
+
+        if (!res.ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Could not verify WCA records",
+          });
+        }
+
+        const data = await res.json();
+        const records = data?.person?.personal_records?.[checkEvent];
+        const officialAvg = records?.average?.best as number | undefined;
+
+        if (!officialAvg || officialAvg > room.maxTimeMs) {
+          const limitSec = (room.maxTimeMs / 100).toFixed(2);
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `Requires official ${checkEvent} average under ${limitSec}s`,
+          });
+        }
+      }
+
       // Upsert participant (rejoin if previously left)
       await ctx.prisma.raceParticipant.upsert({
         where: { roomId_userId: { roomId: room.id, userId: ctx.viewer.userId } },
