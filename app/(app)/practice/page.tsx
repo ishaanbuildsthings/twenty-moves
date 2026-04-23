@@ -2,7 +2,7 @@
 
 import confetti from "canvas-confetti";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { generateScramble } from "@/lib/cubing/scramble";
+import { generateScrambleAsync } from "@/lib/cubing/scramble-client";
 import {
   addSolve,
   clearSolves,
@@ -308,7 +308,11 @@ export default function TimerPage() {
     setSolves([]);
     setStats(null);
     setTotalSolveCount(0);
-    setScramble(generateScramble(selectedEvent));
+    setScramble(null);
+    generateScrambleAsync(selectedEvent).then((s) => {
+      // Guard against stale scramble if event changed while awaiting.
+      if (selectedEventRef.current === selectedEvent) setScramble(s);
+    });
     setHasMore(true);
     const INITIAL_SOLVES_LOADED = 100;
     getRecentSolves(selectedEvent, INITIAL_SOLVES_LOADED).then((loaded) => {
@@ -378,7 +382,10 @@ export default function TimerPage() {
     setState("idle");
 
     const event = selectedEventRef.current;
-    setScramble(generateScramble(event));
+    setScramble(null);
+    generateScrambleAsync(event).then((s) => {
+      if (selectedEventRef.current === event) setScramble(s);
+    });
 
     const prevBest =
       solvesRef.current.length > 0
