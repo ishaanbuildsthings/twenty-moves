@@ -15,6 +15,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+
+  const signupDisabled = mode === "signup" && !ageConfirmed;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,11 +149,24 @@ export default function LoginPage() {
               />
             </div>
           )}
+          {mode === "signup" && (
+            <label className="flex items-start gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-border bg-card text-amber-600 focus:ring-2 focus:ring-amber-500/40 cursor-pointer"
+              />
+              <span className="text-sm text-muted-foreground">
+                I confirm that I am 13 years of age or older.
+              </span>
+            </label>
+          )}
           {error && <p className="text-sm text-red-400">{error}</p>}
           {message && <p className="text-sm text-emerald-400">{message}</p>}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || signupDisabled}
             className="w-full rounded-lg bg-amber-600 hover:bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-[0_3px_0_0_theme(colors.amber.800)] active:shadow-none active:translate-y-[3px]"
           >
             {loading
