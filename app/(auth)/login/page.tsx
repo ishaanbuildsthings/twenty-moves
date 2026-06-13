@@ -59,7 +59,7 @@ export default function LoginPage() {
   };
 
   const title = {
-    signin: "Sign in to twenty moves",
+    signin: "Sign in to twentymoves",
     signup: "Create an account",
     forgot: "Reset your password",
   }[mode];

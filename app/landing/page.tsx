@@ -172,7 +172,7 @@ export default function LandingPage() {
       <footer className="border-t border-border">
         <div className="max-w-5xl mx-auto px-6 py-6">
           <div className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} twenty moves
+            &copy; {new Date().getFullYear()} twentymoves
           </div>
         </div>
       </footer>
