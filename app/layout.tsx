@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "twenty moves",
+  title: "twentymoves",
   description: "The social platform for speedcubers",
   icons: {
     icon: "/t_logo_large.svg",

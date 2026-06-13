@@ -27,10 +27,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { EVENT_MAP, EVENT_CONFIGS, type CubeEvent } from "@/lib/cubing/events";
-import { formatTime } from "@/lib/cubing/format";
+import { formatTime, formatSolveTime, getBestAndWorst } from "@/lib/cubing/format";
+import type { SolveForStats } from "@/lib/cubing/stats";
 import type { PbType } from "@/app/generated/prisma/client";
 
-type ProfileTab = "overview" | "achievements" | "collection" | "clubs";
+type ProfileTab = "overview" | "achievements" | "tournaments" | "collection" | "clubs";
 
 const WCA_AUTHORIZE_URL = "https://www.worldcubeassociation.org/oauth/authorize";
 const WCA_STATE_COOKIE = "wca_oauth_state";
@@ -188,6 +189,7 @@ export default function ProfilePage() {
   const tabs: { key: ProfileTab; label: string; comingSoon?: boolean }[] = [
     { key: "overview", label: "Overview" },
     { key: "achievements", label: "Achievements" },
+    { key: "tournaments", label: "Tournaments" },
     { key: "collection", label: "Collection", comingSoon: true },
     { key: "clubs", label: "Clubs", comingSoon: true },
   ];
@@ -295,6 +297,12 @@ export default function ProfilePage() {
       {activeTab === "achievements" && (
         <div className="px-8 py-6 max-w-3xl mx-auto w-full">
           <AchievementsTab user={user} />
+        </div>
+      )}
+
+      {activeTab === "tournaments" && (
+        <div className="px-8 py-6 max-w-3xl mx-auto w-full">
+          <TournamentHistoryTab user={user} isOwnProfile={isOwnProfile} />
         </div>
       )}
 
@@ -629,6 +637,122 @@ function AchievementsTab({ user }: { user: IUser }) {
       </section>
 
       {compareOpen && <ComparePBsModal viewer={user} onClose={() => setCompareOpen(false)} />}
+    </div>
+  );
+}
+
+const MEDAL_EMOJI: Record<"GOLD" | "SILVER" | "BRONZE", string> = {
+  GOLD: "🥇",
+  SILVER: "🥈",
+  BRONZE: "🥉",
+};
+
+function formatSolveList(solves: SolveForStats[]): string {
+  if (solves.length === 0) return "";
+  if (solves.length !== 5) return solves.map(formatSolveTime).join("  ");
+  const { bestIdx, worstIdx } = getBestAndWorst(solves);
+  return solves
+    .map((s, i) => {
+      const t = formatSolveTime(s);
+      return i === bestIdx || i === worstIdx ? `(${t})` : t;
+    })
+    .join("  ");
+}
+
+function TournamentHistoryTab({ user, isOwnProfile }: { user: IUser; isOwnProfile: boolean }) {
+  const trpc = useTRPC();
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const { data, isLoading, isFetching } = useQuery(
+    trpc.tournament.getUserHistory.queryOptions({ userId: user.id, page, pageSize })
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <CubeLoader message="Loading tournaments..." />
+      </div>
+    );
+  }
+
+  if (!data || data.tournaments.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground font-semibold">No tournament history yet.</p>
+        <p className="text-sm text-muted-foreground/60 mt-1">
+          {isOwnProfile
+            ? "Compete in the daily tournament to build your history."
+            : `${user.firstName} hasn't competed in any tournaments yet.`}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {data.tournaments.map((tournament) => (
+        <section key={tournament.id}>
+          <div className="flex items-baseline justify-between mb-2">
+            <h3 className="text-sm font-bold text-foreground">
+              {tournament.name ?? `Tournament #${tournament.number}`}
+            </h3>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {tournament.datePST}
+            </span>
+          </div>
+          <div className="border border-border rounded-lg overflow-hidden">
+            {tournament.entries.map((entry, idx) => {
+              const config = EVENT_MAP[entry.eventName as CubeEvent];
+              const solvesFmt = formatSolveList(
+                entry.solves.map((s) => ({ timeMs: s.time, penalty: s.penalty }))
+              );
+              return (
+                <div
+                  key={`${tournament.id}-${entry.eventName}-${idx}`}
+                  className="flex items-center gap-3 px-4 py-2.5 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors"
+                >
+                  {config && <EventIcon event={config} size={18} />}
+                  <span className="text-sm font-semibold w-16 shrink-0">{config?.name ?? entry.eventName}</span>
+                  <span className="font-mono tabular-nums text-xs text-muted-foreground flex-1 truncate" title={solvesFmt}>
+                    {solvesFmt}
+                  </span>
+                  <span className="font-mono tabular-nums text-sm">
+                    {entry.result != null ? formatTime(entry.result) : "-"}
+                  </span>
+                  <span className="text-xs text-muted-foreground tabular-nums w-16 text-right">
+                    {entry.rank != null ? `${entry.rank} / ${entry.totalCompetitors}` : "—"}
+                  </span>
+                  <span className="w-6 text-center text-lg leading-none">
+                    {entry.medal ? MEDAL_EMOJI[entry.medal] : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
+      {data.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1 || isFetching}
+            className="px-3 py-1.5 text-sm font-semibold rounded border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-muted-foreground tabular-nums">
+            Page {data.page} of {data.totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+            disabled={page >= data.totalPages || isFetching}
+            className="px-3 py-1.5 text-sm font-semibold rounded border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
