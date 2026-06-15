@@ -23,14 +23,6 @@ const PUZZLE_ID: Record<CubeEvent, string> = {
   [CubeEvent.CLOCK]: "clock",
 };
 
-// Visualization strategy depends on puzzle — only NxN cubes support the
-// flat 2D unfolded view. Everything else falls back to cubing.js's default.
-const NXN_CUBES = new Set<CubeEvent>([
-  CubeEvent.TWO, CubeEvent.THREE, CubeEvent.FOUR, CubeEvent.FIVE,
-  CubeEvent.SIX, CubeEvent.SEVEN,
-  CubeEvent.THREE_BLD, CubeEvent.FOUR_BLD, CubeEvent.FIVE_BLD, CubeEvent.OH,
-]);
-
 type TwistyPlayerLike = HTMLElement & {
   alg?: string;
   puzzle?: string;
@@ -61,7 +53,7 @@ export function CubePreview({
       const player = new TwistyPlayer({
         puzzle: PUZZLE_ID[event] as never,
         alg: scramble ?? "",
-        visualization: NXN_CUBES.has(event) ? "2D" : "auto",
+        visualization: "2D",
         background: "none",
         controlPanel: "none",
         hintFacelets: "none",
@@ -84,7 +76,7 @@ export function CubePreview({
     const p = playerRef.current;
     if (!p) return;
     p.puzzle = PUZZLE_ID[event];
-    p.visualization = NXN_CUBES.has(event) ? "2D" : "auto";
+    p.visualization = "2D";
   }, [event]);
 
   // Update the scramble alg whenever it changes.
