@@ -18,6 +18,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CubeEvent, EVENT_CONFIGS, EVENT_MAP } from "@/lib/cubing/events";
 import { EventIcon } from "@/lib/components/event-icon";
+import { CubePreview } from "@/lib/components/cube-preview";
 import { effectiveTime, DNF_SENTINEL, type EventStats, type StatType, computeAo5, computeAo12, computeAo100, computeMo3, findBestAverageIndex } from "@/lib/cubing/stats";
 import { formatTime, formatSolveTime } from "@/lib/cubing/format";
 import { getPracticeStats } from "./idb";
@@ -845,6 +846,11 @@ export default function TimerPage() {
                 : formatTime(elapsed)}
           </p>
         </div>
+        {timerSettings.showCubePreview && state !== "running" && scramble && (
+          <div className="pb-8 -mt-[6vh]">
+            <CubePreview event={selectedEvent} scramble={scramble} size={264} />
+          </div>
+        )}
         </div>
 
       {/* Right panel — stats + solves list */}

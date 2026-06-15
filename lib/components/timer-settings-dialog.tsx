@@ -84,6 +84,24 @@ export function TimerSettingsDialog({
             </button>
           </div>
 
+          {/* Cube preview */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Cube preview</p>
+              <p className="text-xs text-muted-foreground">Show a 2D view of the scrambled cube</p>
+            </div>
+            <button
+              className={`w-10 h-6 rounded-full transition-colors ${
+                timerSettings.showCubePreview ? accent.toggle : "bg-muted"
+              }`}
+              onClick={() => updateTimerSettings({ showCubePreview: !timerSettings.showCubePreview })}
+            >
+              <div className={`w-4 h-4 rounded-full bg-white transition-transform mx-1 ${
+                timerSettings.showCubePreview ? "translate-x-4" : ""
+              }`} />
+            </button>
+          </div>
+
           {/* Scramble size */}
           <div className="flex items-center justify-between">
             <div>
