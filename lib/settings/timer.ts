@@ -18,6 +18,8 @@ export interface TimerSettings {
   showTimerWhileRunning: boolean;
   /** Font size for scramble text. */
   scrambleSize: ScrambleSize;
+  /** Whether to show the 2D cube preview below the timer. */
+  showCubePreview: boolean;
   /** Last selected cube event — persisted across navigations and refreshes. */
   selectedEvent: CubeEvent;
 }
@@ -34,6 +36,7 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   inspectionDurationMs: 15000,
   showTimerWhileRunning: true,
   scrambleSize: "medium",
+  showCubePreview: false,
   selectedEvent: CubeEvent.THREE,
 };
 
