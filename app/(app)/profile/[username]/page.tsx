@@ -15,6 +15,7 @@ import { FollowButton } from "@/lib/components/follow-button";
 import Link from "next/link";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { PracticePostCard } from "@/lib/components/practice-post-card";
+import { UserClubsTab } from "@/lib/components/user-clubs-tab";
 import { EventIcon } from "@/lib/components/event-icon";
 import { type IUser, type IPersonalBest } from "@/lib/transforms/user";
 import { countryCodeToFlag } from "@/lib/countries";
@@ -191,7 +192,7 @@ export default function ProfilePage() {
     { key: "achievements", label: "Achievements" },
     { key: "tournaments", label: "Tournaments" },
     { key: "collection", label: "Collection", comingSoon: true },
-    { key: "clubs", label: "Clubs", comingSoon: true },
+    { key: "clubs", label: "Clubs" },
   ];
 
   return (
@@ -315,6 +316,16 @@ export default function ProfilePage() {
               {isOwnProfile ? "Add puzzles to your collection" : `${user.firstName}'s puzzles will appear here`}
             </p>
           </div>
+        </div>
+      )}
+
+      {activeTab === "clubs" && (
+        <div className="px-8 py-6 max-w-3xl mx-auto w-full">
+          <UserClubsTab
+            userId={user.id}
+            firstName={user.firstName}
+            isOwnProfile={isOwnProfile}
+          />
         </div>
       )}
 
