@@ -18,24 +18,36 @@ import { EVENT_CONFIGS, EVENT_MAP, CubeEvent } from "@/lib/cubing/events";
 import { formatTime } from "@/lib/cubing/format";
 import { useSettings } from "@/lib/context/settings";
 
-type SortKey = "solves" | "average";
+// "solves" ranks highest-first; the time metrics rank lowest-first with
+// missing values (null) pushed to the bottom.
+type SortKey = "numSolves" | "average" | "bestAo5" | "bestAo12" | "bestAo100";
+
+const METRIC_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "numSolves", label: "Solves" },
+  { key: "average", label: "Avg" },
+  { key: "bestAo5", label: "Ao5" },
+  { key: "bestAo12", label: "Ao12" },
+  { key: "bestAo100", label: "Ao100" },
+];
 
 export function ClubLeaderboard({ clubId }: { clubId: string }) {
   const trpc = useTRPC();
   const { accent } = useSettings();
   const [event, setEvent] = useState<CubeEvent>(CubeEvent.THREE);
-  const [sortBy, setSortBy] = useState<SortKey>("solves");
+  const [sortBy, setSortBy] = useState<SortKey>("numSolves");
 
   const eventConfig = EVENT_MAP[event];
   const lbQuery = useQuery(trpc.club.getLeaderboard.queryOptions({ clubId, event }));
 
   const rows = [...(lbQuery.data ?? [])].sort((a, b) => {
-    if (sortBy === "solves") return b.numSolves - a.numSolves;
-    // average asc; members without an average sort last
-    if (a.average === null && b.average === null) return 0;
-    if (a.average === null) return 1;
-    if (b.average === null) return -1;
-    return a.average - b.average;
+    if (sortBy === "numSolves") return b.numSolves - a.numSolves;
+    // time metrics: ascending, with null (not enough solves) sorted last
+    const av = a[sortBy];
+    const bv = b[sortBy];
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return av - bv;
   });
 
   return (
@@ -78,28 +90,22 @@ export function ClubLeaderboard({ clubId }: { clubId: string }) {
           No members yet.
         </p>
       ) : (
-        <div className="rounded-lg bg-card border border-border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-lg bg-card border border-border overflow-x-auto">
+          <table className="w-full text-sm min-w-[520px]">
             <thead>
               <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 <th className="px-4 py-2 text-left w-10">#</th>
                 <th className="px-3 py-2 text-left">Member</th>
-                <th className="px-3 py-2 text-right">
-                  <button
-                    onClick={() => setSortBy("solves")}
-                    className={`uppercase tracking-wider hover:text-foreground transition-colors ${sortBy === "solves" ? accent.text : ""}`}
-                  >
-                    Solves
-                  </button>
-                </th>
-                <th className="px-4 py-2 text-right">
-                  <button
-                    onClick={() => setSortBy("average")}
-                    className={`uppercase tracking-wider hover:text-foreground transition-colors ${sortBy === "average" ? accent.text : ""}`}
-                  >
-                    Avg
-                  </button>
-                </th>
+                {METRIC_COLUMNS.map((col) => (
+                  <th key={col.key} className="px-4 py-2 text-right">
+                    <button
+                      onClick={() => setSortBy(col.key)}
+                      className={`uppercase tracking-wider hover:text-foreground transition-colors ${sortBy === col.key ? accent.text : ""}`}
+                    >
+                      {col.label}
+                    </button>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -122,12 +128,21 @@ export function ClubLeaderboard({ clubId }: { clubId: string }) {
                       </span>
                     </Link>
                   </td>
-                  <td className="px-3 py-3 text-right font-mono tabular-nums font-bold">
-                    {row.numSolves}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono tabular-nums font-bold">
-                    {row.average !== null ? formatTime(row.average) : "—"}
-                  </td>
+                  {METRIC_COLUMNS.map((col) => {
+                    const value = row[col.key];
+                    return (
+                      <td
+                        key={col.key}
+                        className={`px-4 py-3 text-right font-mono tabular-nums font-bold ${sortBy === col.key ? accent.text : ""}`}
+                      >
+                        {col.key === "numSolves"
+                          ? row.numSolves
+                          : value !== null
+                            ? formatTime(value)
+                            : "—"}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
