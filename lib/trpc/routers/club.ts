@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, authedProcedure } from "../init";
 import { clubService } from "@/lib/services/club";
 import { NotFoundError } from "@/lib/errors";
+import { CubeEvent } from "@/lib/cubing/events";
 
 const cuidSchema = z.string().min(1).max(50);
 
@@ -30,6 +31,13 @@ export const clubRouter = createTRPCRouter({
         }
         throw e;
       }
+    }),
+
+  // Weekly (Mon–Sun PST) per-event leaderboard: solves + average per member.
+  getLeaderboard: authedProcedure
+    .input(z.object({ clubId: cuidSchema, event: z.nativeEnum(CubeEvent) }))
+    .query(async ({ ctx, input }) => {
+      return clubService(ctx).weeklyLeaderboard(input.clubId, input.event);
     }),
 
   create: authedProcedure

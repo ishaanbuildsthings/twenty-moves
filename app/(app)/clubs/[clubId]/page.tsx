@@ -7,6 +7,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CubeLoader } from "@/lib/components/cube-loader";
+import { ClubLeaderboard } from "@/lib/components/club-leaderboard";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { countryCodeToFlag } from "@/lib/countries";
 import { useSettings } from "@/lib/context/settings";
@@ -110,6 +111,11 @@ export default function ClubDetailPage() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Leaderboard */}
+      <div className="border-t border-border px-8 py-6 max-w-3xl mx-auto w-full">
+        <ClubLeaderboard clubId={clubId} />
       </div>
 
       {/* Members */}
