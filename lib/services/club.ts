@@ -1,5 +1,6 @@
 import type { ServiceContext } from "./user";
 import { NotFoundError } from "@/lib/errors";
+import { getCurrentWeekStartUTC } from "@/lib/tournament/date";
 
 const memberSelect = {
   id: true,
@@ -89,6 +90,58 @@ export function clubService(ctx: ServiceContext) {
         },
         select: { id: true },
       }),
+
+    // Per-event leaderboard for the current Mon–Sun PST week. For each member:
+    //   - numSolves: every solve logged this week for the event (attempts, incl. DNF)
+    //   - average:   simple mean of this week's solves (DNFs dropped, +2 applied),
+    //                or null if no countable solves.
+    // eventName is a CubeEvent id (e.g. "333"), which equals Event.name.
+    weeklyLeaderboard: async (clubId: string, eventName: string) => {
+      const memberships = await prisma.clubMembership.findMany({
+        where: { clubId },
+        select: { user: { select: memberSelect } },
+      });
+      const members = memberships.map((m) => m.user);
+      if (members.length === 0) return [];
+
+      const event = await prisma.event.findUnique({
+        where: { name: eventName },
+        select: { id: true },
+      });
+
+      const empty = members.map((user) => ({ user, numSolves: 0, average: null }));
+      if (!event) return empty;
+
+      const solves = await prisma.solve.findMany({
+        where: {
+          eventId: event.id,
+          userId: { in: members.map((m) => m.id) },
+          createdAt: { gte: getCurrentWeekStartUTC() },
+        },
+        select: { userId: true, time: true, penalty: true },
+      });
+
+      // Aggregate per member: total attempts + running sum of countable times.
+      const stats = new Map<string, { count: number; sum: number; valid: number }>();
+      for (const s of solves) {
+        const acc = stats.get(s.userId) ?? { count: 0, sum: 0, valid: 0 };
+        acc.count += 1;
+        if (s.penalty !== "dnf") {
+          acc.sum += s.penalty === "plus_two" ? s.time + 2000 : s.time;
+          acc.valid += 1;
+        }
+        stats.set(s.userId, acc);
+      }
+
+      return members.map((user) => {
+        const acc = stats.get(user.id);
+        return {
+          user,
+          numSolves: acc?.count ?? 0,
+          average: acc && acc.valid > 0 ? Math.round(acc.sum / acc.valid) : null,
+        };
+      });
+    },
 
     // Join a club. Idempotent — a no-op if already a member.
     join: (clubId: string) =>
