@@ -30,7 +30,7 @@ const navItems = [
   { label: "Practice", href: "/practice", icon: "⏱️", comingSoon: false, hoverClass: "hover:bg-orange-500/15 hover:text-orange-300" },
   { label: "Home", href: "/home", icon: "🏠", comingSoon: false, hoverClass: "hover:bg-blue-500/15 hover:text-blue-300" },
   { label: "Tourney", href: "/tourney", icon: "🏆", comingSoon: false, hoverClass: "hover:bg-green-500/15 hover:text-green-300" },
-  { label: "Race Rooms", href: "/race", icon: "🏁", comingSoon: true, hoverClass: "hover:bg-red-500/15 hover:text-red-300" },
+  { label: "Race Rooms", href: "/race", icon: "🏁", comingSoon: false, hoverClass: "hover:bg-red-500/15 hover:text-red-300" },
   { label: "Head to Head", href: "/h2h", icon: "⚔️", comingSoon: true, hoverClass: "hover:bg-purple-500/15 hover:text-purple-300" },
 ];
 
