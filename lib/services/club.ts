@@ -1,6 +1,7 @@
 import type { ServiceContext } from "./user";
 import { NotFoundError } from "@/lib/errors";
 import { getCurrentWeekStartUTC } from "@/lib/tournament/date";
+import { DNF_SENTINEL } from "@/lib/cubing/stats";
 
 const memberSelect = {
   id: true,
@@ -91,10 +92,13 @@ export function clubService(ctx: ServiceContext) {
         select: { id: true },
       }),
 
-    // Per-event leaderboard for the current Mon–Sun PST week. For each member:
-    //   - numSolves: every solve logged this week for the event (attempts, incl. DNF)
-    //   - average:   simple mean of this week's solves (DNFs dropped, +2 applied),
-    //                or null if no countable solves.
+    // Per-event leaderboard for the current Mon–Sun PST week, built from the
+    // member's PRACTICE POSTS for the event this week (tournament solves are
+    // excluded by design). For each member:
+    //   - numSolves: total solves across this week's posts
+    //   - average:   solve-count-weighted mean of each post's sessionMean
+    //   - bestAo5/Ao12/Ao100: best (lowest) of the precomputed per-post bests
+    // Average/best fields are null when no post supplies the value.
     // eventName is a CubeEvent id (e.g. "333"), which equals Event.name.
     weeklyLeaderboard: async (clubId: string, eventName: string) => {
       const memberships = await prisma.clubMembership.findMany({
@@ -109,36 +113,77 @@ export function clubService(ctx: ServiceContext) {
         select: { id: true },
       });
 
-      const empty = members.map((user) => ({ user, numSolves: 0, average: null }));
+      const empty = members.map((user) => ({
+        user,
+        numSolves: 0,
+        average: null,
+        bestAo5: null,
+        bestAo12: null,
+        bestAo100: null,
+      }));
       if (!event) return empty;
 
-      const solves = await prisma.solve.findMany({
+      const posts = await prisma.practicePost.findMany({
         where: {
           eventId: event.id,
           userId: { in: members.map((m) => m.id) },
           createdAt: { gte: getCurrentWeekStartUTC() },
         },
-        select: { userId: true, time: true, penalty: true },
+        select: {
+          userId: true,
+          numSolves: true,
+          sessionMean: true,
+          bestAo5: true,
+          bestAo12: true,
+          bestAo100: true,
+        },
       });
 
-      // Aggregate per member: total attempts + running sum of countable times.
-      const stats = new Map<string, { count: number; sum: number; valid: number }>();
-      for (const s of solves) {
-        const acc = stats.get(s.userId) ?? { count: 0, sum: 0, valid: 0 };
-        acc.count += 1;
-        if (s.penalty !== "dnf") {
-          acc.sum += s.penalty === "plus_two" ? s.time + 2000 : s.time;
-          acc.valid += 1;
+      // Lower-is-better min that ignores nulls.
+      const lower = (a: number | null, b: number | null) =>
+        a === null ? b : b === null ? a : Math.min(a, b);
+
+      type Acc = {
+        numSolves: number;
+        meanSum: number; // Σ sessionMean·numSolves over posts with a real mean
+        meanWeight: number; // Σ numSolves over those same posts
+        bestAo5: number | null;
+        bestAo12: number | null;
+        bestAo100: number | null;
+      };
+      const byUser = new Map<string, Acc>();
+      for (const p of posts) {
+        const acc = byUser.get(p.userId) ?? {
+          numSolves: 0,
+          meanSum: 0,
+          meanWeight: 0,
+          bestAo5: null,
+          bestAo12: null,
+          bestAo100: null,
+        };
+        acc.numSolves += p.numSolves;
+        if (p.sessionMean !== null && p.sessionMean < DNF_SENTINEL) {
+          acc.meanSum += p.sessionMean * p.numSolves;
+          acc.meanWeight += p.numSolves;
         }
-        stats.set(s.userId, acc);
+        acc.bestAo5 = lower(acc.bestAo5, p.bestAo5);
+        acc.bestAo12 = lower(acc.bestAo12, p.bestAo12);
+        acc.bestAo100 = lower(acc.bestAo100, p.bestAo100);
+        byUser.set(p.userId, acc);
       }
 
       return members.map((user) => {
-        const acc = stats.get(user.id);
+        const acc = byUser.get(user.id);
         return {
           user,
-          numSolves: acc?.count ?? 0,
-          average: acc && acc.valid > 0 ? Math.round(acc.sum / acc.valid) : null,
+          numSolves: acc?.numSolves ?? 0,
+          average:
+            acc && acc.meanWeight > 0
+              ? Math.round(acc.meanSum / acc.meanWeight)
+              : null,
+          bestAo5: acc?.bestAo5 ?? null,
+          bestAo12: acc?.bestAo12 ?? null,
+          bestAo100: acc?.bestAo100 ?? null,
         };
       });
     },
