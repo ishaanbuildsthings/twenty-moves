@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CubeLoader } from "@/lib/components/cube-loader";
 import { ClubLeaderboard } from "@/lib/components/club-leaderboard";
+import { ClubOwnerMenu } from "@/lib/components/club-owner-menu";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { countryCodeToFlag } from "@/lib/countries";
 import { useSettings } from "@/lib/context/settings";
@@ -90,9 +91,12 @@ export default function ClubDetailPage() {
           </div>
 
           {club.isOwner ? (
-            <span className="shrink-0 self-start whitespace-nowrap px-4 py-2 text-sm font-bold rounded border border-border text-muted-foreground">
-              Owner
-            </span>
+            <div className="flex shrink-0 self-start items-center gap-2">
+              <span className="whitespace-nowrap px-4 py-2 text-sm font-bold rounded border border-border text-muted-foreground">
+                Owner
+              </span>
+              <ClubOwnerMenu clubId={clubId} description={club.description} />
+            </div>
           ) : club.isMember ? (
             <button
               onClick={() => leaveClub.mutate({ clubId })}

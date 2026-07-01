@@ -188,6 +188,33 @@ export function clubService(ctx: ServiceContext) {
       });
     },
 
+    // Owner-only: update the club's description.
+    updateDescription: async (clubId: string, description: string) => {
+      const club = await prisma.club.findUnique({
+        where: { id: clubId },
+        select: { ownerId: true },
+      });
+      if (!club) throw new NotFoundError("Club not found");
+      if (club.ownerId !== viewer.userId) throw new Error("NOT_OWNER");
+      return prisma.club.update({
+        where: { id: clubId },
+        data: { description },
+        select: { id: true },
+      });
+    },
+
+    // Owner-only: delete the club. Memberships cascade (see schema).
+    remove: async (clubId: string) => {
+      const club = await prisma.club.findUnique({
+        where: { id: clubId },
+        select: { ownerId: true },
+      });
+      if (!club) throw new NotFoundError("Club not found");
+      if (club.ownerId !== viewer.userId) throw new Error("NOT_OWNER");
+      await prisma.club.delete({ where: { id: clubId } });
+      return { success: true };
+    },
+
     // Join a club. Idempotent — a no-op if already a member.
     join: (clubId: string) =>
       prisma.$transaction(async (tx) => {
