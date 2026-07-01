@@ -15,33 +15,39 @@ const memberSelect = {
 export function clubService(ctx: ServiceContext) {
   const { prisma, viewer } = ctx;
   return {
-    // All clubs, most members first then newest. Includes whether the viewer
-    // is a member so the client can render Join/Joined state in one query.
+    // All clubs, most members first then newest. Includes the viewer's own
+    // membership status so the client can render Join / Requested / Joined.
     list: async () => {
       const clubs = await prisma.club.findMany({
         orderBy: [{ memberCount: "desc" }, { createdAt: "desc" }],
         include: {
-          members: { where: { userId: viewer.userId }, select: { id: true } },
+          members: { where: { userId: viewer.userId }, select: { status: true } },
         },
       });
-      return clubs.map((c) => ({
-        id: c.id,
-        name: c.name,
-        description: c.description,
-        memberCount: c.memberCount,
-        isMember: c.members.length > 0,
-      }));
+      return clubs.map((c) => {
+        const mine = c.members[0];
+        return {
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          memberCount: c.memberCount,
+          isPrivate: c.isPrivate,
+          isMember: mine?.status === "active",
+          isPending: mine?.status === "pending",
+        };
+      });
     },
 
-    // Clubs the viewer (or another user) belongs to.
+    // Clubs the viewer (or another user) is an ACTIVE member of. Pending
+    // requests are not surfaced here.
     listForUser: async (userId: string) => {
       const memberships = await prisma.clubMembership.findMany({
-        where: { userId },
+        where: { userId, status: "active" },
         orderBy: { joinedAt: "desc" },
         select: {
           role: true,
           club: {
-            select: { id: true, name: true, description: true, memberCount: true },
+            select: { id: true, name: true, description: true, memberCount: true, isPrivate: true },
           },
         },
       });
@@ -55,21 +61,26 @@ export function clubService(ctx: ServiceContext) {
           owner: { select: memberSelect },
           members: {
             orderBy: { joinedAt: "asc" },
-            select: { role: true, joinedAt: true, user: { select: memberSelect } },
+            select: { role: true, status: true, joinedAt: true, user: { select: memberSelect } },
           },
         },
       });
       if (!club) throw new NotFoundError("Club not found");
+      const active = club.members.filter((m) => m.status === "active");
+      const mine = club.members.find((m) => m.user.id === viewer.userId);
       return {
         id: club.id,
         name: club.name,
         description: club.description,
         memberCount: club.memberCount,
+        isPrivate: club.isPrivate,
         createdAt: club.createdAt,
         owner: club.owner,
-        isMember: club.members.some((m) => m.user.id === viewer.userId),
         isOwner: club.ownerId === viewer.userId,
-        members: club.members.map((m) => ({
+        isMember: mine?.status === "active",
+        isPending: mine?.status === "pending",
+        pendingCount: club.members.filter((m) => m.status === "pending").length,
+        members: active.map((m) => ({
           role: m.role,
           joinedAt: m.joinedAt,
           user: m.user,
@@ -77,16 +88,17 @@ export function clubService(ctx: ServiceContext) {
       };
     },
 
-    // Create a club and make the creator its owner-member in one transaction.
-    create: (input: { name: string; description: string }) =>
+    // Create a club and make the creator its active owner-member.
+    create: (input: { name: string; description: string; isPrivate: boolean }) =>
       prisma.club.create({
         data: {
           name: input.name,
           description: input.description,
+          isPrivate: input.isPrivate,
           ownerId: viewer.userId,
           memberCount: 1,
           members: {
-            create: { userId: viewer.userId, role: "owner" },
+            create: { userId: viewer.userId, role: "owner", status: "active" },
           },
         },
         select: { id: true },
@@ -102,7 +114,7 @@ export function clubService(ctx: ServiceContext) {
     // eventName is a CubeEvent id (e.g. "333"), which equals Event.name.
     weeklyLeaderboard: async (clubId: string, eventName: string) => {
       const memberships = await prisma.clubMembership.findMany({
-        where: { clubId },
+        where: { clubId, status: "active" },
         select: { user: { select: memberSelect } },
       });
       const members = memberships.map((m) => m.user);
@@ -215,30 +227,49 @@ export function clubService(ctx: ServiceContext) {
       return { success: true };
     },
 
-    // Join a club. Idempotent — a no-op if already a member.
+    // Join a club (or request to join a private one). Idempotent.
+    // Returns { status: "joined" } for public clubs (active immediately) or
+    // { status: "requested" } for private clubs (pending owner approval).
     join: (clubId: string) =>
       prisma.$transaction(async (tx) => {
+        const club = await tx.club.findUnique({
+          where: { id: clubId },
+          select: { isPrivate: true },
+        });
+        if (!club) throw new NotFoundError("Club not found");
+
         const existing = await tx.clubMembership.findUnique({
           where: { clubId_userId: { clubId, userId: viewer.userId } },
-          select: { id: true },
+          select: { status: true },
         });
-        if (existing) return { success: true };
+        if (existing) {
+          return { status: existing.status === "active" ? "joined" : "requested" };
+        }
+
+        if (club.isPrivate) {
+          await tx.clubMembership.create({
+            data: { clubId, userId: viewer.userId, role: "member", status: "pending" },
+          });
+          return { status: "requested" };
+        }
+
         await tx.clubMembership.create({
-          data: { clubId, userId: viewer.userId, role: "member" },
+          data: { clubId, userId: viewer.userId, role: "member", status: "active" },
         });
         await tx.club.update({
           where: { id: clubId },
           data: { memberCount: { increment: 1 } },
         });
-        return { success: true };
+        return { status: "joined" };
       }),
 
-    // Leave a club. The owner cannot leave their own club.
+    // Leave a club, or cancel a pending join request. The owner cannot leave.
+    // memberCount only decrements when an ACTIVE membership is removed.
     leave: (clubId: string) =>
       prisma.$transaction(async (tx) => {
         const membership = await tx.clubMembership.findUnique({
           where: { clubId_userId: { clubId, userId: viewer.userId } },
-          select: { role: true },
+          select: { role: true, status: true },
         });
         if (!membership) return { success: true };
         if (membership.role === "owner") {
@@ -247,11 +278,68 @@ export function clubService(ctx: ServiceContext) {
         await tx.clubMembership.delete({
           where: { clubId_userId: { clubId, userId: viewer.userId } },
         });
+        if (membership.status === "active") {
+          await tx.club.update({
+            where: { id: clubId },
+            data: { memberCount: { decrement: 1 } },
+          });
+        }
+        return { success: true };
+      }),
+
+    // Owner-only: pending join requests for a club.
+    listRequests: async (clubId: string) => {
+      const club = await prisma.club.findUnique({
+        where: { id: clubId },
+        select: { ownerId: true },
+      });
+      if (!club) throw new NotFoundError("Club not found");
+      if (club.ownerId !== viewer.userId) throw new Error("NOT_OWNER");
+      const requests = await prisma.clubMembership.findMany({
+        where: { clubId, status: "pending" },
+        orderBy: { joinedAt: "asc" },
+        select: { joinedAt: true, user: { select: memberSelect } },
+      });
+      return requests.map((r) => ({ user: r.user, requestedAt: r.joinedAt }));
+    },
+
+    // Owner-only: approve a pending request → active member. Idempotent.
+    approveRequest: (clubId: string, userId: string) =>
+      prisma.$transaction(async (tx) => {
+        const club = await tx.club.findUnique({
+          where: { id: clubId },
+          select: { ownerId: true },
+        });
+        if (!club) throw new NotFoundError("Club not found");
+        if (club.ownerId !== viewer.userId) throw new Error("NOT_OWNER");
+        const membership = await tx.clubMembership.findUnique({
+          where: { clubId_userId: { clubId, userId } },
+          select: { status: true },
+        });
+        if (!membership || membership.status !== "pending") return { success: true };
+        await tx.clubMembership.update({
+          where: { clubId_userId: { clubId, userId } },
+          data: { status: "active" },
+        });
         await tx.club.update({
           where: { id: clubId },
-          data: { memberCount: { decrement: 1 } },
+          data: { memberCount: { increment: 1 } },
         });
         return { success: true };
       }),
+
+    // Owner-only: deny (delete) a pending request.
+    denyRequest: async (clubId: string, userId: string) => {
+      const club = await prisma.club.findUnique({
+        where: { id: clubId },
+        select: { ownerId: true },
+      });
+      if (!club) throw new NotFoundError("Club not found");
+      if (club.ownerId !== viewer.userId) throw new Error("NOT_OWNER");
+      await prisma.clubMembership.deleteMany({
+        where: { clubId, userId, status: "pending" },
+      });
+      return { success: true };
+    },
   };
 }

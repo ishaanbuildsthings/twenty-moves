@@ -2,13 +2,14 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Users, ArrowLeft } from "lucide-react";
+import { Users, ArrowLeft, Lock } from "lucide-react";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CubeLoader } from "@/lib/components/cube-loader";
 import { ClubLeaderboard } from "@/lib/components/club-leaderboard";
 import { ClubOwnerMenu } from "@/lib/components/club-owner-menu";
+import { ClubJoinRequests } from "@/lib/components/club-join-requests";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { countryCodeToFlag } from "@/lib/countries";
 import { useSettings } from "@/lib/context/settings";
@@ -29,17 +30,18 @@ export default function ClubDetailPage() {
 
   const joinClub = useMutation(
     trpc.club.join.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (res) => {
         invalidate();
-        toast.success("Joined club!");
+        toast.success(res.status === "requested" ? "Request sent" : "Joined club!");
       },
+      onError: (err) => toast.error(err.message),
     })
   );
   const leaveClub = useMutation(
     trpc.club.leave.mutationOptions({
       onSuccess: () => {
         invalidate();
-        toast.success("Left club");
+        toast.success("Done");
       },
       onError: (err) => toast.error(err.message),
     })
@@ -81,8 +83,15 @@ export default function ClubDetailPage() {
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-extrabold truncate">{club.name}</h1>
-              <p className="text-sm text-muted-foreground">
-                {club.memberCount} member{club.memberCount !== 1 ? "s" : ""}
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>
+                  {club.memberCount} member{club.memberCount !== 1 ? "s" : ""}
+                </span>
+                {club.isPrivate && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide">
+                    <Lock className="h-3 w-3" /> Private
+                  </span>
+                )}
               </p>
               {club.description && (
                 <p className="text-sm text-foreground mt-2">{club.description}</p>
@@ -105,17 +114,37 @@ export default function ClubDetailPage() {
             >
               {leaveClub.isPending ? "Leaving..." : "Leave"}
             </button>
+          ) : club.isPending ? (
+            <button
+              onClick={() => leaveClub.mutate({ clubId })}
+              disabled={pending}
+              className="shrink-0 self-start whitespace-nowrap px-4 py-2 text-sm font-bold rounded border border-border text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              title="Cancel your join request"
+            >
+              {leaveClub.isPending ? "Canceling..." : "Requested — Cancel"}
+            </button>
           ) : (
             <button
               onClick={() => joinClub.mutate({ clubId })}
               disabled={pending}
               className={`shrink-0 self-start whitespace-nowrap px-4 py-2 text-sm font-bold rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow} disabled:opacity-50`}
             >
-              {joinClub.isPending ? "Joining..." : "Join"}
+              {joinClub.isPending
+                ? "…"
+                : club.isPrivate
+                  ? "Request to join"
+                  : "Join"}
             </button>
           )}
         </div>
       </div>
+
+      {/* Join requests (owner only) */}
+      {club.isOwner && club.pendingCount > 0 && (
+        <div className="border-t border-border px-8 py-6 max-w-3xl mx-auto w-full">
+          <ClubJoinRequests clubId={clubId} />
+        </div>
+      )}
 
       {/* Leaderboard */}
       <div className="border-t border-border px-8 py-6 max-w-3xl mx-auto w-full">

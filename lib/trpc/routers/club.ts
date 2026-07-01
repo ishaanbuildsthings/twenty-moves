@@ -56,10 +56,44 @@ export const clubRouter = createTRPCRouter({
       z.object({
         name: z.string().min(3).max(50),
         description: z.string().max(300).default(""),
+        isPrivate: z.boolean().default(false),
       })
     )
     .mutation(async ({ ctx, input }) => {
       return clubService(ctx).create(input);
+    }),
+
+  // Owner-only: pending join requests.
+  getJoinRequests: authedProcedure
+    .input(z.object({ clubId: cuidSchema }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await clubService(ctx).listRequests(input.clubId);
+      } catch (e) {
+        throwClubError(e);
+      }
+    }),
+
+  // Owner-only: approve a pending join request.
+  approveRequest: authedProcedure
+    .input(z.object({ clubId: cuidSchema, userId: cuidSchema }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await clubService(ctx).approveRequest(input.clubId, input.userId);
+      } catch (e) {
+        throwClubError(e);
+      }
+    }),
+
+  // Owner-only: deny a pending join request.
+  denyRequest: authedProcedure
+    .input(z.object({ clubId: cuidSchema, userId: cuidSchema }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await clubService(ctx).denyRequest(input.clubId, input.userId);
+      } catch (e) {
+        throwClubError(e);
+      }
     }),
 
   // Owner-only: edit the club description.
@@ -87,7 +121,11 @@ export const clubRouter = createTRPCRouter({
   join: authedProcedure
     .input(z.object({ clubId: cuidSchema }))
     .mutation(async ({ ctx, input }) => {
-      return clubService(ctx).join(input.clubId);
+      try {
+        return await clubService(ctx).join(input.clubId);
+      } catch (e) {
+        throwClubError(e);
+      }
     }),
 
   leave: authedProcedure
