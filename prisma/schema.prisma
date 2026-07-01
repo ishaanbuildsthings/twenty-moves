@@ -227,12 +227,20 @@ enum ClubRole {
   member
 }
 
+// Membership lifecycle. Private clubs create `pending` rows on request that the
+// owner approves to `active`; public clubs go straight to `active`.
+enum ClubMemberStatus {
+  pending
+  active
+}
+
 model Club {
   id          String   @id @default(cuid())
   name        String
   description String   @default("")
+  isPrivate   Boolean  @default(false) // Private clubs require owner approval to join.
   ownerId     String
-  memberCount Int      @default(1) // Denormalized — kept in sync on join/leave.
+  memberCount Int      @default(1) // Denormalized ACTIVE member count — synced on join/approve/leave.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -243,17 +251,19 @@ model Club {
 }
 
 model ClubMembership {
-  id       String   @id @default(cuid())
+  id       String           @id @default(cuid())
   clubId   String
   userId   String
-  role     ClubRole @default(member)
-  joinedAt DateTime @default(now())
+  role     ClubRole         @default(member)
+  status   ClubMemberStatus @default(active)
+  joinedAt DateTime         @default(now())
 
   club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id])
 
   @@unique([clubId, userId])
   @@index([userId])
+  @@index([clubId, status])
 }
 
 // Race feature — schema mirrors the live DB tables (from PR #80, not yet merged).

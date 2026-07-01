@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users, Lock } from "lucide-react";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 import { CubeLoader } from "@/lib/components/cube-loader";
@@ -14,7 +14,9 @@ type ClubListItem = {
   name: string;
   description: string;
   memberCount: number;
+  isPrivate: boolean;
   isMember: boolean;
+  isPending: boolean;
 };
 
 function ClubCard({ club }: { club: ClubListItem }) {
@@ -27,7 +29,17 @@ function ClubCard({ club }: { club: ClubListItem }) {
         <Users className="h-6 w-6 text-muted-foreground" />
       </div>
       <div className="min-w-0 flex-1">
-        <h2 className="font-bold truncate">{club.name}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-bold truncate">{club.name}</h2>
+          {club.isPrivate && (
+            <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          {club.isPending && (
+            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Requested
+            </span>
+          )}
+        </div>
         {club.description && (
           <p className="text-sm text-muted-foreground truncate">
             {club.description}

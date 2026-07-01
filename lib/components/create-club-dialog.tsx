@@ -22,6 +22,7 @@ interface CreateClubDialogProps {
 export function CreateClubDialog({ open, onOpenChange }: CreateClubDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -34,9 +35,11 @@ export function CreateClubDialog({ open, onOpenChange }: CreateClubDialogProps) 
     const club = await createClub.mutateAsync({
       name: name.trim(),
       description: description.trim(),
+      isPrivate,
     });
     setName("");
     setDescription("");
+    setIsPrivate(false);
     onOpenChange(false);
     queryClient.removeQueries({ queryKey: [["club", "list"]] });
     toast.success("Club created!", {
@@ -91,6 +94,29 @@ export function CreateClubDialog({ open, onOpenChange }: CreateClubDialogProps) 
             <p className="text-xs text-right mt-1 text-muted-foreground">
               {description.length}/300
             </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Visibility</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: false, label: "Public", hint: "Anyone can join" },
+                { value: true, label: "Private", hint: "Owner approves requests. Anyone can see the club." },
+              ].map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setIsPrivate(opt.value)}
+                  className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                    isPrivate === opt.value
+                      ? `${accent.border} bg-muted`
+                      : "border-border hover:bg-muted/50"
+                  }`}
+                >
+                  <span className="block text-sm font-bold">{opt.label}</span>
+                  <span className="block text-xs text-muted-foreground">{opt.hint}</span>
+                </button>
+              ))}
+            </div>
           </div>
           {createClub.error && (
             <p className="text-sm text-red-500">{createClub.error.message}</p>
