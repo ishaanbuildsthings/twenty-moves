@@ -7,6 +7,17 @@ import { CubeEvent } from "@/lib/cubing/events";
 
 const cuidSchema = z.string().min(1).max(50);
 
+// Maps service-layer errors to client-safe TRPCErrors. Always throws.
+function throwClubError(e: unknown): never {
+  if (e instanceof NotFoundError) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Club not found" });
+  }
+  if (e instanceof Error && e.message === "NOT_OWNER") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Only the club owner can do that" });
+  }
+  throw e;
+}
+
 export const clubRouter = createTRPCRouter({
   // All clubs, for the discover page.
   list: authedProcedure.query(async ({ ctx }) => {
@@ -49,6 +60,28 @@ export const clubRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       return clubService(ctx).create(input);
+    }),
+
+  // Owner-only: edit the club description.
+  updateDescription: authedProcedure
+    .input(z.object({ clubId: cuidSchema, description: z.string().max(300) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await clubService(ctx).updateDescription(input.clubId, input.description);
+      } catch (e) {
+        throwClubError(e);
+      }
+    }),
+
+  // Owner-only: delete the club.
+  delete: authedProcedure
+    .input(z.object({ clubId: cuidSchema }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await clubService(ctx).remove(input.clubId);
+      } catch (e) {
+        throwClubError(e);
+      }
     }),
 
   join: authedProcedure
