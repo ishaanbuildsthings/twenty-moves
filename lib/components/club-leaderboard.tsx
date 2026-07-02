@@ -14,6 +14,7 @@ import {
 import { EventIcon } from "@/lib/components/event-icon";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { CubeLoader } from "@/lib/components/cube-loader";
+import { InfoTooltip } from "@/lib/components/info-tooltip";
 import { EVENT_CONFIGS, EVENT_MAP, CubeEvent } from "@/lib/cubing/events";
 import { formatTime } from "@/lib/cubing/format";
 import { useSettings } from "@/lib/context/settings";
@@ -54,8 +55,11 @@ export function ClubLeaderboard({ clubId }: { clubId: string }) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-muted-foreground">
             Leaderboard
+            <InfoTooltip>
+              Based only on practice posts from the past week — tournament solves aren&apos;t counted.
+            </InfoTooltip>
           </h2>
           <p className="text-xs text-muted-foreground/60">This week (Mon–Sun PST)</p>
         </div>

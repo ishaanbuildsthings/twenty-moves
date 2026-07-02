@@ -72,7 +72,7 @@ export default function ClubsPage() {
           <div>
             <h1 className="text-2xl font-extrabold">Clubs</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Find your crew, compete as a team.
+              Join or create a club and view weekly leaderboards.
             </p>
           </div>
           <button
