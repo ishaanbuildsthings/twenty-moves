@@ -4,6 +4,7 @@ import { DNF_SENTINEL } from "@/lib/cubing/stats";
 
 type CreatePracticeSessionInput = {
   eventId: string;
+  title: string;
   caption: string;
   youtubeUrl?: string;
   bestSingle: number | null;
@@ -52,6 +53,7 @@ export function postService(ctx: ServiceContext) {
             userId: viewer.userId,
             eventId: input.eventId,
             scrambleSetId: scrambleSet.id,
+            title: input.title,
             caption: input.caption,
             youtubeUrl: input.youtubeUrl,
             bestSingle: input.bestSingle,
