@@ -6,6 +6,7 @@ export interface IPracticePost {
   id: string;
   user: IUser;
   eventName: string;
+  title: string;
   caption: string;
   bestSingle: number | null;
   bestAo5: number | null;
@@ -36,6 +37,7 @@ export function practicePostToIPracticePost(
     id: post.id,
     user: userToIUser(post.user),
     eventName: post.event.name,
+    title: post.title,
     caption: post.caption,
     bestSingle: post.bestSingle,
     bestAo5: post.bestAo5,

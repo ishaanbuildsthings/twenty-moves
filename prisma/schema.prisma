@@ -152,6 +152,7 @@ model PracticePost {
   id            String  @id @default(cuid())
   userId        String
   eventId       String
+  title         String  @default("")
   caption       String  @default("")
   bestSingle    Int?
   bestAo5       Int?

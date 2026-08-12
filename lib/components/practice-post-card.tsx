@@ -130,11 +130,17 @@ export function PracticePostCard({ post }: PracticePostCardProps) {
         </DropdownMenu>
       </div>
 
-      {/* Post title — event + solve count */}
-      <div className="flex items-center gap-2 mt-3">
+      {/* Post header — event + solve count + title */}
+      <div className="flex items-center gap-2 mt-3 min-w-0">
         {eventConfig && <EventIcon event={eventConfig} size={20} />}
-        <span className="text-base font-bold">{eventConfig?.name ?? post.eventName}</span>
-        <span className="text-sm text-muted-foreground">{post.numSolves} solve{post.numSolves !== 1 ? "s" : ""}</span>
+        <span className="text-base font-bold shrink-0">{eventConfig?.name ?? post.eventName}</span>
+        <span className="text-sm text-muted-foreground shrink-0">{post.numSolves} solve{post.numSolves !== 1 ? "s" : ""}</span>
+        {post.title && (
+          <>
+            <span className="text-sm text-muted-foreground shrink-0">·</span>
+            <span className="text-base font-semibold truncate">{post.title}</span>
+          </>
+        )}
       </div>
 
       {/* Stats */}
@@ -516,6 +522,11 @@ function CommentsModal({ post, open, onOpenChange }: { post: PostWithInteraction
             <span>{timeAgo(post.createdAt)}</span>
           </DialogDescription>
         </DialogHeader>
+
+        {/* Title */}
+        {post.title && (
+          <p className="text-base font-bold break-words">{post.title}</p>
+        )}
 
         {/* Caption */}
         {post.caption && (

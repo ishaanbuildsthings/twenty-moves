@@ -352,6 +352,7 @@ export const postRouter = createTRPCRouter({
       z.object({
         event: z.nativeEnum(CubeEvent),
         solves: z.array(solveSchema).min(1).max(1000),
+        title: z.string().max(100).default(""),
         caption: z.string().max(500).default(""),
         youtubeUrl: z.string().url().optional(),
       })
@@ -379,6 +380,7 @@ export const postRouter = createTRPCRouter({
 
       return postService(ctx).createPracticeSession({
         eventId: dbEvent.id,
+        title: input.title,
         caption: input.caption,
         youtubeUrl: input.youtubeUrl,
         bestSingle: stats.bestSingle,

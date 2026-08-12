@@ -90,6 +90,7 @@ export function DraftPostModal({
   stats: _sessionStats,
   solves,
 }: DraftPostModalProps) {
+  const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [rangeStart, setRangeStart] = useState(0);
@@ -143,9 +144,11 @@ export function DraftPostModal({
         penalty: s.penalty ?? undefined,
         scramble: s.scramble,
       })),
+      title,
       caption,
       youtubeUrl: youtubeUrl || undefined,
     });
+    setTitle("");
     setCaption("");
     setYoutubeUrl("");
     onOpenChange(false);
@@ -273,6 +276,20 @@ export function DraftPostModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="post-title" className="block text-sm font-medium mb-1">
+              Title
+            </label>
+            <input
+              id="post-title"
+              type="text"
+              maxLength={100}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. First sub-15 Ao5!"
+              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white"
+            />
+          </div>
           <div>
             <label htmlFor="post-caption" className="block text-sm font-medium mb-1">
               Caption
