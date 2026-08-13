@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, ImageIcon } from "lucide-react";
 import { useTRPC } from "@/lib/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+  uploadClubImage,
+  validateClubImageFile,
+  ACCEPTED_IMAGE_TYPES,
+} from "@/lib/supabase/upload-club-image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,12 +40,42 @@ export function ClubOwnerMenu({ clubId, description }: ClubOwnerMenuProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [draft, setDraft] = useState(description);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: trpc.club.getById.queryKey({ clubId }) });
+    queryClient.removeQueries({ queryKey: [["club", "list"]] });
+  };
+
+  const updateImage = useMutation(trpc.club.updateImage.mutationOptions());
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const err = validateClubImageFile(file);
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const url = await uploadClubImage(clubId, file);
+      await updateImage.mutateAsync({ clubId, imageUrl: url });
+      invalidate();
+      toast.success("Photo updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const updateClub = useMutation(
     trpc.club.updateDescription.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: trpc.club.getById.queryKey({ clubId }) });
-        queryClient.removeQueries({ queryKey: [["club", "list"]] });
+        invalidate();
         setEditOpen(false);
         toast.success("Club updated");
       },
@@ -67,6 +102,13 @@ export function ClubOwnerMenu({ clubId, description }: ClubOwnerMenuProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingPhoto}
+          >
+            <ImageIcon className="h-4 w-4" />
+            <span>{uploadingPhoto ? "Uploading…" : "Change photo"}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => {
               setDraft(description);
               setEditOpen(true);
@@ -84,6 +126,14 @@ export function ClubOwnerMenu({ clubId, description }: ClubOwnerMenuProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES}
+        onChange={handlePhotoChange}
+        className="hidden"
+      />
 
       {/* Edit description */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

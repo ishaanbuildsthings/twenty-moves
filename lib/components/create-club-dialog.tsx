@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useSettings } from "@/lib/context/settings";
+import {
+  uploadClubImage,
+  validateClubImageFile,
+  ACCEPTED_IMAGE_TYPES,
+} from "@/lib/supabase/upload-club-image";
 
 interface CreateClubDialogProps {
   open: boolean;
@@ -23,32 +29,74 @@ export function CreateClubDialog({ open, onOpenChange }: CreateClubDialogProps) 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
   const { accent } = useSettings();
 
   const createClub = useMutation(trpc.club.create.mutationOptions());
+  const updateImage = useMutation(trpc.club.updateImage.mutationOptions());
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const club = await createClub.mutateAsync({
-      name: name.trim(),
-      description: description.trim(),
-      isPrivate,
-    });
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const err = validateClubImageFile(file);
+    if (err) {
+      setImageError(err);
+      return;
+    }
+    setImageError(null);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const reset = () => {
     setName("");
     setDescription("");
     setIsPrivate(false);
-    onOpenChange(false);
-    queryClient.removeQueries({ queryKey: [["club", "list"]] });
-    toast.success("Club created!", {
-      action: {
-        label: "View",
-        onClick: () => router.push(`/clubs/${club.id}`),
-      },
-    });
-    router.push(`/clubs/${club.id}`);
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const club = await createClub.mutateAsync({
+        name: name.trim(),
+        description: description.trim(),
+        isPrivate,
+      });
+
+      // Image needs the club id for its storage path, so upload after create.
+      if (imageFile) {
+        try {
+          const url = await uploadClubImage(club.id, imageFile);
+          await updateImage.mutateAsync({ clubId: club.id, imageUrl: url });
+        } catch {
+          toast.error("Club created, but the photo failed to upload.");
+        }
+      }
+
+      reset();
+      onOpenChange(false);
+      queryClient.removeQueries({ queryKey: [["club", "list"]] });
+      toast.success("Club created!", {
+        action: {
+          label: "View",
+          onClick: () => router.push(`/clubs/${club.id}`),
+        },
+      });
+      router.push(`/clubs/${club.id}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -62,6 +110,31 @@ export function CreateClubDialog({ open, onOpenChange }: CreateClubDialogProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Photo <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">
+                {imagePreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imagePreview} alt="Club photo preview" className="h-full w-full object-cover" />
+                ) : (
+                  <Users className="h-7 w-7 text-muted-foreground" />
+                )}
+              </div>
+              <label className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm font-semibold hover:bg-muted transition-colors">
+                Choose image
+                <input
+                  type="file"
+                  accept={ACCEPTED_IMAGE_TYPES}
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            {imageError && <p className="text-sm text-red-500 mt-1">{imageError}</p>}
+          </div>
           <div>
             <label htmlFor="club-name" className="block text-sm font-medium mb-1">
               Name
@@ -124,10 +197,10 @@ export function CreateClubDialog({ open, onOpenChange }: CreateClubDialogProps) 
           <div className="flex justify-end pt-1">
             <button
               type="submit"
-              disabled={createClub.isPending || name.trim().length < 3}
+              disabled={submitting || name.trim().length < 3}
               className={`px-4 py-2 text-sm font-bold rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow} disabled:opacity-50`}
             >
-              {createClub.isPending ? "Creating..." : "Create club"}
+              {submitting ? "Creating..." : "Create club"}
             </button>
           </div>
         </form>
