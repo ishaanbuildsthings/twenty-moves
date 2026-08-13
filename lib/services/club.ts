@@ -30,6 +30,7 @@ export function clubService(ctx: ServiceContext) {
           id: c.id,
           name: c.name,
           description: c.description,
+          imageUrl: c.imageUrl,
           memberCount: c.memberCount,
           isPrivate: c.isPrivate,
           isMember: mine?.status === "active",
@@ -72,6 +73,7 @@ export function clubService(ctx: ServiceContext) {
         id: club.id,
         name: club.name,
         description: club.description,
+        imageUrl: club.imageUrl,
         memberCount: club.memberCount,
         isPrivate: club.isPrivate,
         createdAt: club.createdAt,
@@ -211,6 +213,22 @@ export function clubService(ctx: ServiceContext) {
       return prisma.club.update({
         where: { id: clubId },
         data: { description },
+        select: { id: true },
+      });
+    },
+
+    // Owner-only: set (or clear) the club's image URL. The actual file is
+    // uploaded client-side to Supabase storage; we just persist the URL.
+    updateImage: async (clubId: string, imageUrl: string | null) => {
+      const club = await prisma.club.findUnique({
+        where: { id: clubId },
+        select: { ownerId: true },
+      });
+      if (!club) throw new NotFoundError("Club not found");
+      if (club.ownerId !== viewer.userId) throw new Error("NOT_OWNER");
+      return prisma.club.update({
+        where: { id: clubId },
+        data: { imageUrl },
         select: { id: true },
       });
     },

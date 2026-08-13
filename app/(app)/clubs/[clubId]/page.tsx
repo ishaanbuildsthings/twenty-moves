@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Users, ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { CubeLoader } from "@/lib/components/cube-loader";
 import { ClubLeaderboard } from "@/lib/components/club-leaderboard";
 import { ClubOwnerMenu } from "@/lib/components/club-owner-menu";
 import { ClubJoinRequests } from "@/lib/components/club-join-requests";
+import { ClubImage } from "@/lib/components/club-image";
 import { UserAvatar } from "@/lib/components/user-avatar";
 import { countryCodeToFlag } from "@/lib/countries";
 import { useSettings } from "@/lib/context/settings";
@@ -78,9 +79,12 @@ export default function ClubDetailPage() {
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-5 min-w-0">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-muted">
-              <Users className="h-8 w-8 text-muted-foreground" />
-            </div>
+            <ClubImage
+              imageUrl={club.imageUrl}
+              name={club.name}
+              className="h-16 w-16 shrink-0 rounded-xl"
+              iconClassName="h-8 w-8"
+            />
             <div className="min-w-0">
               <h1 className="text-2xl font-extrabold truncate">{club.name}</h1>
               <p className="text-sm text-muted-foreground flex items-center gap-2">

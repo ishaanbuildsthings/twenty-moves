@@ -239,6 +239,7 @@ model Club {
   id          String   @id @default(cuid())
   name        String
   description String   @default("")
+  imageUrl    String?  // Owner-uploaded club photo (Supabase storage public URL).
   isPrivate   Boolean  @default(false) // Private clubs require owner approval to join.
   ownerId     String
   memberCount Int      @default(1) // Denormalized ACTIVE member count — synced on join/approve/leave.

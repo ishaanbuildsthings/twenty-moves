@@ -4,8 +4,21 @@ import { createTRPCRouter, authedProcedure } from "../init";
 import { clubService } from "@/lib/services/club";
 import { NotFoundError } from "@/lib/errors";
 import { CubeEvent } from "@/lib/cubing/events";
+import { publicEnv } from "@/lib/env";
 
 const cuidSchema = z.string().min(1).max(50);
+
+// Club images live in the shared Supabase `avatars` bucket (public URLs).
+const clubImageUrlSchema = z
+  .string()
+  .max(500)
+  .refine(
+    (url) =>
+      url.startsWith(
+        `${publicEnv().NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/`
+      ),
+    { message: "Invalid image URL" }
+  );
 
 // Maps service-layer errors to client-safe TRPCErrors. Always throws.
 function throwClubError(e: unknown): never {
@@ -102,6 +115,17 @@ export const clubRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         return await clubService(ctx).updateDescription(input.clubId, input.description);
+      } catch (e) {
+        throwClubError(e);
+      }
+    }),
+
+  // Owner-only: set or clear the club image.
+  updateImage: authedProcedure
+    .input(z.object({ clubId: cuidSchema, imageUrl: clubImageUrlSchema.nullable() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await clubService(ctx).updateImage(input.clubId, input.imageUrl);
       } catch (e) {
         throwClubError(e);
       }

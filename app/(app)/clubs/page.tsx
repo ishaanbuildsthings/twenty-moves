@@ -6,6 +6,7 @@ import { Users, Lock } from "lucide-react";
 import { useTRPC } from "@/lib/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 import { CubeLoader } from "@/lib/components/cube-loader";
+import { ClubImage } from "@/lib/components/club-image";
 import { CreateClubDialog } from "@/lib/components/create-club-dialog";
 import { useSettings } from "@/lib/context/settings";
 
@@ -13,6 +14,7 @@ type ClubListItem = {
   id: string;
   name: string;
   description: string;
+  imageUrl: string | null;
   memberCount: number;
   isPrivate: boolean;
   isMember: boolean;
@@ -25,9 +27,12 @@ function ClubCard({ club }: { club: ClubListItem }) {
       href={`/clubs/${club.id}`}
       className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 hover:bg-muted/50 transition-colors"
     >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted">
-        <Users className="h-6 w-6 text-muted-foreground" />
-      </div>
+      <ClubImage
+        imageUrl={club.imageUrl}
+        name={club.name}
+        className="h-12 w-12 shrink-0 rounded-lg"
+        iconClassName="h-6 w-6"
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h2 className="font-bold truncate">{club.name}</h2>
