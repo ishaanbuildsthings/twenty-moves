@@ -9,6 +9,7 @@ import {
   countSolvesForEvent,
   deleteSolve,
   getRecentSolves,
+  getAllSolves,
   getStats,
   loadMoreSolves,
   updateSolve,
@@ -27,7 +28,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { X, Copy, Check, Trash2, ChevronDown, Settings, PanelRightClose, PanelRightOpen, FilePen, BarChart3 } from "lucide-react";
+import { X, Copy, Check, Trash2, ChevronDown, Settings, PanelRightClose, PanelRightOpen, FilePen, BarChart3, Clock } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -213,6 +215,16 @@ function StatDetailModal({
                       <span className="font-mono tabular-nums text-sm font-bold">
                         {trimmed ? `(${formatSolveTime(solve)})` : formatSolveTime(solve)}
                       </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="text-muted-foreground/50 hover:text-foreground">
+                            <Clock className="w-3 h-3" />
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-muted text-white *:last:bg-muted *:last:fill-muted">
+                            {new Date(solve.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed truncate">
@@ -266,6 +278,7 @@ export default function TimerPage() {
   const [inspectionTime, setInspectionTime] = useState(0);
   const [scramble, setScramble] = useState<string | null>(null);
   const [solves, setSolves] = useState<Solve[]>([]);
+  const [postSolves, setPostSolves] = useState<Solve[]>([]);
   const [totalSolveCount, setTotalSolveCount] = useState(0);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -275,6 +288,14 @@ export default function TimerPage() {
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
   const [expandedSolveId, setExpandedSolveId] = useState<number | null>(null);
   const [postOpen, setPostOpen] = useState(false);
+  // Load EVERY solve for the event (not just the windowed list) before opening
+  // the post modal, so the user can select from all of them.
+  const openPostModal = useCallback(() => {
+    getAllSolves(selectedEvent).then((all) => {
+      setPostSolves(all);
+      setPostOpen(true);
+    });
+  }, [selectedEvent]);
   const [statDetail, setStatDetail] = useState<{ stat: StatType; variant: "current" | "best" } | null>(null);
   // Whether there are more solves in IDB beyond what's currently loaded.
   // False once a batch returns fewer results than requested.
@@ -604,7 +625,7 @@ export default function TimerPage() {
           {stats && (
             <button
               className={`flex items-center gap-1.5 text-xs font-bold py-1.5 px-3 rounded ${accent.bg} text-white ${accent.hover} transition-colors ${accent.shadow} ${solves.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
-              onClick={() => solves.length > 0 && setPostOpen(true)}
+              onClick={() => solves.length > 0 && openPostModal()}
               disabled={solves.length === 0}
             >
               <FilePen className="w-3.5 h-3.5" />
@@ -733,6 +754,11 @@ export default function TimerPage() {
                         </button>
                         {isExpanded && (
                           <div className="px-2 pb-2 space-y-2">
+                            {/* Timestamp */}
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
+                              <span>{new Date(solve.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>
+                            </div>
                             {/* Scramble + copy */}
                             <div className="flex items-start justify-between gap-2">
                               <p className="font-mono text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
@@ -993,6 +1019,12 @@ export default function TimerPage() {
                         </button>
                       </div>
 
+                      {/* Timestamp */}
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span>{new Date(solve.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>
+                      </div>
+
                       {/* Scramble */}
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-mono text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
@@ -1044,7 +1076,7 @@ export default function TimerPage() {
             onOpenChange={setPostOpen}
             eventConfig={eventConfig}
             stats={stats}
-            solves={solves}
+            solves={postSolves}
           />
         )}
         {statDetail && (
