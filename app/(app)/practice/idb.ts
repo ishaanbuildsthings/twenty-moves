@@ -132,6 +132,15 @@ export async function loadMoreSolves(
   });
 }
 
+// Public: fetch ALL solves for an event (newest first), in its own
+// transaction. Used when posting a session so the user can pick from every
+// solve, not just the windowed subset loaded for the list.
+export async function getAllSolves(event: CubeEvent): Promise<Solve[]> {
+  const db = await openDB();
+  const tx = db.transaction(SOLVES_STORE, "readonly");
+  return getAllSolvesForEvent(tx, event);
+}
+
 // Fetch ALL solves for an event (needed for best-ever stats).
 // Only used internally for stats recomputation.
 async function getAllSolvesForEvent(
